@@ -256,6 +256,7 @@ Completed:
 - S6 Architecture Design
 - S7 Solution Initialization
 - S8 Data Foundation
+- S9 Customer Web UI Foundation + Home + Products
 
 S8 completed:
 - Entities created.
@@ -266,3 +267,13 @@ S8 completed:
 - Database update verified: 8 business tables and `__EFMigrationsHistory` present;
   only Admin/Customer roles seeded; all 7 other business tables empty.
 - Build verified: 0 warnings, 0 errors.
+
+S9 completed:
+- Customer Web UI foundation and shared layout.
+- Home with newest active products, database brand/category navigation and empty states.
+- Product List at `/products`; reusable product card with local image fallback.
+- Server-side search/filter/sort through Web → Business → Data.
+- Responsive foundation verified at 1440/820/390/320 px without horizontal overflow.
+- Build verified: 0 warnings, 0 errors; Home and /products return HTTP 200.
+- No fake business data or schema/migration changes.
+- Catalog is empty: validation/query execution verified; populated-result behavior remains unverified.

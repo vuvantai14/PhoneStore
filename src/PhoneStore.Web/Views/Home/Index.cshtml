@@ -1,8 +1,29 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@model HomeViewModel
+@{ ViewData["Title"] = "Trang chủ"; }
+<section class="hero"><div class="container hero-grid">
+<div class="hero-copy"><span class="eyebrow"><span class="small-dot"></span> KHÁM PHÁ CÙNG PHONESTORE</span>
+<h1>Công nghệ mới.<br /><span>Lựa chọn của bạn.</span></h1>
+<p>Tìm chiếc điện thoại phù hợp với nhịp sống của bạn. Khám phá cấu hình và lựa chọn theo cách riêng.</p>
+<a class="button button-primary" href="/products">Khám phá sản phẩm <span aria-hidden="true">↗</span></a>
+<div class="hero-note"><span aria-hidden="true">◈</span> Tìm theo thương hiệu, cấu hình và mức giá</div></div>
+<div class="hero-art" aria-hidden="true"><div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div><span class="art-label">DESIGNED FOR YOUR EVERYDAY</span>
+<div class="phone phone-back"><div class="camera-block"><i></i><i></i><i></i><b></b></div><span class="phone-mark">p.</span></div>
+<div class="phone phone-front"><div class="phone-screen"><span class="phone-island"></span><div class="screen-curve"></div><div class="screen-curve second"></div><span class="screen-caption">Make it<br />yours.</span><span class="screen-bottom"></span></div></div>
+<div class="art-tag"><span class="small-dot"></span> Kết nối. Khám phá. Trải nghiệm.</div></div>
+</div></section>
+<div class="container">
+@if (Model.Brands.Count > 0) {
+<section class="section brand-section" aria-labelledby="brands-title"><div class="section-heading"><div><span class="eyebrow">THƯƠNG HIỆU</span><h2 id="brands-title">Bắt đầu từ thương hiệu bạn yêu thích</h2></div></div>
+<div class="brand-list">@foreach (var brand in Model.Brands) { <a href="/products?brandId=@brand.Id">@brand.Name<span aria-hidden="true">↗</span></a> }</div></section>
 }
-
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<section class="section" aria-labelledby="newest-title">
+<div class="section-heading"><div><span class="eyebrow">KHÁM PHÁ DANH MỤC</span><h2 id="newest-title">Điện thoại mới nhất</h2><p>Những sản phẩm mới được cập nhật tại PhoneStore.</p></div><a class="text-link" href="/products">Xem tất cả <span aria-hidden="true">→</span></a></div>
+@if (Model.Products.Count == 0) { <partial name="_EmptyCatalog" model='@("Chưa có sản phẩm.")' /> }
+else { <div class="product-grid">@foreach (var product in Model.Products) { <partial name="_ProductCard" model="product" /> }</div> }
+</section>
+@if (Model.Categories.Count > 0) {
+<section class="section" aria-labelledby="categories-title"><div class="section-heading"><div><span class="eyebrow">THEO NHU CẦU CỦA BẠN</span><h2 id="categories-title">Khám phá danh mục</h2></div></div>
+<div class="category-list">@foreach (var category in Model.Categories) { <a href="/products?categoryId=@category.Id"><span>@category.Name</span><span aria-hidden="true">↗</span></a> }</div></section>
+}
+<section class="discovery-cta"><div><span class="eyebrow">MỘT LỰA CHỌN, NHIỀU KHẢ NĂNG</span><h2>Chiếc điện thoại tiếp theo của bạn?</h2><p>Bắt đầu với những điều bạn cần. Bộ lọc sẽ giúp bạn thu hẹp lựa chọn.</p></div><a class="button button-primary" href="/products">Tìm điện thoại <span aria-hidden="true">→</span></a></section>
 </div>

@@ -1,0 +1,31 @@
+@model ProductListViewModel
+@{ ViewData["Title"] = "Sản phẩm"; }
+<div class="container catalog-page">
+<nav class="breadcrumbs" aria-label="Đường dẫn"><a href="/">Trang chủ</a><span aria-hidden="true">/</span><span aria-current="page">Sản phẩm</span></nav>
+<div class="catalog-heading"><span class="eyebrow">DANH MỤC PHONESTORE</span><h1>Tìm điện thoại của bạn</h1><p>Lựa chọn theo thương hiệu, nhu cầu và mức giá phù hợp.</p></div>
+<form action="/products" method="get" class="catalog-layout">
+<details class="filter-panel" open><summary>Bộ lọc sản phẩm <span aria-hidden="true">⌄</span></summary><div class="filter-body">
+<div class="field"><label for="catalog-search">Tìm kiếm</label><input id="catalog-search" name="search" value="@Model.Filter.Search" placeholder="Tên điện thoại, thương hiệu" /></div>
+<div class="field"><label for="brandId">Thương hiệu</label><select id="brandId" name="brandId"><option value="">Tất cả thương hiệu</option>
+@foreach (var brand in Model.Brands) { <option value="@brand.Id" selected="@(Model.Filter.BrandId == brand.Id)">@brand.Name</option> }
+</select></div>
+<div class="field"><label for="categoryId">Danh mục</label><select id="categoryId" name="categoryId"><option value="">Tất cả danh mục</option>
+@foreach (var category in Model.Categories) { <option value="@category.Id" selected="@(Model.Filter.CategoryId == category.Id)">@category.Name</option> }
+</select></div>
+<fieldset class="price-filter"><legend>Khoảng giá <span>(₫)</span></legend>
+<div class="field"><label for="minPrice">Giá từ</label><input type="text" inputmode="decimal" id="minPrice" name="minPrice" value="@Model.Filter.MinPrice" placeholder="Không giới hạn" /></div>
+<div class="field"><label for="maxPrice">Giá đến</label><input type="text" inputmode="decimal" id="maxPrice" name="maxPrice" value="@Model.Filter.MaxPrice" placeholder="Không giới hạn" /></div></fieldset>
+<button class="button button-primary filter-submit" type="submit">Áp dụng bộ lọc <span aria-hidden="true">→</span></button><a href="/products" class="reset-link">Xóa bộ lọc</a></div></details>
+<section class="catalog-results" aria-labelledby="results-heading">
+<div class="results-toolbar"><div><h2 id="results-heading">Danh sách sản phẩm</h2><span>@Model.Products.Count sản phẩm@(Model.Filter.HasFilters ? " phù hợp" : "")</span></div>
+<div class="sort-control"><label for="sort">Sắp xếp</label><select id="sort" name="sort">
+<option value="newest" selected="@(Model.Filter.Sort == "newest")">Mới nhất</option>
+<option value="price-asc" selected="@(Model.Filter.Sort == "price-asc")">Giá tăng dần</option>
+<option value="price-desc" selected="@(Model.Filter.Sort == "price-desc")">Giá giảm dần</option>
+<option value="name-asc" selected="@(Model.Filter.Sort == "name-asc")">Tên A–Z</option>
+</select><button class="sort-submit" type="submit">Áp dụng</button></div></div>
+@if (!ViewData.ModelState.IsValid) { <div class="validation-errors" role="alert"><strong>Vui lòng kiểm tra bộ lọc.</strong><div asp-validation-summary="All"></div></div> }
+else if (Model.Products.Count == 0) { <partial name="_EmptyCatalog" model='@(Model.Filter.HasFilters ? "Không tìm thấy sản phẩm phù hợp." : "Chưa có sản phẩm.")' /> }
+else { <div class="product-grid">@foreach (var product in Model.Products) { <partial name="_ProductCard" model="product" /> }</div> }
+</section></form></div>
+
