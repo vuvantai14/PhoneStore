@@ -1,0 +1,21 @@
+# .NET build output
+bin/
+obj/
+
+# Visual Studio / user settings
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code local settings
+.vscode/
+
+# Local SDK cache used in restricted environments
+.dotnet-local/
+
+# Logs and OS files
+*.log
+Thumbs.db
+Desktop.ini
