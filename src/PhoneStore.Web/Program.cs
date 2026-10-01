@@ -2,6 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using PhoneStore.Data.Context;
 using PhoneStore.Business.Catalog;
 using PhoneStore.Data.Catalog;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
+using PhoneStore.Business.Authentication;
+using PhoneStore.Data.Authentication;
+using PhoneStore.Models.Entities;
+using PhoneStore.Web.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +15,26 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ProductCatalogReader>();
+builder.Services.AddScoped<AuthUserStore>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<CustomerCookieEvents>();
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
+{
+    options.LoginPath = "/account/login";
+    options.AccessDeniedPath = "/account/access-denied";
+    options.Cookie.Name = "PhoneStore.Auth";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+    options.SlidingExpiration = true;
+    options.EventsType = typeof(CustomerCookieEvents);
+});
+builder.Services.AddAuthorization(options =>
+    options.AddPolicy("Customer", policy => policy.RequireAuthenticatedUser().RequireRole("Customer")));
 builder.Services.AddDbContext<PhoneStoreDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("PhoneStoreConnection")));
 
@@ -27,6 +53,7 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(

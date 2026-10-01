@@ -1,0 +1,18 @@
+@model RegisterViewModel
+@{ ViewData["Title"] = "Đăng ký"; }
+<div class="container auth-page">
+    <section class="auth-card" aria-labelledby="auth-title">
+        <div class="auth-intro"><span class="eyebrow">TÀI KHOẢN PHONESTORE</span><h1 id="auth-title">Bắt đầu cùng PhoneStore.</h1><p>Tạo tài khoản khách hàng của bạn.</p></div>
+        <form asp-controller="Account" asp-action="Register" method="post" class="auth-form">
+            <div asp-validation-summary="ModelOnly" class="auth-errors" role="alert"></div>
+            <div class="field"><label asp-for="FullName"></label><input asp-for="FullName" autocomplete="name" placeholder="Họ và tên của bạn" aria-describedby="name-error" /><span asp-validation-for="FullName" id="name-error" class="field-error"></span></div>
+            <div class="field"><label asp-for="Email"></label><input asp-for="Email" type="email" autocomplete="email" inputmode="email" placeholder="Email của bạn" aria-describedby="email-error" /><span asp-validation-for="Email" id="email-error" class="field-error"></span></div>
+            <div class="field"><label asp-for="Phone"></label><span class="optional-label">Không bắt buộc</span><input asp-for="Phone" type="tel" autocomplete="tel" placeholder="Số điện thoại" aria-describedby="phone-error" /><span asp-validation-for="Phone" id="phone-error" class="field-error"></span></div>
+            <div class="field"><label asp-for="Password"></label><input asp-for="Password" type="password" value="" autocomplete="new-password" placeholder="Ít nhất 8 ký tự" aria-describedby="password-hint password-error" /><span id="password-hint" class="field-hint">Sử dụng từ 8 đến 128 ký tự.</span><span asp-validation-for="Password" id="password-error" class="field-error"></span></div>
+            <div class="field"><label asp-for="ConfirmPassword"></label><input asp-for="ConfirmPassword" type="password" value="" autocomplete="new-password" placeholder="Nhập lại mật khẩu" aria-describedby="confirm-error" /><span asp-validation-for="ConfirmPassword" id="confirm-error" class="field-error"></span></div>
+            <button class="button button-primary auth-submit" type="submit">Tạo tài khoản <span aria-hidden="true">→</span></button>
+        </form>
+        <p class="auth-switch">Đã có tài khoản? <a href="/account/login">Đăng nhập</a></p>
+        <a href="/products" class="auth-back">← Tiếp tục khám phá sản phẩm</a>
+    </section>
+</div>

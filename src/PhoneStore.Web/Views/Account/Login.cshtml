@@ -1,0 +1,21 @@
+@model LoginViewModel
+@{ ViewData["Title"] = "Đăng nhập"; }
+<div class="container auth-page">
+    <section class="auth-card" aria-labelledby="auth-title">
+        <div class="auth-intro"><span class="eyebrow">TÀI KHOẢN PHONESTORE</span><h1 id="auth-title">Chào mừng trở lại.</h1><p>Đăng nhập để tiếp tục cùng PhoneStore.</p></div>
+        @if (TempData["AuthSuccess"] is string message)
+        {
+            <div class="auth-success" role="status">@message</div>
+        }
+        <form asp-controller="Account" asp-action="Login" method="post" class="auth-form">
+            <input asp-for="ReturnUrl" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="auth-errors" role="alert"></div>
+            <div class="field"><label asp-for="Email"></label><input asp-for="Email" type="email" autocomplete="username" inputmode="email" placeholder="Email của bạn" aria-describedby="email-error" /><span asp-validation-for="Email" id="email-error" class="field-error"></span></div>
+            <div class="field"><label asp-for="Password"></label><input asp-for="Password" type="password" value="" autocomplete="current-password" placeholder="Mật khẩu của bạn" aria-describedby="password-error" /><span asp-validation-for="Password" id="password-error" class="field-error"></span></div>
+            <div class="remember-field"><input asp-for="RememberMe" /><label asp-for="RememberMe"></label></div>
+            <button class="button button-primary auth-submit" type="submit">Đăng nhập <span aria-hidden="true">→</span></button>
+        </form>
+        <p class="auth-switch">Chưa có tài khoản? <a href="/account/register">Đăng ký</a></p>
+        <a href="/products" class="auth-back">← Tiếp tục khám phá sản phẩm</a>
+    </section>
+</div>

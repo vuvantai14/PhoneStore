@@ -258,6 +258,7 @@ Completed:
 - S8 Data Foundation
 - S9 Customer Web UI Foundation + Home + Products
 - S10 Product Detail + Product Browsing Polish
+- S11 Customer Authentication
 
 S8 completed:
 - Entities created.
@@ -289,3 +290,13 @@ S10 completed:
 - Build verified: 0 warnings, 0 errors; S9 browser regression checks passed.
 - No fake business data or migration/schema changes.
 - Product Detail runtime test pending real product data (including gallery and inactive-product verification).
+
+S11 completed:
+- Customer registration with normalized email, duplicate-email handling and database Customer role assignment.
+- Customer login/logout; secure PasswordHasher<User> hashing; no Identity tables.
+- Cookie authentication with UserId/FullName/Email/Role claims, RememberMe and local-only ReturnUrl.
+- Anti-forgery on authentication POSTs; inactive login blocked and inactive sessions revoked.
+- Authentication-aware header, responsive Login/Register and Customer authorization policy.
+- Runtime/security checks passed; temporary accounts created through Register and removed afterward.
+- Build verified: 0 warnings, 0 errors; S9/S10 browsing regression checks passed.
+- No migration/schema changes. Product Detail still awaits real product data for populated runtime checks.
