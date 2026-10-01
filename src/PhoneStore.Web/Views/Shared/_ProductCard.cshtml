@@ -1,14 +1,12 @@
 @model ProductCard
 @using System.Globalization
 @{
-var image = Model.ImageUrl;
-var localImage = !string.IsNullOrWhiteSpace(image) && (image.StartsWith("~/") || (image.StartsWith("/") && !image.StartsWith("//"))) && !image.Contains('\\');
-var imageUrl = localImage ? Url.Content(image!) : Url.Content("~/images/product-placeholder.svg");
+var imageUrl = ProductImageUrl.LocalOrPlaceholder(Model.ImageUrl);
 var specs = string.Join(" · ", new[] { Model.RAM, Model.Storage }.Where(s => !string.IsNullOrWhiteSpace(s)));
 }
-<article class="product-card"><div class="product-image"><img src="@imageUrl" alt="@Model.ProductName" loading="lazy" width="280" height="240" data-product-image /></div>
-<div class="product-info"><span class="product-brand">@Model.BrandName</span><h3>@Model.ProductName</h3><p class="product-specs">@(string.IsNullOrEmpty(specs) ? "Cấu hình đang cập nhật" : specs)</p>
+<article class="product-card"><a class="product-image" href="/products/@Model.ProductId" aria-label="Xem @Model.ProductName"><img src="@imageUrl" alt="@Model.ProductName" loading="lazy" width="280" height="240" data-product-image /></a>
+<div class="product-info"><span class="product-brand">@Model.BrandName</span><h3><a href="/products/@Model.ProductId">@Model.ProductName</a></h3><p class="product-specs">@(string.IsNullOrEmpty(specs) ? "Cấu hình đang cập nhật" : specs)</p>
 <p class="product-price">@Model.Price.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) <span>₫</span></p>
 <div class="product-bottom"><span class="stock-state @(Model.StockQuantity > 0 ? "" : "out-of-stock")"><i></i>@(Model.StockQuantity > 0 ? "Còn hàng" : "Hết hàng")</span>
-<button class="detail-placeholder" type="button" disabled title="Trang chi tiết chưa khả dụng" aria-label="Chi tiết sản phẩm — chưa khả dụng">Chi tiết <span aria-hidden="true">↗</span></button></div></div></article>
+<a class="detail-link" href="/products/@Model.ProductId" aria-label="Chi tiết @Model.ProductName">Chi tiết <span aria-hidden="true">↗</span></a></div></div></article>
 

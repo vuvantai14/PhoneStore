@@ -257,6 +257,7 @@ Completed:
 - S7 Solution Initialization
 - S8 Data Foundation
 - S9 Customer Web UI Foundation + Home + Products
+- S10 Product Detail + Product Browsing Polish
 
 S8 completed:
 - Entities created.
@@ -277,3 +278,14 @@ S9 completed:
 - Build verified: 0 warnings, 0 errors; Home and /products return HTTP 200.
 - No fake business data or schema/migration changes.
 - Catalog is empty: validation/query execution verified; populated-result behavior remains unverified.
+
+S10 completed:
+- Product Detail at `/products/{id}` through existing read service; active products only.
+- Product image gallery with keyboard-accessible thumbnail buttons and local fallback.
+- Specifications omit empty values; description is rendered as safely encoded text.
+- Related products: up to 4 active products in the same brand/category, excluding current product.
+- Shared Product Card → Detail navigation.
+- Responsive Product Detail; clean 404 verified at 1440/820/390/320 px.
+- Build verified: 0 warnings, 0 errors; S9 browser regression checks passed.
+- No fake business data or migration/schema changes.
+- Product Detail runtime test pending real product data (including gallery and inactive-product verification).

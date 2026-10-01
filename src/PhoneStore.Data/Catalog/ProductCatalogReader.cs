@@ -7,6 +7,29 @@ namespace PhoneStore.Data.Catalog;
 
 public sealed class ProductCatalogReader(PhoneStoreDbContext db)
 {
+    public Task<ProductDetail?> GetProductDetailAsync(int id, CancellationToken cancellationToken = default) =>
+        db.Products.AsNoTracking().Where(p => p.ProductId == id && p.IsActive)
+            .Select(p => new ProductDetail
+            {
+                ProductId = p.ProductId, ProductName = p.ProductName,
+                BrandId = p.BrandId, BrandName = p.Brand.BrandName,
+                CategoryId = p.CategoryId, CategoryName = p.Category.CategoryName,
+                Price = p.Price, StockQuantity = p.StockQuantity,
+                RAM = p.RAM, Storage = p.Storage, Chip = p.Chip, Screen = p.Screen,
+                Camera = p.Camera, Battery = p.Battery, OperatingSystem = p.OperatingSystem,
+                Description = p.Description,
+                Images = p.ProductImages.OrderByDescending(i => i.IsPrimary).ThenBy(i => i.DisplayOrder)
+                    .ThenBy(i => i.ImageId).Select(i => i.ImageUrl).ToList()
+            }).SingleOrDefaultAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<ProductCard>> GetRelatedAsync(
+        ProductDetail product, CancellationToken cancellationToken = default) =>
+        await Cards(db.Products.AsNoTracking()
+            .Where(p => p.IsActive && p.ProductId != product.ProductId
+                && (p.CategoryId == product.CategoryId || p.BrandId == product.BrandId))
+            .OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.ProductId).Take(4))
+            .ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyList<ProductCard>> GetProductsAsync(
         CatalogQuery filter, CancellationToken cancellationToken = default)
     {

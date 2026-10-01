@@ -9,6 +9,19 @@ namespace PhoneStore.Web.Controllers;
 [Route("products")]
 public class ProductsController(IProductService products) : Controller
 {
+    [HttpGet("{id}")]
+    public async Task<IActionResult> Detail(string id, CancellationToken cancellationToken)
+    {
+        if (!int.TryParse(id, out var productId) || productId <= 0)
+            return new ViewResult { ViewName = "NotFound", StatusCode = StatusCodes.Status404NotFound };
+
+        var product = await products.GetProductDetailAsync(productId, cancellationToken);
+        if (product is null)
+            return new ViewResult { ViewName = "NotFound", StatusCode = StatusCodes.Status404NotFound };
+
+        var related = await products.GetRelatedAsync(product, cancellationToken);
+        return View(new ProductDetailViewModel { Product = product, RelatedProducts = related });
+    }
     [HttpGet("")]
     public async Task<IActionResult> Index([FromQuery] ProductFilterViewModel filter, CancellationToken cancellationToken)
     {
