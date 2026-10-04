@@ -264,6 +264,7 @@ Completed:
 - S13 WinForms Admin Login + Admin UI Foundation
 - S14 Admin Brands + Categories + Products + Product Images
 - S15 Admin Customer + Order Management
+- S16 Admin Dashboard + Reports / Statistics
 
 S8 completed:
 - Entities created.
@@ -370,7 +371,16 @@ S15 completed:
 - Home, Products, Product Detail 404, Cart and Login regression routes passed; S14 catalog data remains unchanged.
 - Database currently has no Customer or Order rows, so real checkout, populated Admin order detail/status flow and cancellation stock restoration remain runtime pending real Customer order data; no fake order was created.
 - Restore/build verified: 0 warnings, 0 errors; no schema change, migration or fake seed added.
-- Dashboard statistics and reports remain placeholders; S16 not started.
+
+S16 completed:
+- Admin Dashboard uses real PhoneStoreDB statistics for product, customer, order and completed revenue summaries.
+- Order status statistics, recent orders, best-selling products and active low-stock products are displayed with clear empty states.
+- Reports screen supports inclusive date-range reporting for completed revenue, orders, product sales and current inventory.
+- Best-seller calculations use historical OrderDetail.UnitPrice and consistently include Confirmed, Shipping and Completed orders.
+- Reporting queries are read-only, asynchronous and database-aggregated; no fake statistics were added.
+- Built-in WinForms rendering provides useful status and revenue charts without an additional package.
+- Real Admin UI and SQL comparison passed with current data; Customer Web and S14/S15 navigation regression checks passed.
+- Build verified: 0 warnings, 0 errors; no database schema change or migration added.
 
 Demo catalog:
 - 40 realistic phone catalog products imported for project demonstration and testing across 8 required brands.

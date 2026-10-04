@@ -10,6 +10,8 @@ using PhoneStore.Models.Entities;
 using PhoneStore.Admin.Management;
 using PhoneStore.Business.Management;
 using PhoneStore.Data.Management;
+using PhoneStore.Business.Reporting;
+using PhoneStore.Data.Reporting;
 
 namespace PhoneStore.Admin;
 
@@ -47,6 +49,8 @@ internal static class AdminServices
         services.AddScoped<ICustomerManagementService, CustomerManagementService>();
         services.AddScoped<OrderManagementStore>();
         services.AddScoped<IOrderManagementService, OrderManagementService>();
+        services.AddScoped<ReportingStore>();
+        services.AddScoped<IReportingService, ReportingService>();
         services.AddSingleton<CatalogManagementGateway>();
         services.AddTransient<LoginForm>();
         services.AddTransient<MainForm>();

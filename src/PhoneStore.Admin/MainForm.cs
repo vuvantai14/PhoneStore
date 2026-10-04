@@ -132,7 +132,7 @@ public sealed class MainForm : Form
         shell.Controls.Add(sidebar, 0, 0);
         shell.Controls.Add(workspace, 1, 0);
         Controls.Add(shell);
-        ShowControl(new DashboardControl(), "Tổng quan");
+        ShowControl(new DashboardControl(_catalog), "Tổng quan");
         ResumeLayout(true);
     }
 
@@ -275,12 +275,13 @@ public sealed class MainForm : Form
     {
         UserControl control = title switch
         {
-            "Tổng quan" => new DashboardControl(),
+            "Tổng quan" => new DashboardControl(_catalog),
             "Thương hiệu" => new LookupManagementControl(LookupKind.Brand, _catalog),
             "Danh mục" => new LookupManagementControl(LookupKind.Category, _catalog),
             "Sản phẩm" => new ProductsManagementControl(_catalog),
             "Khách hàng" => new CustomersManagementControl(_catalog),
             "Đơn hàng" => new OrdersManagementControl(_catalog),
+            "Báo cáo" => new ReportsControl(_catalog),
             _ => new ModulePlaceholderControl(title)
         };
         ShowControl(control, title);

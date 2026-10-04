@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using PhoneStore.Admin.Authentication;
 using PhoneStore.Business.Management;
+using PhoneStore.Business.Reporting;
 
 namespace PhoneStore.Admin.Management;
 
@@ -32,6 +33,13 @@ public sealed class CatalogManagementGateway(IServiceScopeFactory scopeFactory, 
         RequireAdmin();
         using var scope = scopeFactory.CreateScope();
         return await action(scope.ServiceProvider.GetRequiredService<IOrderManagementService>());
+    }
+
+    public async Task<T> WithReportingAsync<T>(Func<IReportingService, Task<T>> action)
+    {
+        RequireAdmin();
+        using var scope = scopeFactory.CreateScope();
+        return await action(scope.ServiceProvider.GetRequiredService<IReportingService>());
     }
 
     private void RequireAdmin()
