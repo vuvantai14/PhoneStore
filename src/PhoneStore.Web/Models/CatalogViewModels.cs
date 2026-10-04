@@ -5,6 +5,7 @@ namespace PhoneStore.Web.Models;
 public sealed class HomeViewModel
 {
     public IReadOnlyList<ProductCard> Products { get; init; } = [];
+    public IReadOnlyList<ProductCard> BestSellers { get; init; } = [];
     public IReadOnlyList<CatalogOption> Brands { get; init; } = [];
     public IReadOnlyList<CatalogOption> Categories { get; init; } = [];
 }

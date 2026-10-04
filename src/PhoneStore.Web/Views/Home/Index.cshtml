@@ -1,29 +1,87 @@
 @model HomeViewModel
-@{ ViewData["Title"] = "Trang chủ"; }
-<section class="hero"><div class="container hero-grid">
-<div class="hero-copy"><span class="eyebrow"><span class="small-dot"></span> KHÁM PHÁ CÙNG PHONESTORE</span>
-<h1>Công nghệ mới.<br /><span>Lựa chọn của bạn.</span></h1>
-<p>Tìm chiếc điện thoại phù hợp với nhịp sống của bạn. Khám phá cấu hình và lựa chọn theo cách riêng.</p>
-<a class="button button-primary" href="/products">Khám phá sản phẩm <span aria-hidden="true">↗</span></a>
-<div class="hero-note"><span aria-hidden="true">◈</span> Tìm theo thương hiệu, cấu hình và mức giá</div></div>
-<div class="hero-art" aria-hidden="true"><div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div><span class="art-label">DESIGNED FOR YOUR EVERYDAY</span>
-<div class="phone phone-back"><div class="camera-block"><i></i><i></i><i></i><b></b></div><span class="phone-mark">p.</span></div>
-<div class="phone phone-front"><div class="phone-screen"><span class="phone-island"></span><div class="screen-curve"></div><div class="screen-curve second"></div><span class="screen-caption">Make it<br />yours.</span><span class="screen-bottom"></span></div></div>
-<div class="art-tag"><span class="small-dot"></span> Kết nối. Khám phá. Trải nghiệm.</div></div>
-</div></section>
-<div class="container">
-@if (Model.Brands.Count > 0) {
-<section class="section brand-section" aria-labelledby="brands-title"><div class="section-heading"><div><span class="eyebrow">THƯƠNG HIỆU</span><h2 id="brands-title">Bắt đầu từ thương hiệu bạn yêu thích</h2></div></div>
-<div class="brand-list">@foreach (var brand in Model.Brands) { <a href="/products?brandId=@brand.Id">@brand.Name<span aria-hidden="true">↗</span></a> }</div></section>
+@{
+    ViewData["Title"] = "Trang chủ";
+    var heroProduct = Model.Products.FirstOrDefault();
+    var heroImage = heroProduct is null ? null : ProductImageUrl.LocalOrPlaceholder(heroProduct.ImageUrl);
+    var brandIcons = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Apple"] = "apple.jpg",
+        ["Google"] = "google.jpg",
+        ["OnePlus"] = "oneplus.jpg",
+        ["OPPO"] = "oppo.jpg",
+        ["realme"] = "realme.jpg",
+        ["Samsung"] = "samsung.jpg",
+        ["vivo"] = "vivo.jpg",
+        ["Xiaomi"] = "xiaomi.jpg"
+    };
 }
-<section class="section" aria-labelledby="newest-title">
-<div class="section-heading"><div><span class="eyebrow">KHÁM PHÁ DANH MỤC</span><h2 id="newest-title">Điện thoại mới nhất</h2><p>Những sản phẩm mới được cập nhật tại PhoneStore.</p></div><a class="text-link" href="/products">Xem tất cả <span aria-hidden="true">→</span></a></div>
-@if (Model.Products.Count == 0) { <partial name="_EmptyCatalog" model='@("Chưa có sản phẩm.")' /> }
-else { <div class="product-grid">@foreach (var product in Model.Products) { <partial name="_ProductCard" model="product" /> }</div> }
+
+<section class="home-hero">
+    <div class="container home-hero-inner">
+        <div class="home-hero-copy">
+            <span class="home-kicker">PhoneStore</span>
+            <h1>Điện thoại chính hãng<br /><span>Công nghệ trong tầm tay</span></h1>
+            <p>Khám phá những mẫu điện thoại phù hợp với nhu cầu của bạn.</p>
+            <a class="button home-hero-button" href="/products">Khám phá ngay <span aria-hidden="true">→</span></a>
+        </div>
+        <div class="home-hero-visual" aria-hidden="true">
+            <span class="hero-glow hero-glow-one"></span><span class="hero-glow hero-glow-two"></span>
+            @if (heroImage is not null) { <img src="@heroImage" alt="" width="440" height="440" /> }
+            else { <div class="hero-phone-placeholder"><span></span></div> }
+        </div>
+    </div>
 </section>
-@if (Model.Categories.Count > 0) {
-<section class="section" aria-labelledby="categories-title"><div class="section-heading"><div><span class="eyebrow">THEO NHU CẦU CỦA BẠN</span><h2 id="categories-title">Khám phá danh mục</h2></div></div>
-<div class="category-list">@foreach (var category in Model.Categories) { <a href="/products?categoryId=@category.Id"><span>@category.Name</span><span aria-hidden="true">↗</span></a> }</div></section>
-}
-<section class="discovery-cta"><div><span class="eyebrow">MỘT LỰA CHỌN, NHIỀU KHẢ NĂNG</span><h2>Chiếc điện thoại tiếp theo của bạn?</h2><p>Bắt đầu với những điều bạn cần. Bộ lọc sẽ giúp bạn thu hẹp lựa chọn.</p></div><a class="button button-primary" href="/products">Tìm điện thoại <span aria-hidden="true">→</span></a></section>
+
+<div class="container home-content">
+    @if (Model.Brands.Count > 0)
+    {
+        <section class="home-section" id="brands" aria-labelledby="brands-title">
+            <div class="home-section-heading home-section-heading-centered"><div><span class="home-kicker"></span><h2 id="brands-title">Thương hiệu bạn yêu thích</h2></div><a class="home-section-link" href="/products">Xem tất cả <span aria-hidden="true">→</span></a></div>
+            <div class="home-brand-grid">
+                @foreach (var brand in Model.Brands)
+                {
+                    <a href="/products?brandId=@brand.Id" aria-label="Xem sản phẩm @brand.Name" title="@brand.Name">
+                        <span class="brand-logo-wrap">
+                            @if (brandIcons.TryGetValue(brand.Name, out var iconFile))
+                            {
+                                <img class="brand-logo" src="/uploads/products/@iconFile" alt="@brand.Name" title="@brand.Name" onerror="this.hidden=true;this.nextElementSibling.hidden=false" />
+                                <span class="brand-logo-fallback" hidden aria-hidden="true">@brand.Name[..1]</span>
+                            }
+                            else
+                            {
+                                <span class="brand-logo-fallback" aria-hidden="true">@brand.Name[..1]</span>
+                            }
+                        </span>
+                    </a>
+                }
+            </div>
+        </section>
+    }
+
+    <section class="home-section" aria-labelledby="newest-title">
+        <div class="home-section-heading home-section-heading-centered"><div><span class="home-kicker"></span><h2 id="newest-title">Điện thoại mới nhất</h2><p></p></div><a class="home-section-link" href="/products">Xem tất cả <span aria-hidden="true">→</span></a></div>
+        @if (Model.Products.Count == 0) { <partial name="_EmptyCatalog" model='@("Chưa có sản phẩm.")' /> }
+        else { <div class="home-product-grid">@foreach (var product in Model.Products) { <partial name="_ProductCard" model="product" /> }</div> }
+    </section>
+
+    <section class="home-section" aria-labelledby="best-sellers-title">
+        <div class="home-section-heading home-section-heading-centered">
+            <div><span class="home-kicker">Sản phẩm nổi bật</span><h2 id="best-sellers-title">Sản phẩm bán chạy</h2><p></p></div>
+        </div>
+        @if (Model.BestSellers.Count == 0)
+        {
+            <div class="home-best-sellers-empty">Chưa có dữ liệu sản phẩm bán chạy.</div>
+        }
+        else
+        {
+            <div class="home-product-grid">@foreach (var product in Model.BestSellers) { <partial name="_ProductCard" model="product" /> }</div>
+        }
+    </section>
+
+    <section class="home-services" aria-label="Dịch vụ PhoneStore">
+        <article><span class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h11v11H3zM14 10h4l3 3v4h-7z"/><circle cx="7" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></svg></span><div><h2>Giao hàng toàn quốc</h2><p>Nhận hàng thuận tiện tại địa chỉ của bạn.</p></div></article>
+        <article><span class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span><div><h2>Sản phẩm chính hãng</h2><p>Thông tin sản phẩm rõ ràng, dễ lựa chọn.</p></div></article>
+        <article><span class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h12a5 5 0 0 1 0 10H8"/><path d="m8 3-4 4 4 4"/></svg></span><div><h2>Đổi trả dễ dàng</h2><p>Quy trình hỗ trợ rõ ràng và thuận tiện.</p></div></article>
+        <article><span class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 13v-2a8 8 0 0 1 16 0v2"/><path d="M4 13h3v6H5a1 1 0 0 1-1-1zM20 13h-3v6h2a1 1 0 0 0 1-1z"/><path d="M17 19c0 1-1 2-3 2"/></svg></span><div><h2>Hỗ trợ khách hàng</h2><p>Đồng hành khi bạn cần tìm hiểu sản phẩm.</p></div></article>
+    </section>
 </div>

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PhoneStore.Data.Context;
 using PhoneStore.Models.Entities;
 using PhoneStore.Models.Catalog;
+using PhoneStore.Data.Reporting;
 
 namespace PhoneStore.Data.Catalog;
 
@@ -61,6 +62,61 @@ public sealed class ProductCatalogReader(PhoneStoreDbContext db)
         await Cards(db.Products.AsNoTracking().Where(p => p.IsActive)
             .OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.ProductId).Take(count))
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<ProductCard>> GetDiversifiedNewestAsync(
+        int count, CancellationToken cancellationToken = default)
+    {
+        if (count <= 0) return [];
+
+        var candidateCount = Math.Min(count * 8, 64);
+        var candidates = await Cards(db.Products.AsNoTracking().Where(p => p.IsActive)
+            .OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.ProductId)
+            .Take(candidateCount)).ToListAsync(cancellationToken);
+
+        var brandQueues = candidates.GroupBy(product => product.BrandName)
+            .Select(group => new Queue<ProductCard>(group)).ToList();
+        var diversified = new List<ProductCard>(Math.Min(count, candidates.Count));
+        while (diversified.Count < count && brandQueues.Count > 0)
+        {
+            foreach (var queue in brandQueues.ToArray())
+            {
+                diversified.Add(queue.Dequeue());
+                if (queue.Count == 0) brandQueues.Remove(queue);
+                if (diversified.Count == count) break;
+            }
+        }
+        return diversified;
+    }
+
+    public async Task<IReadOnlyList<ProductCard>> GetBestSellersAsync(
+        int count, CancellationToken cancellationToken = default)
+    {
+        if (count <= 0) return [];
+
+        var rankedIds = await db.OrderDetails.AsNoTracking()
+            .Where(detail => detail.Product.IsActive
+                && SalesOrderStatuses.Values.Contains(detail.Order.Status))
+            .GroupBy(detail => new { detail.ProductId, detail.Product.ProductName })
+            .Select(group => new
+            {
+                group.Key.ProductId,
+                group.Key.ProductName,
+                QuantitySold = group.Sum(detail => detail.Quantity)
+            })
+            .OrderByDescending(item => item.QuantitySold)
+            .ThenBy(item => item.ProductName)
+            .ThenBy(item => item.ProductId)
+            .Take(count)
+            .Select(item => item.ProductId)
+            .ToListAsync(cancellationToken);
+
+        if (rankedIds.Count == 0) return [];
+        var cards = await Cards(db.Products.AsNoTracking()
+            .Where(product => rankedIds.Contains(product.ProductId)))
+            .ToListAsync(cancellationToken);
+        var byId = cards.ToDictionary(product => product.ProductId);
+        return rankedIds.Where(byId.ContainsKey).Select(id => byId[id]).ToArray();
+    }
 
     public async Task<IReadOnlyList<CatalogOption>> GetBrandsAsync(CancellationToken cancellationToken = default) =>
         await db.Brands.AsNoTracking().Where(b => b.IsActive).OrderBy(b => b.BrandName)

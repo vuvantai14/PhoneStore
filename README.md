@@ -34,6 +34,10 @@
 - Quản lý đơn hàng
 - Cập nhật trạng thái đơn hàng
 - Báo cáo và thống kê
+## Tài khoản Admin mẫu
+
+- Email: admin@phonestore.vn
+- Mật khẩu: Admin@123
 
 ## Database
 

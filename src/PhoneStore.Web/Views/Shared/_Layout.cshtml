@@ -12,8 +12,8 @@
 <body>
 <a class="skip-link" href="#main-content">Đến nội dung chính</a>
 <header class="site-header"><div class="container header-inner">
-<a class="wordmark" href="/" aria-label="PhoneStore — Trang chủ"><span class="brand-symbol" aria-hidden="true">p.</span>Phone<span>Store</span></a>
-<nav class="main-nav" aria-label="Điều hướng chính"><a href="/" aria-current="@(current == "Home" ? "page" : null)">Trang chủ</a><a href="/products" aria-current="@(current == "Products" ? "page" : null)">Sản phẩm</a></nav>
+<a class="wordmark" href="/" aria-label="PhoneStore — Trang chủ"><span class="brand-symbol" aria-hidden="true">P</span>Phone<span>Store</span></a>
+<nav class="main-nav" aria-label="Điều hướng chính"><a href="/" aria-current="@(current == "Home" ? "page" : null)">Trang chủ</a><a href="/products" aria-current="@(current == "Products" ? "page" : null)">Sản phẩm</a><a href="/#brands">Thương hiệu</a><a href="/#categories">Danh mục</a></nav>
 <form class="header-search" action="/products" method="get" role="search">
 <label class="sr-only" for="header-search">Tìm điện thoại</label>
 <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
@@ -40,10 +40,10 @@ else
 </div></header>
 <main id="main-content" tabindex="-1">@RenderBody()</main>
 <footer class="site-footer"><div class="container footer-main">
-<div class="footer-about"><a class="wordmark" href="/">Phone<span>Store</span></a><p>Không gian khám phá điện thoại.<br />Tìm lựa chọn phù hợp với nhu cầu của bạn.</p></div>
-<nav aria-label="Điều hướng cuối trang"><h2>Khám phá</h2><a href="/">Trang chủ</a><a href="/products">Tất cả sản phẩm</a></nav>
-<div><h2>Thông tin sản phẩm</h2><p>Xem cấu hình, giá và tình trạng còn hàng trong danh sách sản phẩm.</p></div>
-</div><div class="container footer-bottom"><span>© @DateTime.Now.Year PhoneStore</span><span>Công nghệ cho lựa chọn của bạn.</span></div></footer>
+<div class="footer-about"><a class="wordmark" href="/"><span class="brand-symbol" aria-hidden="true">P</span>Phone<span>Store</span></a><p>Không gian mua sắm điện thoại chính hãng với thông tin sản phẩm rõ ràng và trải nghiệm thuận tiện.</p></div>
+<nav aria-label="Liên kết nhanh"><h2>Liên kết nhanh</h2><a href="/">Trang chủ</a><a href="/products">Sản phẩm</a><a href="/#brands">Thương hiệu</a><a href="/#categories">Danh mục</a></nav>
+<nav aria-label="Hỗ trợ khách hàng"><h2>Hỗ trợ khách hàng</h2><a href="/cart">Giỏ hàng</a>@if (User.Identity?.IsAuthenticated == true) { <a href="/orders">Đơn hàng của tôi</a> } else { <a href="/account/login">Đăng nhập</a> }<a href="/Home/Privacy">Chính sách bảo mật</a></nav>
+</div><div class="container footer-bottom"><span>© @DateTime.Now.Year PhoneStore</span><span>Điện thoại chính hãng · Công nghệ trong tầm tay</span></div></footer>
 <script src="~/js/site.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts", required: false)
 </body></html>

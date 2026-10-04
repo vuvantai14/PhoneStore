@@ -17,6 +17,12 @@ public sealed class ProductService(ProductCatalogReader reader) : IProductServic
     public Task<IReadOnlyList<ProductCard>> GetNewestAsync(int count, CancellationToken cancellationToken = default) =>
         reader.GetNewestAsync(count, cancellationToken);
 
+    public Task<IReadOnlyList<ProductCard>> GetDiversifiedNewestAsync(int count, CancellationToken cancellationToken = default) =>
+        reader.GetDiversifiedNewestAsync(count, cancellationToken);
+
+    public Task<IReadOnlyList<ProductCard>> GetBestSellersAsync(int count, CancellationToken cancellationToken = default) =>
+        reader.GetBestSellersAsync(count, cancellationToken);
+
     public Task<IReadOnlyList<CatalogOption>> GetBrandsAsync(CancellationToken cancellationToken = default) =>
         reader.GetBrandsAsync(cancellationToken);
 

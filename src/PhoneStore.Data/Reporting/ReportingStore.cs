@@ -7,9 +7,6 @@ namespace PhoneStore.Data.Reporting;
 
 public sealed class ReportingStore(PhoneStoreDbContext db)
 {
-    private static readonly OrderStatus[] SalesStatuses =
-        [OrderStatus.Confirmed, OrderStatus.Shipping, OrderStatus.Completed];
-
     public async Task<DashboardSnapshot> DashboardAsync(int lowStockThreshold, CancellationToken ct)
     {
         var activeProducts = await db.Products.AsNoTracking().CountAsync(product => product.IsActive, ct);
@@ -27,7 +24,7 @@ public sealed class ReportingStore(PhoneStoreDbContext db)
             .Select(order => new RecentOrderMetric(order.OrderCode, order.ReceiverName, order.TotalAmount,
                 order.Status, order.OrderDate)).ToListAsync(ct);
         var best = await BestSellers(db.OrderDetails.AsNoTracking()
-            .Where(detail => SalesStatuses.Contains(detail.Order.Status)), 5, ct);
+            .Where(detail => SalesOrderStatuses.Values.Contains(detail.Order.Status)), 5, ct);
         var low = await LowStock(lowStockThreshold, 8, ct);
         return new DashboardSnapshot
         {
@@ -51,7 +48,7 @@ public sealed class ReportingStore(PhoneStoreDbContext db)
         var completedRevenue = await completed.SumAsync(order => (decimal?)order.TotalAmount, ct) ?? 0m;
         var best = await BestSellers(db.OrderDetails.AsNoTracking().Where(detail =>
             detail.Order.OrderDate >= startUtc && detail.Order.OrderDate < endExclusiveUtc
-            && SalesStatuses.Contains(detail.Order.Status)), 10, ct);
+            && SalesOrderStatuses.Values.Contains(detail.Order.Status)), 10, ct);
         var activeProducts = await db.Products.AsNoTracking().CountAsync(product => product.IsActive, ct);
         var totalStock = await db.Products.AsNoTracking().Where(product => product.IsActive)
             .SumAsync(product => (long)product.StockQuantity, ct);

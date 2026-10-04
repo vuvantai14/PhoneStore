@@ -18,10 +18,15 @@ public class HomeController : Controller
 
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var products = await _products.GetNewestAsync(8, cancellationToken);
+        var products = await _products.GetDiversifiedNewestAsync(6, cancellationToken);
+        var bestSellers = await _products.GetBestSellersAsync(6, cancellationToken);
         var brands = await _products.GetBrandsAsync(cancellationToken);
-        var categories = await _products.GetCategoriesAsync(cancellationToken);
-        return View(new HomeViewModel { Products = products, Brands = brands, Categories = categories });
+        return View(new HomeViewModel
+        {
+            Products = products,
+            BestSellers = bestSellers,
+            Brands = brands
+        });
     }
 
     public IActionResult Privacy()
