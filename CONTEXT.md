@@ -265,6 +265,7 @@ Completed:
 - S14 Admin Brands + Categories + Products + Product Images
 - S15 Admin Customer + Order Management
 - S16 Admin Dashboard + Reports / Statistics
+- S17 Full System Testing / Regression Test
 
 S8 completed:
 - Entities created.
@@ -381,6 +382,16 @@ S16 completed:
 - Built-in WinForms rendering provides useful status and revenue charts without an additional package.
 - Real Admin UI and SQL comparison passed with current data; Customer Web and S14/S15 navigation regression checks passed.
 - Build verified: 0 warnings, 0 errors; no database schema change or migration added.
+
+S17 completed:
+- Full-system regression covered Customer Web, Admin, Business, Data, SQL Server and cross-application integration.
+- Added focused xUnit integration tests for authentication, checkout, ownership, order transitions and cancellation stock restoration: 26 passed, 0 failed, 0 skipped.
+- Customer Web runtime and responsive smoke tests passed at 1440, 768 and 375 px; protected routes, product 404, images and overflow were verified.
+- Existing real order was completed through the normal Admin business workflow; Customer order status, Dashboard/Reports revenue and unchanged stock were verified.
+- Admin authentication, catalog controls, Dashboard and Reports production harnesses passed; destructive catalog tests remained isolated from PhoneStoreDB.
+- Testing evidence is documented in `docs/S17_TESTING.md`, including explicit NOT TESTED manual visual cases.
+- Final database retains 41 products, 1 Customer, 1 Completed order and the demonstration catalog; no fake business data was added.
+- Restore/build/test verified with 0 warnings, 0 errors and 0 failed tests; database schema and migrations unchanged.
 
 Demo catalog:
 - 40 realistic phone catalog products imported for project demonstration and testing across 8 required brands.

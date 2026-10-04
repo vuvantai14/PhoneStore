@@ -2,24 +2,87 @@
 
 Đề tài: Xây dựng hệ thống quản lý và bán điện thoại di động.
 
-Kiến trúc:
+## Công nghệ
 
-- PhoneStore.Web: ASP.NET Core MVC dành cho khách hàng.
-- PhoneStore.Admin: Windows Forms dành cho quản trị viên.
-- PhoneStore.Business: xử lý nghiệp vụ dùng chung.
-- PhoneStore.Data: tầng truy cập dữ liệu.
-- PhoneStore.Models: model/entity dùng chung.
-- Database: Microsoft SQL Server (dự kiến cho giai đoạn sau).
+- C# / .NET 8
+- ASP.NET Core MVC
+- Windows Forms
+- Entity Framework Core
+- SQL Server
+- HTML/CSS/Bootstrap/JavaScript
 
-Đã khởi tạo Solution (S7) và nền tảng dữ liệu EF Core (S8); chưa triển khai chức năng nghiệp vụ.
-Đọc `CONTEXT.md` trước khi làm việc. Migration đã tạo; cấu hình development dùng `taiiiii\SERVER`
-với Windows Authentication. `PhoneStoreDB` đã được tạo và kiểm tra: đủ bảng theo S8,
-chỉ seed roles Admin/Customer, các bảng nghiệp vụ khác chưa có dữ liệu.
+## Chức năng
 
-Sử dụng .NET 8, SDK 8.0.319 (cấu hình trong `global.json`). Windows Forms cần Windows.
+### Customer Web
 
-Build: `dotnet build PhoneStore.sln`
+- Xem, tìm kiếm, lọc sản phẩm
+- Xem chi tiết sản phẩm
+- Đăng ký / đăng nhập / đăng xuất
+- Giỏ hàng
+- Checkout
+- Lịch sử và chi tiết đơn hàng
+- Theo dõi trạng thái đơn hàng
 
-Chạy Web: `dotnet run --project src/PhoneStore.Web/PhoneStore.Web.csproj`
+### Admin WinForms
 
-Chạy Admin trên Windows: `dotnet run --project src/PhoneStore.Admin/PhoneStore.Admin.csproj`
+- Đăng nhập Admin
+- Dashboard
+- Quản lý thương hiệu
+- Quản lý danh mục
+- Quản lý sản phẩm và hình ảnh
+- Quản lý khách hàng
+- Quản lý đơn hàng
+- Cập nhật trạng thái đơn hàng
+- Báo cáo và thống kê
+
+## Database
+
+Database: `PhoneStoreDB`
+
+Tables:
+
+- Roles
+- Users
+- Brands
+- Categories
+- Products
+- ProductImages
+- Orders
+- OrderDetails
+
+
+## Cấu trúc
+
+- PhoneStore.Models
+- PhoneStore.Data
+- PhoneStore.Business
+- PhoneStore.Web
+- PhoneStore.Admin
+- PhoneStore.Tests
+
+## Cách chạy
+
+Build:
+
+```bash
+dotnet build PhoneStore.sln
+```
+
+Customer Web:
+
+```bash
+dotnet run --project src/PhoneStore.Web/PhoneStore.Web.csproj
+```
+
+Admin:
+
+```bash
+dotnet run --project src/PhoneStore.Admin/PhoneStore.Admin.csproj
+```
+
+Test:
+
+```bash
+dotnet test PhoneStore.sln
+```
+
