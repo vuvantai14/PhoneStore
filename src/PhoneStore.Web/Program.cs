@@ -8,11 +8,32 @@ using PhoneStore.Business.Authentication;
 using PhoneStore.Data.Authentication;
 using PhoneStore.Models.Entities;
 using PhoneStore.Web.Authentication;
+using PhoneStore.Web.Purchasing;
+using PhoneStore.Business.Purchasing;
+using PhoneStore.Data.Purchasing;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromHours(2);
+    options.Cookie.Name = "PhoneStore.Session";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+});
+builder.Services.AddScoped<SessionCart>();
+builder.Services.AddScoped<CartPresenter>();
+builder.Services.AddSingleton<CheckoutSubmissionGuard>();
+builder.Services.AddScoped<PurchaseStore>();
+builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ProductCatalogReader>();
 builder.Services.AddScoped<AuthUserStore>();
@@ -52,6 +73,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -1,0 +1,13 @@
+@model CartViewModel
+@using System.Globalization
+<aside class="order-summary" aria-labelledby="summary-title">
+    <span class="eyebrow">LỰA CHỌN CỦA BẠN</span><h2 id="summary-title">Tóm tắt đơn hàng</h2>
+    <ul class="summary-items">
+        @foreach (var line in Model.Items)
+        {
+            <li><div><strong>@(line.Product?.ProductName ?? "Sản phẩm không còn khả dụng")</strong><span>Số lượng: @line.Item.Quantity</span></div><b>@line.LineTotal.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫</b></li>
+        }
+    </ul>
+    <div class="summary-total"><span>Tổng cộng</span><strong>@Model.TotalAmount.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫</strong></div>
+    <p class="field-hint">Giá và tồn kho được kiểm tra lại khi xác nhận đặt hàng.</p>
+</aside>

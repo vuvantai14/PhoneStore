@@ -1,0 +1,16 @@
+@model PhoneStore.Models.Purchasing.OrderReceipt
+@using System.Globalization
+@{
+    ViewData["Title"] = "Đặt hàng thành công";
+    var orderDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(Model.OrderDate, DateTimeKind.Utc),
+        TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
+}
+<div class="container purchasing-page">
+    <section class="order-success-heading"><span class="success-symbol" aria-hidden="true">✓</span><span class="eyebrow">ĐẶT HÀNG THÀNH CÔNG</span><h1>Cảm ơn bạn đã đặt hàng.</h1><p>Đơn hàng <strong>@Model.OrderCode</strong> đã được ghi nhận.</p></section>
+    <div class="purchase-layout"><section class="shipping-panel"><h2>Thông tin đơn hàng</h2>
+        <dl class="receipt-info"><div><dt>Mã đơn hàng</dt><dd>@Model.OrderCode</dd></div><div><dt>Ngày đặt</dt><dd>@orderDate.ToString("dd/MM/yyyy HH:mm")</dd></div><div><dt>Người nhận</dt><dd>@Model.ReceiverName</dd></div><div><dt>Số điện thoại</dt><dd>@Model.ReceiverPhone</dd></div><div><dt>Địa chỉ giao hàng</dt><dd>@Model.ShippingAddress</dd></div></dl>
+        <a class="button button-primary" href="/products">Tiếp tục mua sắm <span aria-hidden="true">→</span></a>
+    </section><aside class="order-summary"><h2>Sản phẩm đã đặt</h2><ul class="summary-items">
+        @foreach (var item in Model.Items) { <li><div><strong>@item.ProductName</strong><span>Số lượng: @item.Quantity</span></div><b>@((item.Quantity * item.UnitPrice).ToString("N0", CultureInfo.GetCultureInfo("vi-VN"))) ₫</b></li> }
+    </ul><div class="summary-total"><span>Tổng cộng</span><strong>@Model.TotalAmount.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫</strong></div></aside></div>
+</div>

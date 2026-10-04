@@ -259,6 +259,7 @@ Completed:
 - S9 Customer Web UI Foundation + Home + Products
 - S10 Product Detail + Product Browsing Polish
 - S11 Customer Authentication
+- S12 Cart + Checkout + Order Creation
 
 S8 completed:
 - Entities created.
@@ -300,3 +301,16 @@ S11 completed:
 - Runtime/security checks passed; temporary accounts created through Register and removed afterward.
 - Build verified: 0 warnings, 0 errors; S9/S10 browsing regression checks passed.
 - No migration/schema changes. Product Detail still awaits real product data for populated runtime checks.
+
+S12 completed:
+- Session cart stores ProductId/Quantity; add/update/remove use POST with anti-forgery.
+- Cart indicator reads Session; cart totals use current database prices.
+- Customer-only checkout with safe Login ReturnUrl, shipping prefill and validation.
+- Transactional Order/OrderDetails creation with server-side prices, UnitPrice snapshot and Pending status.
+- Stock revalidated inside a Serializable transaction and reduced only with successful order commit.
+- Cart clears after commit; PRG and a per-submission in-memory guard prevent duplicate submissions on this Web instance.
+- Order Success enforces authenticated order ownership; responsive Cart/Checkout/Success views.
+- Empty-state/security/browser regression checks passed; temporary Register accounts removed.
+- Build verified: 0 warnings, 0 errors; schema unchanged and no migration added.
+- Full purchase-flow runtime test pending real product data (including success refresh and cross-customer order access).
+- Session cart and submission guard currently use in-process memory.
