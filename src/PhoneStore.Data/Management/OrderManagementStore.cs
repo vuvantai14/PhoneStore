@@ -39,9 +39,14 @@ public sealed class OrderManagementStore(PhoneStoreDbContext db)
     public Task<IDbContextTransaction> BeginAsync(CancellationToken ct) =>
         db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
-    public Task<Order?> LockAsync(int id, CancellationToken ct) => db.Orders
-        .FromSqlInterpolated($"SELECT * FROM [Orders] WITH (UPDLOCK, HOLDLOCK) WHERE [OrderId] = {id}")
-        .SingleOrDefaultAsync(ct);
+    public Task<Order?> LockAsync(int id, CancellationToken ct)
+    {
+        if (!db.Database.IsSqlServer())
+            return db.Orders.SingleOrDefaultAsync(order => order.OrderId == id, ct);
+        return db.Orders
+            .FromSqlInterpolated($"SELECT * FROM [Orders] WITH (UPDLOCK, HOLDLOCK) WHERE [OrderId] = {id}")
+            .SingleOrDefaultAsync(ct);
+    }
 
     public Task<List<OrderDetail>> DetailsForCancellationAsync(int orderId, CancellationToken ct) =>
         db.OrderDetails.Include(detail => detail.Product).Where(detail => detail.OrderId == orderId)
