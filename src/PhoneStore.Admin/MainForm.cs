@@ -1,6 +1,8 @@
 using PhoneStore.Admin.Authentication;
 using PhoneStore.Admin.Controls;
 using PhoneStore.Admin.Styling;
+using PhoneStore.Admin.Management;
+using PhoneStore.Models.Management;
 
 namespace PhoneStore.Admin;
 
@@ -11,10 +13,11 @@ public sealed class MainForm : Form
     private readonly Label _pageTitle;
     private readonly Dictionary<string, Button> _navigationButtons = new();
     private string _activeTitle = string.Empty;
+    private readonly CatalogManagementGateway _catalog;
 
     public event EventHandler? LogoutRequested;
 
-    public MainForm(AdminSession session)
+    public MainForm(AdminSession session, CatalogManagementGateway catalog)
     {
         ArgumentNullException.ThrowIfNull(session);
         var identity = session.Current
@@ -25,6 +28,7 @@ public sealed class MainForm : Form
         }
         SuspendLayout();
         _session = session;
+        _catalog = catalog;
         Name = nameof(MainForm);
         Text = "PhoneStore Admin";
         StartPosition = FormStartPosition.CenterScreen;
@@ -269,9 +273,14 @@ public sealed class MainForm : Form
 
     private void Navigate(string title)
     {
-        UserControl control = title == "Tổng quan"
-            ? new DashboardControl()
-            : new ModulePlaceholderControl(title);
+        UserControl control = title switch
+        {
+            "Tổng quan" => new DashboardControl(),
+            "Thương hiệu" => new LookupManagementControl(LookupKind.Brand, _catalog),
+            "Danh mục" => new LookupManagementControl(LookupKind.Category, _catalog),
+            "Sản phẩm" => new ProductsManagementControl(_catalog),
+            _ => new ModulePlaceholderControl(title)
+        };
         ShowControl(control, title);
     }
 }

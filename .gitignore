@@ -15,6 +15,9 @@ obj/
 # Local SDK cache used in restricted environments
 .dotnet-local/
 
+# Product images entered through Admin are runtime data.
+src/PhoneStore.Web/wwwroot/uploads/products/
+
 # Logs and OS files
 *.log
 Thumbs.db

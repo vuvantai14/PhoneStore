@@ -7,6 +7,9 @@ using PhoneStore.Business.Authentication;
 using PhoneStore.Data.Authentication;
 using PhoneStore.Data.Context;
 using PhoneStore.Models.Entities;
+using PhoneStore.Admin.Management;
+using PhoneStore.Business.Management;
+using PhoneStore.Data.Management;
 
 namespace PhoneStore.Admin;
 
@@ -31,6 +34,16 @@ internal static class AdminServices
         services.AddScoped<IAdminAuthService, AdminAuthService>();
         services.AddSingleton<AdminLoginGateway>();
         services.AddSingleton<AdminSession>();
+        var uploadsPath = configuration["ProductImages:UploadsDirectory"];
+        if (string.IsNullOrWhiteSpace(uploadsPath))
+            throw new InvalidOperationException("ProductImages:UploadsDirectory configuration is required.");
+        services.AddSingleton<IProductImageStorage>(new LocalProductImageStorage(
+            Path.GetFullPath(uploadsPath, AppContext.BaseDirectory)));
+        services.AddScoped<LookupManagementStore>();
+        services.AddScoped<ILookupManagementService, LookupManagementService>();
+        services.AddScoped<ProductManagementStore>();
+        services.AddScoped<IProductManagementService, ProductManagementService>();
+        services.AddSingleton<CatalogManagementGateway>();
         services.AddTransient<LoginForm>();
         services.AddTransient<MainForm>();
         return services.BuildServiceProvider(new ServiceProviderOptions

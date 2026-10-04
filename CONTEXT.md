@@ -262,6 +262,7 @@ Completed:
 - S11.5 Customer UI/UX Final Polish
 - S12 Cart + Checkout + Order Creation
 - S13 WinForms Admin Login + Admin UI Foundation
+- S14 Admin Brands + Categories + Products + Product Images
 
 S8 completed:
 - Entities created.
@@ -342,4 +343,17 @@ S13 completed:
 - Real Customer/inactive login runtime checks also await existing accounts; role/inactive rejection verified in isolated service tests.
 - Customer Web preserved; browsing/search/filter/sort, Detail 404, anonymous checkout protection and invalid auth forms regression checks passed.
 - Restore/build verified: 0 warnings, 0 errors; no schema/migration changes or fake data added.
-- S14 not started; no CRUD, statistics, order management or reports implemented.
+
+S14 completed:
+- Brand/Category management: database list/search, Add/Edit dialogs, activate/deactivate, trimmed names and safe unique-constraint validation.
+- Product management: database search and brand/category/status filters, Add/Edit specifications, active/historical lookup handling and business-side validation/timestamps.
+- Product image management: multiple local images, transactional primary-image changes, nonnegative display order and safe association removal.
+- Admin management uses Business → Data → the same PhoneStoreDB as Customer Web; authentication/session and S13 shell preserved.
+- Image storage uses configured `ProductImages:UploadsDirectory`, resolved against Admin AppContext.BaseDirectory; development value `../../../../PhoneStore.Web/wwwroot/uploads/products` targets Web wwwroot.
+- Deployment can override `ProductImages__UploadsDirectory` with an absolute/shared Web uploads directory accessible to Admin; database URLs remain `/uploads/products/<generated-guid>.<jpg|jpeg|png|webp>`.
+- Images validate format/signature and a 10 MB limit. Only unreferenced generated files inside the managed directory are deleted; unsafe cleanup or uncertain commit outcomes retain files and may require manual orphan cleanup.
+- Verification passed: 62 lookup and 69 product service assertions, 46 lookup and 44 product UI assertions at 120 DPI, 17 local storage checks and 13 write-blocked checks against the real SQL instance.
+- Exact Admin startup/configuration/DI and normal `dotnet run` Login window verified without authentication bypass; Customer browsing/search/filter/sort, responsive empty states, Detail 404 and anonymous/auth-form protection regression checks passed.
+- Restore/build verified: 0 warnings, 0 errors; no schema changes, migrations, fake seed or business database writes.
+- Admin/Customer accounts and catalog/order tables remain empty. Full authenticated Admin CRUD and populated Web Product Detail/image integration remain runtime pending real accounts/data; shared-database integration structurally verified.
+- S15 not started; customer/order management, dashboard statistics and reports remain unimplemented.
