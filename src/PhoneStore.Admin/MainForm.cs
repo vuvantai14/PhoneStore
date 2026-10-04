@@ -279,6 +279,8 @@ public sealed class MainForm : Form
             "Thương hiệu" => new LookupManagementControl(LookupKind.Brand, _catalog),
             "Danh mục" => new LookupManagementControl(LookupKind.Category, _catalog),
             "Sản phẩm" => new ProductsManagementControl(_catalog),
+            "Khách hàng" => new CustomersManagementControl(_catalog),
+            "Đơn hàng" => new OrdersManagementControl(_catalog),
             _ => new ModulePlaceholderControl(title)
         };
         ShowControl(control, title);

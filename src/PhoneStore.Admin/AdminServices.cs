@@ -43,6 +43,10 @@ internal static class AdminServices
         services.AddScoped<ILookupManagementService, LookupManagementService>();
         services.AddScoped<ProductManagementStore>();
         services.AddScoped<IProductManagementService, ProductManagementService>();
+        services.AddScoped<CustomerManagementStore>();
+        services.AddScoped<ICustomerManagementService, CustomerManagementService>();
+        services.AddScoped<OrderManagementStore>();
+        services.AddScoped<IOrderManagementService, OrderManagementService>();
         services.AddSingleton<CatalogManagementGateway>();
         services.AddTransient<LoginForm>();
         services.AddTransient<MainForm>();

@@ -37,8 +37,15 @@ public sealed class PurchaseStore(PhoneStoreDbContext db)
             {
                 OrderCode = o.OrderCode, OrderDate = o.OrderDate, TotalAmount = o.TotalAmount,
                 ReceiverName = o.ReceiverName, ReceiverPhone = o.ReceiverPhone, ShippingAddress = o.ShippingAddress,
+                Note = o.Note, Status = o.Status,
                 Items = o.OrderDetails.OrderBy(d => d.OrderDetailId)
                     .Select(d => new PurchasedItem(d.Product.ProductName, d.Quantity, d.UnitPrice)).ToList()
             }).SingleOrDefaultAsync(ct);
+
+    public async Task<IReadOnlyList<CustomerOrderRow>> CustomerOrdersAsync(int userId, CancellationToken ct) =>
+        await db.Orders.AsNoTracking().Where(order => order.UserId == userId)
+            .OrderByDescending(order => order.OrderDate).ThenByDescending(order => order.OrderId)
+            .Select(order => new CustomerOrderRow(order.OrderId, order.OrderCode, order.OrderDate,
+                order.TotalAmount, order.Status, order.ReceiverName)).ToListAsync(ct);
 }
 

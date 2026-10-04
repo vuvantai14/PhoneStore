@@ -1,0 +1,25 @@
+@model IReadOnlyList<PhoneStore.Models.Purchasing.CustomerOrderRow>
+@using PhoneStore.Models.Management
+@using System.Globalization
+@{
+    ViewData["Title"] = "Đơn hàng của tôi";
+    var culture = CultureInfo.GetCultureInfo("vi-VN");
+    var zone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+}
+<div class="container purchasing-page">
+    <section class="order-success-heading"><span class="eyebrow">TÀI KHOẢN</span><h1>Đơn hàng của tôi</h1><p>Theo dõi trạng thái các đơn hàng đã đặt.</p></section>
+    @if (Model.Count == 0)
+    {
+        <section class="shipping-panel"><h2>Chưa có đơn hàng.</h2><p>Đơn hàng hoàn tất từ trang thanh toán sẽ xuất hiện tại đây.</p><a class="button button-primary" href="/products">Xem sản phẩm</a></section>
+    }
+    else
+    {
+        <section class="shipping-panel"><div class="receipt-info">
+        @foreach (var order in Model)
+        {
+            var localDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(order.OrderDate, DateTimeKind.Utc), zone);
+            <div><dt><a href="/orders/@order.OrderId">@order.OrderCode</a></dt><dd>@localDate.ToString("dd/MM/yyyy HH:mm") · @OrderStatusLabels.Display(order.Status) · @order.TotalAmount.ToString("N0", culture) ₫</dd></div>
+        }
+        </div></section>
+    }
+</div>

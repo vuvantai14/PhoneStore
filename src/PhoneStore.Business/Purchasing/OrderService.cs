@@ -22,6 +22,9 @@ public sealed class OrderService(PurchaseStore store) : IOrderService
     public Task<OrderReceipt?> GetReceiptAsync(int orderId, int userId, CancellationToken ct = default) =>
         store.ReceiptAsync(orderId, userId, ct);
 
+    public Task<IReadOnlyList<CustomerOrderRow>> GetCustomerOrdersAsync(int userId, CancellationToken ct = default) =>
+        store.CustomerOrdersAsync(userId, ct);
+
     public async Task<OrderCreationResult> CreateAsync(int userId, IReadOnlyList<CartItem> items,
         ShippingInfo shipping, CancellationToken ct = default)
     {

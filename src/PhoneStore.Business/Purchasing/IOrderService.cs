@@ -8,5 +8,6 @@ public interface IOrderService
     Task<CheckoutCustomer?> GetCustomerAsync(int userId, CancellationToken ct = default);
     Task<OrderCreationResult> CreateAsync(int userId, IReadOnlyList<CartItem> items, ShippingInfo shipping, CancellationToken ct = default);
     Task<OrderReceipt?> GetReceiptAsync(int orderId, int userId, CancellationToken ct = default);
+    Task<IReadOnlyList<CustomerOrderRow>> GetCustomerOrdersAsync(int userId, CancellationToken ct = default);
 }
 

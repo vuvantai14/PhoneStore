@@ -1,0 +1,17 @@
+@model PhoneStore.Models.Purchasing.OrderReceipt
+@using PhoneStore.Models.Management
+@using System.Globalization
+@{
+    ViewData["Title"] = "Chi tiết đơn hàng";
+    var culture = CultureInfo.GetCultureInfo("vi-VN");
+    var orderDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(Model.OrderDate, DateTimeKind.Utc), TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
+}
+<div class="container purchasing-page">
+    <section class="order-success-heading"><span class="eyebrow">@OrderStatusLabels.Display(Model.Status)</span><h1>Đơn hàng @Model.OrderCode</h1><p>Ngày đặt @orderDate.ToString("dd/MM/yyyy HH:mm")</p></section>
+    <div class="purchase-layout"><section class="shipping-panel"><h2>Thông tin giao hàng</h2>
+        <dl class="receipt-info"><div><dt>Người nhận</dt><dd>@Model.ReceiverName</dd></div><div><dt>Số điện thoại</dt><dd>@Model.ReceiverPhone</dd></div><div><dt>Địa chỉ</dt><dd>@Model.ShippingAddress</dd></div>@if (!string.IsNullOrWhiteSpace(Model.Note)) { <div><dt>Ghi chú</dt><dd>@Model.Note</dd></div> }</dl>
+        <a class="button" href="/orders">← Tất cả đơn hàng</a>
+    </section><aside class="order-summary"><h2>Sản phẩm đã đặt</h2><ul class="summary-items">
+        @foreach (var item in Model.Items) { <li><div><strong>@item.ProductName</strong><span>Số lượng: @item.Quantity · Đơn giá: @item.UnitPrice.ToString("N0", culture) ₫</span></div><b>@((item.Quantity * item.UnitPrice).ToString("N0", culture)) ₫</b></li> }
+    </ul><div class="summary-total"><span>Tổng cộng</span><strong>@Model.TotalAmount.ToString("N0", culture) ₫</strong></div></aside></div>
+</div>

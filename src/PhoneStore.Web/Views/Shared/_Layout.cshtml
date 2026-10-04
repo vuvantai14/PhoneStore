@@ -26,7 +26,7 @@ if (Context.Request.Query.ContainsKey(key)) { <input type="hidden" name="@key" v
 <div class="header-actions">
 @if (User.Identity?.IsAuthenticated == true)
 {
-    <span class="auth-greeting" title="@User.Identity.Name">Xin chào, @User.Identity.Name</span>
+    <a class="auth-greeting" href="/orders" title="Đơn hàng của tôi">Xin chào, @User.Identity.Name</a>
     <form asp-controller="Account" asp-action="Logout" method="post" class="header-logout">
         <button type="submit" class="logout-button">Đăng xuất</button>
     </form>

@@ -263,6 +263,7 @@ Completed:
 - S12 Cart + Checkout + Order Creation
 - S13 WinForms Admin Login + Admin UI Foundation
 - S14 Admin Brands + Categories + Products + Product Images
+- S15 Admin Customer + Order Management
 
 S8 completed:
 - Entities created.
@@ -339,7 +340,7 @@ S13 completed:
 - Main Admin shell, persistent sidebar, current-page/account header, Dashboard foundation and reusable module placeholder.
 - Dock/TableLayoutPanel desktop foundation with resizing and DPI scaling; screenshots verified at 120 DPI.
 - Exact startup/configuration/DI and invalid login against SQL verified; isolated authentication/UI/lifecycle checks passed without database writes.
-- Admin login runtime test pending real Admin account.
+- Real Admin authentication and S15 management navigation verified using the intentional initial Admin account.
 - Real Customer/inactive login runtime checks also await existing accounts; role/inactive rejection verified in isolated service tests.
 - Customer Web preserved; browsing/search/filter/sort, Detail 404, anonymous checkout protection and invalid auth forms regression checks passed.
 - Restore/build verified: 0 warnings, 0 errors; no schema/migration changes or fake data added.
@@ -355,5 +356,24 @@ S14 completed:
 - Verification passed: 62 lookup and 69 product service assertions, 46 lookup and 44 product UI assertions at 120 DPI, 17 local storage checks and 13 write-blocked checks against the real SQL instance.
 - Exact Admin startup/configuration/DI and normal `dotnet run` Login window verified without authentication bypass; Customer browsing/search/filter/sort, responsive empty states, Detail 404 and anonymous/auth-form protection regression checks passed.
 - Restore/build verified: 0 warnings, 0 errors; no schema changes, migrations, fake seed or business database writes.
-- Admin/Customer accounts and catalog/order tables remain empty. Full authenticated Admin CRUD and populated Web Product Detail/image integration remain runtime pending real accounts/data; shared-database integration structurally verified.
-- S15 not started; customer/order management, dashboard statistics and reports remain unimplemented.
+- One intentional Admin account and real S14 catalog data are present. Customer/order runtime integration remains pending a real Customer checkout.
+- Customer/order management is implemented in S15; dashboard statistics and reports remain unimplemented.
+
+S15 completed:
+- Admin Customer management lists only Customer-role users, supports name/email/phone search, status filter, profile detail/edit and activate/deactivate without exposing PasswordHash.
+- Admin Order management provides newest-first database list, search, status filter and read-only detail with historical OrderDetail.UnitPrice and stored TotalAmount.
+- Business layer enforces Pending → Confirmed/Cancelled, Confirmed → Shipping/Cancelled and Shipping → Completed; Completed and Cancelled are terminal.
+- Status updates reload and lock the current order in a Serializable transaction; stale or invalid transitions are rejected.
+- Cancellation restores each product's stock exactly once in the same transaction; normal status updates do not change stock.
+- Customer Web now provides protected `/orders` history and owned `/orders/{id}` detail so Admin status changes appear from the shared PhoneStoreDB; existing ownership checks remain intact.
+- Real Admin login, production Customer/Order controls, real SQL reads/filters and Customer ownership queries verified without database mutations. Anonymous Customer order routes redirect to login.
+- Home, Products, Product Detail 404, Cart and Login regression routes passed; S14 catalog data remains unchanged.
+- Database currently has no Customer or Order rows, so real checkout, populated Admin order detail/status flow and cancellation stock restoration remain runtime pending real Customer order data; no fake order was created.
+- Restore/build verified: 0 warnings, 0 errors; no schema change, migration or fake seed added.
+- Dashboard statistics and reports remain placeholders; S16 not started.
+
+Demo catalog:
+- 40 realistic phone catalog products imported for project demonstration and testing across 8 required brands.
+- Category `Điện thoại thông minh` is active; catalog images are served from `/uploads/products/`.
+- The explicit, transactional and idempotent utility is `tools/PhoneStore.CatalogImport`; it never runs from Web or Admin startup.
+- Existing manual product data was preserved; no database schema change or migration was created.
