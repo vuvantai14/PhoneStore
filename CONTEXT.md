@@ -259,7 +259,9 @@ Completed:
 - S9 Customer Web UI Foundation + Home + Products
 - S10 Product Detail + Product Browsing Polish
 - S11 Customer Authentication
+- S11.5 Customer UI/UX Final Polish
 - S12 Cart + Checkout + Order Creation
+- S13 WinForms Admin Login + Admin UI Foundation
 
 S8 completed:
 - Entities created.
@@ -302,6 +304,19 @@ S11 completed:
 - Build verified: 0 warnings, 0 errors; S9/S10 browsing regression checks passed.
 - No migration/schema changes. Product Detail still awaits real product data for populated runtime checks.
 
+S11.5 completed:
+- Customer UI/UX final polish; existing white/blue/navy visual identity preserved.
+- Header/footer proportions refined; desktop header remains on one row where space allows.
+- Home and Products spacing refined with shared spacing/control tokens.
+- Product and existing Cart empty states refined without fake business data.
+- Login/Register refined with consistent card width, spacing, focus and touch targets.
+- Customer responsive consistency verified at 1440/1024/1000/820/701/700/390/320 px.
+- Home, Products, Cart, Login/Register and Product Detail 404 verified without horizontal overflow.
+- Search/filter/sort regression checks and invalid authentication forms passed; backend/authentication code unchanged.
+- Build verified: 0 warnings, 0 errors; no data inserted, schema changes or migrations.
+- Populated Product Detail/gallery/related products and authenticated-session runtime checks await real data/accounts.
+- No additional S12 functionality implemented; existing S12 implementation preserved.
+
 S12 completed:
 - Session cart stores ProductId/Quantity; add/update/remove use POST with anti-forgery.
 - Cart indicator reads Session; cart totals use current database prices.
@@ -314,3 +329,17 @@ S12 completed:
 - Build verified: 0 warnings, 0 errors; schema unchanged and no migration added.
 - Full purchase-flow runtime test pending real product data (including success refresh and cross-customer order access).
 - Session cart and submission guard currently use in-process memory.
+
+S13 completed:
+- WinForms Admin authentication through Business → existing AuthUserStore/Data → PhoneStoreDB.
+- Shared PasswordHasher<User>; active Admin role required, Customer/inactive/invalid credentials blocked.
+- Safe in-memory Admin session with identity only; logout disposes shell, clears session and returns to a fresh LoginForm.
+- Admin Login UI with Vietnamese validation, masked password, show/hide, Enter submit and safe connection/error messages.
+- Main Admin shell, persistent sidebar, current-page/account header, Dashboard foundation and reusable module placeholder.
+- Dock/TableLayoutPanel desktop foundation with resizing and DPI scaling; screenshots verified at 120 DPI.
+- Exact startup/configuration/DI and invalid login against SQL verified; isolated authentication/UI/lifecycle checks passed without database writes.
+- Admin login runtime test pending real Admin account.
+- Real Customer/inactive login runtime checks also await existing accounts; role/inactive rejection verified in isolated service tests.
+- Customer Web preserved; browsing/search/filter/sort, Detail 404, anonymous checkout protection and invalid auth forms regression checks passed.
+- Restore/build verified: 0 warnings, 0 errors; no schema/migration changes or fake data added.
+- S14 not started; no CRUD, statistics, order management or reports implemented.
