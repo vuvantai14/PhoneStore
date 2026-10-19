@@ -14,6 +14,15 @@ using PhoneStore.Data.Purchasing;
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (builder.Environment.IsDevelopment())
+{
+    // Development runs may not have permission to write to the Windows Event Log.
+    // Keep diagnostics available without allowing an Event Log failure to abort requests.
+    builder.Logging.ClearProviders();
+    builder.Logging.AddConsole();
+    builder.Logging.AddDebug();
+}
+
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 builder.Services.AddDistributedMemoryCache();

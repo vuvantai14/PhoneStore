@@ -398,3 +398,35 @@ Demo catalog:
 - Category `Điện thoại thông minh` is active; catalog images are served from `/uploads/products/`.
 - The explicit, transactional and idempotent utility is `tools/PhoneStore.CatalogImport`; it never runs from Web or Admin startup.
 - Existing manual product data was preserved; no database schema change or migration was created.
+
+S17.1 status (19/10/2026):
+- Customer Web functional verification is PARTIAL; evidence and the manual checklist are in `docs/S17_1_CUSTOMER_WEB_TEST.md`.
+- Restore succeeded; build passed with 0 warnings/0 errors; 26/26 isolated tests passed.
+- Read-only browser checks passed for Login/Register anti-forgery forms, anonymous protected-route redirects and local ReturnUrl enforcement.
+- Current PhoneStoreDB baseline and DB-backed Home/Products/cart/authenticated pages could not be rerun because the verified `MSSQL$SERVER` service was stopped and this session lacked permission to start it (SQL error 26).
+- No live customer/order was created, no existing Completed order was changed, and schema/migrations were unchanged.
+- Remaining manual work: start `taiiiii\SERVER`, record current counts, run the documented read-only GUI walkthrough, then obtain explicit approval before any new live checkout.
+
+S17.2 status (20/10/2026):
+- Admin WinForms functional verification is PASS by user-confirmed manual execution of A01-A10; evidence and result classification are in `docs/S17_2_ADMIN_WINFORMS_TEST.md`.
+- The previous run recorded restore success, build 0 warnings/0 errors and 26/26 isolated tests passed; these commands were not rerun for the documentation update.
+- Business/security review passed for Admin authentication rules, soft activation, product/image validation, order transitions, stock restoration, Serializable transactions and reporting queries.
+- TLS/Schannel previously blocked automated database probes, but Admin connected successfully during the new manual session and login/RBAC, Dashboard, catalog CRUD/validation/images, customers, orders/workflow/stock and reports all passed.
+- Independent `sqlcmd` read-only counting still fails with the ODBC encryption/credential error, so current baseline/final counts and database-preservation comparison remain BLOCKED. No preservation claim is made.
+- The documentation update made no UI/source/schema/migration/data changes. Do not advance to S17.3 until the independent baseline/final evidence is recorded or the remaining condition is explicitly accepted.
+
+S17.3 status (20/10/2026):
+- Full Web + Admin + SQL Server integration verification is BLOCKED; evidence and manual checklist are in `docs/S17_3_FULL_INTEGRATION_TEST.md`.
+- Restore/build passed with 0 warnings/0 errors; 26/26 existing tests passed on isolated SQLite in-memory and are not claimed as live SQL integration evidence.
+- Web and Admin configurations both target `taiiiii\SERVER/PhoneStoreDB` with Windows Authentication; only the existing InitialCreate migration is present.
+- Current `sqlcmd` read-only access is blocked by the ODBC TLS/Schannel error, so baseline/final counts and database integrity could not be verified.
+- Web Kestrel started, but requests in this session were blocked by Windows Event Log write permission after the HTTPS-port warning. Admin's successful A01-A10 manual evidence remains recorded in S17.2 but was not rerun as S17.3.
+- No live business write, seed/import, schema change or migration was performed. INT01-INT08 have 0/8 PASS under the strict integration-evidence rules; Ready for S18: NO.
+
+S17.3.1 blocker diagnosis/fix (20/10/2026):
+- Development Web logging now uses Console + Debug providers only, preventing an unauthorized Windows Event Log write from aborting requests; production logging and security are unchanged.
+- Release smoke retest passed `/account/login` and the static placeholder with HTTP 200. Database-backed Home/Products now reach EF and expose the remaining SQL TLS/pre-login error instead of the former logging crash.
+- ODBC 17/sqlcmd and EF Core/Microsoft.Data.SqlClient fail with the same encryption error. SQL Server has ForceEncryption 0, no configured certificate, TCP enabled, Named Pipes disabled and Windows exposes 28 TLS cipher suites. Exact certificate/service-account/protocol cause still requires administrative SQL ERRORLOG/Configuration Manager inspection.
+- A guarded read-only SSMS count batch is documented for Roles plus the seven non-role business tables. Execution remains blocked in automation until SQL connectivity works.
+- A safe `PhoneStoreTestDB` isolation plan is documented but no database was created or modified; explicit user approval is required before creation or migration application.
+- Release solution build passed with 0 warnings/0 errors and 26/26 tests passed. No UI, auth, schema, migration, seed or business data changed. Ready to resume S17.3: NO.
