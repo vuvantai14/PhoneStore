@@ -1,17 +1,18 @@
 @model CustomerProfileViewModel
 @{ ViewData["Title"] = "Hồ sơ của tôi"; }
-<div class="container auth-page">
+<div class="container auth-page customer-account-page customer-profile-page">
     <section class="auth-card" aria-labelledby="profile-title">
-        <h1 id="profile-title">Hồ sơ của tôi</h1>
-        <p>Email: <span>@Model.Email</span> (không thể thay đổi tại đây)</p>
-        @if (TempData["ProfileSuccess"] is string message) { <p role="status">@message</p> }
-        <form asp-controller="Profile" asp-action="Index" method="post" class="auth-form">
-            <div asp-validation-summary="ModelOnly" class="auth-errors" role="alert"></div>
-            <div class="field"><label asp-for="FullName"></label><input asp-for="FullName" autocomplete="name" /><span asp-validation-for="FullName" class="field-error"></span></div>
-            <div class="field"><label asp-for="Phone"></label><input asp-for="Phone" type="tel" autocomplete="tel" /><span asp-validation-for="Phone" class="field-error"></span></div>
-            <div class="field"><label asp-for="Address"></label><textarea asp-for="Address" autocomplete="street-address"></textarea><span asp-validation-for="Address" class="field-error"></span></div>
+        <div class="auth-intro"><span class="eyebrow">TÀI KHOẢN CỦA BẠN</span><h1 id="profile-title">Hồ sơ của tôi</h1><p>Xem và cập nhật thông tin cá nhân của bạn.</p></div>
+        <div class="profile-identity" role="group" aria-label="Email đăng nhập"><span class="profile-identity-label">Email đăng nhập</span><strong>@Model.Email</strong><p>Email không thể thay đổi tại đây.</p></div>
+        @if (TempData["ProfileSuccess"] is string message) { <p class="auth-success" role="status">@message</p> }
+        <p class="account-required-hint">Các trường có dấu * là bắt buộc.</p>
+        <form asp-controller="Profile" asp-action="Index" method="post" class="auth-form" data-ui-submit data-pending-label="Đang lưu hồ sơ…">
+            <div asp-validation-summary="All" class="auth-errors" role="alert" tabindex="-1" data-error-summary aria-label="Thông tin cần kiểm tra"></div>
+            <div class="field"><label asp-for="FullName">Họ tên <span aria-hidden="true">*</span></label><input asp-for="FullName" autocomplete="name" required minlength="2" aria-describedby="profile-name-error" /><span asp-validation-for="FullName" class="field-error" id="profile-name-error"></span></div>
+            <div class="field"><label asp-for="Phone"></label><span class="optional-label">Không bắt buộc</span><input asp-for="Phone" type="tel" autocomplete="tel" aria-describedby="profile-phone-error" /><span asp-validation-for="Phone" class="field-error" id="profile-phone-error"></span></div>
+            <div class="field"><label asp-for="Address"></label><span class="optional-label">Không bắt buộc</span><textarea asp-for="Address" rows="3" autocomplete="street-address" aria-describedby="profile-address-error"></textarea><span asp-validation-for="Address" class="field-error" id="profile-address-error"></span></div>
             <button type="submit" class="button button-primary">Lưu hồ sơ</button>
         </form>
-        <p><a href="/orders">Đơn hàng của tôi</a></p>
+        <p class="auth-switch"><a href="/orders">Xem đơn hàng của tôi <span aria-hidden="true">→</span></a></p>
     </section>
 </div>

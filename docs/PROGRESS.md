@@ -1,7 +1,7 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
-Cập nhật 2026-11-02 — S29.9D **PASS source/browser cách ly, PARTIAL main**: Cart/Checkout/Orders/Detail UI đã đồng bộ B/C, summary focus/loading/cancel confirmation; build solution 0 warnings/errors, 162/162 tests PASS, Web rebuild cuối 0 warnings/errors. Edge preview Razor thật (không SQL): 40/40 trạng thái×breakpoint PASS tại 375/768/1024/1440; 16 screenshots. Không POST/DML main, không deploy/restart/commit/push. Xem `S29_9D_CART_CHECKOUT_ORDERS.md`. READY source cho E; chờ user đặt tên commit/yêu cầu push và duyệt triển khai để nghiệm thu main.
-S29.9B.2/S29.9C **PASS** browser responsive, search/filter/sort/detail và 40 ảnh. Git main sau đổi message: `d99a4cf`; thay đổi D đang uncommitted. Xem `S29_9B_2_BROWSER_ACCEPTANCE.md`, `S29_9C_CATALOG_PRODUCT_DETAIL.md`.
+Cập nhật 2026-11-02 — S29.9E **PASS source/browser cách ly, PARTIAL main**: Login/Register/Profile/AccessDenied đã đồng bộ tokens; 4 views + CSS + resolver lỗi nhiều ID trong JS. Build0warnings/errors; targeted40/40testsPASS, Edge36/36trạng thái×viewport375/768/1024/1440PASS,19screenshots. Không POST/DML main/deploy/restart/stage/commit/push. Xem `S29_9E_AUTH_PROFILE_UI_UX.md`. READY chuẩn bị nghiệm thu tổng thể sau duyệt triển khai D/E; E còn unstaged.
+S29.9B/C PASS. D source/browser cách ly PASS (build0warnings/errors,162tests,40browserchecks), main còn PARTIAL. HEAD hiện `ece7b67` — Shopping cart, checkout, customer order — được tạo ngoài thao tác agent lượt E; views/report D giữ nguyên. Xem `S29_9D_CART_CHECKOUT_ORDERS.md`, `S29_9B_2_BROWSER_ACCEPTANCE.md`, `S29_9C_CATALOG_PRODUCT_DETAIL.md`.
 Đọc đầu mỗi phiên. Ưu tiên source và kết quả thực tế khi tài liệu mâu thuẫn; chỉ kiểm tra phần liên quan nhiệm vụ.
 
 ## 1. Kiến trúc, môi trường và cấu hình
@@ -115,6 +115,7 @@ S29.9B.2/S29.9C **PASS** browser responsive, search/filter/sort/detail và 40 �
 - Word/Excel UC01–UC12/SCR01–SCR12/rubric chấm điểm chưa được xác minh; không tự suy đáp ứng toàn bộ tài liệu chưa có.
 
 ## 8. Nhiệm vụ hiện tại và bước tiếp theo
+- [S29.9E Auth/Profile UI](S29_9E_AUTH_PROFILE_UI_UX.md): preview Razor không SQL PASS, summary/link/error/hint/loading/pageshow/keyboard/contrast PASS; không thay đổi auth/session/backend. Chưa nghiệm thu trên runtime main với Customer thật; không stage/commit/push. Giữ toàn bộ công việc D, không audit lại các màn hình đã PASS.
 - [S29.9D UI](S29_9D_CART_CHECKOUT_ORDERS.md): 5 Razor views + CSS/JS; browser cách ly PASS (native invalid/summary/link focus/Tab/Shift+Tab/loading/pageshow/confirmation-dismiss). Main chỉ GET cart200; Razor mới chưa deploy, không ghi SQL. Skill đọc trực tiếp do `py` chưa khả dụng; script/harness tạm ở obj ignored.
 - [S29.9B.2 acceptance](S29_9B_2_BROWSER_ACCEPTANCE.md) và [S29.9C](S29_9C_CATALOG_PRODUCT_DETAIL.md) đã thay trạng thái B.1 PARTIAL: Home/catalog/detail PASS Edge CDP đúng 4 viewport, hero/fallback/tablet CTA đã sửa. B/C build0warning/error,162testsPASS; không đổi nghiệp vụ.
 - [S29.9A UI/UX audit](S29_9A_UI_UX_AUDIT.md): Codex nhận diện `ui-ux-pro-max` và đã audit source toàn bộ Web/Admin; không sửa source/runtime/DB. Kết luận READY có điều kiện cho S29.9B Web trước. Điểm ưu tiên: font 9–12px, disabled contrast 2.56:1, error-focus/checkout/cancel, reduced-motion chưa phủ transform, token/responsive Web; DPI/keyboard/status/chart semantics Admin. `py` hiện báo không có Python nên search design-system chưa chạy, không có output cũ; audit dùng SKILL/checklist trực tiếp. Tests/build không chạy vì documentation-only.

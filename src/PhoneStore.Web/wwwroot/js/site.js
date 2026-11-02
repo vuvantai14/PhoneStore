@@ -36,6 +36,8 @@ document.querySelectorAll('form[data-ui-submit]').forEach(form => {
     const originalLabels = buttons.map(button => button.innerHTML);
     const summary = form.querySelector('[data-error-summary]');
     const fields = [...form.querySelectorAll('input:not([type="hidden"]), textarea, select')];
+    const fieldError = field => (field.getAttribute('aria-describedby') || '').split(/\s+/)
+        .map(id => document.getElementById(id)).find(element => element?.classList.contains('field-error'));
     let invalidScheduled = false;
 
     const showErrors = () => {
@@ -48,7 +50,7 @@ document.querySelectorAll('form[data-ui-submit]').forEach(form => {
             const label = form.querySelector(`label[for="${field.id}"]`);
             const name = label?.textContent.replace('*', '').trim() || 'Thông tin';
             const message = field.validity.valueMissing ? `Vui lòng nhập ${name.toLowerCase()}.` : field.validationMessage;
-            const error = document.getElementById(field.getAttribute('aria-describedby'));
+            const error = fieldError(field);
             if (error) error.textContent = message;
             field.setAttribute('aria-invalid', 'true');
             const item = document.createElement('li');
@@ -69,7 +71,7 @@ document.querySelectorAll('form[data-ui-submit]').forEach(form => {
             // Link server-side field errors without exposing or changing posted values.
             summary.querySelectorAll('li').forEach(item => {
                 const field = fields.find(input => {
-                    const error = document.getElementById(input.getAttribute('aria-describedby'));
+                    const error = fieldError(input);
                     return error?.textContent.trim() && error.textContent.trim() === item.textContent.trim();
                 });
                 if (field) {
@@ -92,7 +94,7 @@ document.querySelectorAll('form[data-ui-submit]').forEach(form => {
         fields.forEach(field => field.addEventListener('input', () => {
             if (!field.validity.valid) return;
             field.removeAttribute('aria-invalid');
-            const error = document.getElementById(field.getAttribute('aria-describedby'));
+            const error = fieldError(field);
             if (error) error.textContent = '';
         }));
     }
