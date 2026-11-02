@@ -105,9 +105,15 @@ public sealed class ProductManagementStore(PhoneStoreDbContext db)
 
     // The parent row is a shared lock point even when no image rows exist yet.
     // This prevents two concurrent first uploads from both becoming primary.
-    public Task<Product?> LockProductAsync(int id, CancellationToken ct) =>
-        db.Products.FromSqlInterpolated($"SELECT * FROM [Products] WITH (UPDLOCK, HOLDLOCK) WHERE [ProductId] = {id}")
+    public async Task<Product?> LockProductAsync(int id, CancellationToken ct)
+    {
+        // Serializable image scans may lock overlapping PK ranges for different Products.
+        // Serialize image writers BEFORE taking any Product/image lock; no automatic retry.
+        if (db.Database.IsSqlServer())
+            await db.Database.ExecuteSqlRawAsync("DECLARE @r int; EXEC @r=sys.sp_getapplock @Resource=N'PhoneStore.ProductImages.Write', @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000; IF @r<0 THROW 51021,'Image management is busy; reload before trying again',1;", ct);
+        return await db.Products.FromSqlInterpolated($"SELECT * FROM [Products] WITH (UPDLOCK, HOLDLOCK) WHERE [ProductId] = {id}")
             .SingleOrDefaultAsync(ct);
+    }
 
     public Task<List<ProductImage>> ImagesForUpdateAsync(int productId, CancellationToken ct) =>
         db.ProductImages.Where(i => i.ProductId == productId).OrderBy(i => i.DisplayOrder)

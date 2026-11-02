@@ -1,5 +1,5 @@
-﻿# PhoneStore — Tiến độ và điểm tiếp tục
-Cập nhật: 2026-11-02, Asia/Bangkok, sau S29.8D.1C.2 PASS. Đây là snapshot có ngày kiểm tra, không phải cam kết trạng thái live.
+# PhoneStore — Tiến độ và điểm tiếp tục
+Cập nhật: 2026-11-02 13:50 Asia/Bangkok, D.2C.5 Product13 tạo/sửa/tìm/softinactive UI+SQLPASS; filterPARTIAL, dừngtrướcảnh. Đây là snapshot.
 Đọc đầu mỗi phiên. Ưu tiên source và kết quả thực tế khi tài liệu mâu thuẫn; chỉ kiểm tra phần liên quan nhiệm vụ.
 
 ## 1. Kiến trúc, môi trường và cấu hình
@@ -18,8 +18,8 @@ Cập nhật: 2026-11-02, Asia/Bangkok, sau S29.8D.1C.2 PASS. Đây là snapshot
 - NOT IMPLEMENTED/MISSING: chưa có chức năng; UNKNOWN/NOT TESTED: thiếu bằng chứng, không mặc định là lỗi.
 - Báo cáo tổng hợp mới nhất: [S29.8D](S29_8D_FUNCTIONAL_AUDIT.md).
 
-## 3. Runtime và SQL gần nhất — S29.8D.1C.2
-- SELECT 2026-11-02 03:26:20 UTC / 10:26:20 Bangkok: localhost/DESKTOP-ES9362P, PhoneStoreDB ONLINE.
+## 3. Runtime và SQL gần nhất — S29.8D.2B
+- SELECT 2026-11-02 03:55:44 UTC / 10:55:44 Bangkok: localhost/DESKTOP-ES9362P, PhoneStoreDB ONLINE.
 - Products40, Images40, Brands8, Category1, Users2, Roles2, Orders1, OrderDetails1, tổng tồn740.
 - Admin duy nhất UserId1/admin@admin.com/RoleId1/active; Customer UserId2/tai123@gmail.com/RoleId2/active.
 - Customer đã khôi phục tài vũ/09032657212/AddressNULL bằng UI1lần theo duyệtD.1C.2; SQL/Web/greeting khớp, không đăng nhập lại.
@@ -47,7 +47,8 @@ Cập nhật: 2026-11-02, Asia/Bangkok, sau S29.8D.1C.2 PASS. Đây là snapshot
 | Hồ sơ Customer self-service | PASS source/tests/deploy/GET/lưu thủ công và khôi phục UI D.1C.2; AddressNULL/cookie/greeting/invariants PASS; đề xuất đóng D.1 |
 | Admin login/phân quyền | VERIFIED login main C.6B; role/Customer rejection PASS tests; desktop logout NOT TESTED |
 | Dashboard | VERIFIED đọc hiện tại40SP/740kho/1Customer/1Cancelled/0Completed/0doanhthu |
-| Sản phẩm/ảnh/lookup/Customer | PARTIAL toàn CRUD; đọc main PASS, còn thiếu write/UI acceptance rộng |
+| Product/Brand/Category/ảnh | D.2A SQL/servicePASS; D.2B JPEG/PNG fullDecode/safeFile/concurrency PASS, WebP mới từchối; PARTIAL vì chưaUI D.2C/deploy |
+| Quản lý Customer Admin | PARTIAL: đọc/bảo vệAdmin có evidence, sửa/khóaGUI chưa nghiệmthu; ngoài D.2A |
 | Stale stock | VERIFIED SQL/dialog thật B.1 + regression; đã triển khai C.6B, không còn chờ deploy |
 | Admin quản lý đơn | VERIFIED UI cách ly C.5 toàn workflow; main C.7A Confirm thật và đọc Cancelled |
 | Reports | PARTIAL: main đọc0 đúng; source tổng/trend/average chỉ Completed, thiếu regression doanh thu dương/biên ngày |
@@ -91,12 +92,12 @@ Cập nhật: 2026-11-02, Asia/Bangkok, sau S29.8D.1C.2 PASS. Đây là snapshot
 - Ảnh runtime: `C:\PhoneStore\PhoneStore\src\PhoneStore.Web\wwwroot\uploads\products`; cần backup riêng, không tự xóa/ghi đè.
 
 ## 7. Tests và rủi ro còn mở
-- Gần nhất D.1B: build0warnings/errors,129/129 PASS,0skip;107 baseline +22profile (12service/10HTTP); restore D.1 PASS.
+- Gần nhất D.2C buildsolution0warnings/errors,155/155 PASS,0skip; outputbin/S29.8D.2C/. D2B18filecasesWIC và27SQLassertionsriêng PASS.
 - D.1C.1 chạy lại22/22profile PASS (SQLite/HTTP thật cách ly), output bin/S29.8D.1C.1-tests; khôngfullsuite/deploy/mainPOST.
-- Lệnh: `dotnet build PhoneStore.sln --no-restore -p:OutputPath=bin/S29.8D.1B-build/`; `dotnet test PhoneStore.sln --no-build --no-restore -p:OutputPath=bin/S29.8D.1B-build/ --verbosity minimal`.
+- LệnhD2B: `dotnet build PhoneStore.sln --no-restore -p:OutputPath=bin/S29.8D.2B/`; `dotnet test PhoneStore.sln --no-build --no-restore -p:OutputPath=bin/S29.8D.2B/ --verbosity minimal`.
 - Suite SQLite: Authentication, Bootstrap, SingleAdminPolicy/Constraint, Checkout, OrderWorkflow, ProductStockConcurrency, CommerceWorkflow, CartController.
 - SQL/HTTP/UI harness riêng opt-in trong tests/PhoneStore.SqlIntegration; không chạy audit read-only để tránh ghi fixture.
-- Chưa có suite báo cáo/CRUD lookup/ảnh/Customer đầy đủ; desktop logout, RememberMe dài ngày, stress/commit không rõ chưa nghiệm thu đủ.
+- Có18testsCRUD+8safety/WIC/SQLshared/concurrentprimary; WebP policyreject, GUI/report/CustomerCRUD/logout/stresschưađủ; orphan giữ cóchủđích,khôngautodelete.
 - Original-stock guard không phải rowversion mọi field/ABA; cart theo browser session; legacyCreateAsync không token nhưng Web dùng Idempotent.
 - Revenue tổng/trend/average chỉ Completed; BestSellers/SalesValue dùng Confirmed/Shipping/Completed, không cùng chỉ số doanh thu.
 - DateOnly report được coi UTC nhưng UI ngày local: cần chốt timezone/test biên ngày. Admin gateway kiểm session snapshot, chưa revalidate DB từng command.
@@ -114,21 +115,31 @@ Cập nhật: 2026-11-02, Asia/Bangkok, sau S29.8D.1C.2 PASS. Đây là snapshot
 - Artifact/backup/staging/manifests/log: `src/PhoneStore.Web/obj/S29.8D.1B-20261102_024935357Z_9be18a0a8d6a413d9cfa63304bc5d7f7`; giữ, khôngclean.
 - Hậu kiểm D.1B mainONLINE40/40/8/1,Users2,Order1Cancelled,Detail1,tồn740,Customer tên tài vũ; cảWeb19388/Admin10736 SQLmain, khôngghi.
 - Browser sessionCustomer cũ còn hợp lệ; clicklinkHome→Hồsơ PASS đúngowner/emailreadonly/noSensitiveFields; anonymous302login;40detail/40ảnh200.
-- [D.1C acceptance](S29_8D_1C_PROFILE_ACCEPTANCE.md): được duyệt sửa tạm/khôi phục User2 qua UI; preflight đúngPID19388/10736/main/customer và60Web+101preservedhash PASS.
-- Gốc SELECT: tài vũ/09032657212/AddressNULL; nhập form Khách hàng Kiểm thử/0900000000/Địa chỉ kiểm thử PhoneStore, thửmouseclick Lưu1lần.
-- Helper timeout không xác nhận success; DỪNG, khôngretry/khôi phục tự động. DOM còn giá trị thử chưa lưu, greeting tên cũ; chưa chứng minh POST thực sự được gửi, không kết luận app lỗi.
-- SELECT sau dừng hồ sơ vẫn gốc/email-role-active giữ nguyên;9/9 snapshot bảng không đổi (Users không đọc credentials),catalog40/40/tồn740/Order1Cancelled/Admin1active.
-- D.1C PARTIAL, cookie sau đổi tên/restore NOT TESTED;129testsbaseline D.1B, khôngrerun. Chỉdocs+evidenceobj; khôngsource/SQLDML/binarychange.
-- Artifact `src/PhoneStore.Web/obj/S29.8D.1C-20261102_031553601Z_0f70f82b55224b31a97cc4420a0835cf`; giữedit.attempt, khôngxóa marker/rerunhelper để thửghi.
-- [D.1C.1 diagnosis](S29_8D_1C_1_PROFILE_DIAGNOSIS.md): quan sátDOM cho greetingtênmới; SELECT3fieldđãtestvalues, userxácnhận tựbấmLưu. CheckpointgốcC.1 chỉlàlịchsử.
-- Formaction/method/name/CSRFpresent đúng, nativevalid3field, nosubmitJS/listeners trực tiếp, noerror. Log3UPDATE nhưng0HTTPrequestmetadata; helperPOSTcũ UNKNOWN, nghi vấn scrollsmooth→tọađộclick chưaổnđịnh, chưa chứngminh.
-- C.1.1 chỉđọc main,22tests PASS;8bảngkhác nguyên, Users SELECTchiếu3fieldgốc đểso khớp snapshot→cácfieldkhác/Adminnguyên. Web60hashnguyên, khôngsourcefix.
-- [D.1C.2 restore](S29_8D_1C_2_PROFILE_RESTORE.md) PASS sau duyệt riêng: kiểmtra đúngowner/3giátrị/nút rồi nativebuttonclick1lần;1POST302→GET200/reloadGET200, successmessage và greetingtài vũ, sessiongiữ.
-- SQLUser2=tài vũ/09032657212/AddressNULL,Email/Role2/active giữ;9/9snapshotgốc khớp (Userskhôngcredentials),40SP/40ảnh/kho740/Order1Cancelled/Detail1/Adminnguyên.
-- Web19388/Admin10736/hash60+101 nguyên; khôngsourcefix/build/testmới, chỉdocs/helper/evidence restore-C2-* trongartifactD.1C; giữattempt, khôngrerun.
-- Đềxuấtđóng S29.8D.1, chuyển S29.8D.2 CRUDAdmin khi cóchỉđạo; chưa tựthửghiCRUDmain hoặc thêmfixtureSQL.
-- Sau đó D.2 nghiệm thu/hoàn thiện CRUD quản trị, D.3 reports/auth-session, D.4 tổng nghiệm thu; mở rộng sau, UI/UX cuối.
-- Không coi phê duyệt C.7 một giao dịch hoặc D.1 source/tests là quyền tạo thêm tài khoản/đơn hay triển khai/ghi main.
+- [D.1C](S29_8D_1C_PROFILE_ACCEPTANCE.md) helperclick timeout→dừng/SELECTgốc; [C.1 diagnosis](S29_8D_1C_1_PROFILE_DIAGNOSIS.md) user xácnhận đã tựLưu, SQL/greetingtestvalues; rootcausehelpercũ UNKNOWN.
+- [D.1C.2 restore](S29_8D_1C_2_PROFILE_RESTORE.md) duyệtriêng UI1click/POST302→GET200/reload, Customer2=tài vũ/09032657212/AddressNULL,session/greeting/invariantsPASS;đềxuấtđóngD.1.
+- EvidenceD.1C `src/PhoneStore.Web/obj/S29.8D.1C-20261102_031553601Z_0f70f82b55224b31a97cc4420a0835cf`; giữmarkers,khôngrerunhelperghi.
+- [D.2A audit](S29_8D_2A_ADMIN_CRUD_AUDIT.md) PARTIAL toànphạmvi; source/SQL/testPASS, chưa fullWinFormsCRUD. Đã sửaLookupManagementService catchDbExceptionchung; thêmAdminCrudTests/AdminCrudChecks/modeProgram+harnessREADME/docs.
+- TestDBđượcduyệtghi+dọn:trướckhôngsession/processkhác,guardDB_NAMEtừngEFcommand+cooperativelock. FixtureD2Ariêng1Brand/1Category/3Products/1OrderCancelled/1Detail,khôngtạo/sửaUsers.
+- ChạySQL1lầnPASS43assertions:validation/duplicate/lookups/softdeactivate/referenceFK/stockpredicate/ảnhJPEG-PNG-primary-order-remove/rollback/filecleanup/gatewaydeny.
+- Cleanupchỉprefix/IDmới+filefixture,giữfixturecũ; main/test9/9snapshotsnguyên (Userskhôngcredentials),identitytestcóthểtăng,khôngreseed/drop/migrate.
+- HậuSELECTD2A03:32:01UTC mainONLINE40/40/tồn740/Users2/Order1Cancelled/Detail1/Customernguyên/Adminnguyên;Web60+101preservedhashPASS,khôngdeploy.
+- Evidence `tests/PhoneStore.SqlIntegration/obj/S29.8D.2A-20261102_033101218Z`;giữmarker/log/snapshots,khôngtựrerunoldmodes.
+- Giới hạn ảnh signature-only của D.2A là lịch sử; đã được D.2B thay thế bên dưới, GUI vẫn chưa nghiệm thu đầy đủ.
+- DỪNGchờchỉđạo,khôngtriểnkhaiAdmin/ghimain. Softdeactivate là luồngxóaUI hiệncó;ProductNamekhôngunique,lookupinactivekhôngcascadeẩnProduct,cầnchốt nếumuốnđổi.
+- [D.2B report](S29_8D_2B_IMAGE_VALIDATION.md): JPEG/PNG≤10MiB/4096mỗichiều/16Mpixels/1frame,decodeWICmọipixel;CRC/IEND/EOI/APNGgate;WebP mớitừchốirõ,ảnhcũgiữ. FrameworkWPFđãcài,khôngNuGetcodec/migration.
+- Storagebắtbuộcvalidator,snapshotbấtbiến,GUID/CreateNew/atomicmove,chỉdọn.tmpđãtạo. Servicegiữfilepublish sauunlink/DBfailure/unknowncommit+noticeURL;dọnorphanphảikiểmtra/duyệtriêng.
+- SQLlầnđầuFAILdeadlock PK_ProductImages RangeS-S→X (system_healtheventfile),đãSELECToutcome/dọnđúngfixturemới;thêmsp_getapplockExclusive/Transactiontrướcmọilockảnh,khôngretry. FixturemớisausửaPASS,cảbảncuốiCRC.
+- SQLtestdùnglạiStockConcurrencyTest,fixture2Products/1Brand/1Category/images,khôngUsers/Orders. Sharedreplace+firstuploadđồngthời/primary/rollback/orphannoticePASS;cleanupchỉfixture,main/test9snapshotsnguyên.
+- Evidence `tests/PhoneStore.SqlIntegration/obj/S29.8D.2B-20261102_033917998Z`;logs/markers/snapshots/browserJPEG-PNG-WebPdecode. BrowserofflinePASS,khônguploadmain.
+- SourceD2B: validatorinterface+AdminWIC,LocalStorage/ProductService/DataStore,AdminDI/dialogfilter/frameworkref;testsSafety/SQLImageChecks/modes/README,D2Acasesupdatedpolicy,docs. Chưa deployWeb/Admin.
+- HậuD2Bmain40/40/tồn740/1Cancelled/Detail1/Customer-Adminnguyên;Web19388/Admin10736responsive,Web60+preserved101hashgiữ(40ảnhdemo). Khôngcommit/push.
+- D2Bsource/testsPASSkhôngthayUIacceptance. Rủiro:orphan/dunglượng,nativecodec/ACL,globalimagelockgiảmthroughput;khôngtựdọnmain.
+- [D.2C UI](S29_8D_2C_ADMIN_WINFORMS_ACCEPTANCE.md) PARTIAL: appcopy/config/envcáchly,PID13368đãlogintestD2C1;DBStockConcurrencyTest/ảnhriêng,main/test9snapshotspublic+40ảnhhashnguyên,chưaCRUDghi.
+- Artifact `src/PhoneStore.Admin/obj/S29.8D.2C-20261102_035250536Z`; D2C1duyệtriêngPasswordHashtestUser1/admin@s29-8b1.test,guardSQLthật+Serializable+WHEREchặt,1rowcommit/SELECTbooleanPASS03:58:54UTC.
+- Usertựnhậppassẩnx2terminal,tựlogin vàxácnhận;UI13368shellđúngtestAdmin/SQLtestDBPASS03:59:38UTC;khôngsecretslog/file/chat. Main/test9snapshotnoncredentials và40ảnhnguyên.
+- D2C1utility build0warning/error,giữattempt/passwordtest,khôngresetlặp. D2C3 testPID5944 appcopy59hashPASS;userlogin/shellSQLTestAdmin/SQLsessiontestDBPASS(openTx0);Dashboard3SP/8kho/10đơn,Products3/Brands1/Categories1 tảiPASS. Config/env/DI pinảnhriêng,uploads0file(chưaupload). UI tạo/sửa/tìm Brand6+Category6 S29D2C;Categoryrequired/duplicate báo rõ;Brandduplicate không thêmrow nhưng chưađọcđượctext. 13:42 UIA đồngthời thấy ProductEditDialog+LookupEditDialog cũ: dừng trướcSaveProduct,chờuserHủy/đóngmodal;0Product/0Image mới. Main9snapshot+40ảnhnguyên;test7bảngnguyên,Brands/Categories chỉthêm2fixtureID6active,giữđểtiếp,chưacleanup. Evidence *-D2C3-before/comparison.json+D2C3-fixture-checkpoint.json. Khôngbuild/testlại/deploy/mainDML.
+- D.2C.2 PARTIAL 13:35Bangkok: PID13368/10736/19388 không còn, không có PhoneStore process hoặc listener5015; dừng theo điều kiện precheck, không tự restart/CRUD. Config test vẫn đúng DB/ảnh riêng0file. SELECT main40/40/tồn740/Users2/Order1Cancelled/Detail1; test3Products/0Images/tồn8/Users5/10Orders;40ảnhhash nguyên. Chỉ docs, không build/test lại; chờ mở lại Admin test/login để tiếp. D.3 reports/auth-session, D.4 tổng nghiệm thu sau D.2.
+- D2C.5 13:47–13:50 testPID9840/SQLtestDB/ảnhriêng/Brand6+Category6active,1dialogPASS. UI tạo1ProductId13 S29D2C Product UI giá1230000/kho5; sửa tên thêmEdited/giá1250000/môtả,SQLkhớp;exactsearch1row;confirmsoftinactivePASS. Numericâm→0khiblur,thiếutênbáorõ/khôngghi. FilterstatusUIAuncertain→dừngkhôngretry;chưaảnh/stalestockmới. Main9snapshot+40ảnhhashnguyên/40SP/40ảnh/740/1Cancelled/1Customer/1Adminactive;3Products cũvàBrands/Categories testnguyên. GiữProduct13inactive/kho5/0ảnh,khôngcleanup. EvidenceD2C5-*.json;khôngsource/build/test/deploy/mainDML. Chờmanualfilter/phêduyệtảnhriêng.
 
 ## 9. Phê duyệt và giới hạn lâu dài
 - Đã duyệt main migration/Admin/import,deployC.6B/D.1B,1Customer/1OrderC.7; D.1C.2 khôiphục3fieldUser2quaUI đãPASS. Không suy quyền ghi giao dịch/CRUD tiếp theo.

@@ -40,7 +40,7 @@ internal static class AdminServices
         if (string.IsNullOrWhiteSpace(uploadsPath))
             throw new InvalidOperationException("ProductImages:UploadsDirectory configuration is required.");
         services.AddSingleton<IProductImageStorage>(new LocalProductImageStorage(
-            Path.GetFullPath(uploadsPath, AppContext.BaseDirectory)));
+            Path.GetFullPath(uploadsPath, AppContext.BaseDirectory), new WindowsProductImageContentValidator()));
         services.AddScoped<LookupManagementStore>();
         services.AddScoped<ILookupManagementService, LookupManagementService>();
         services.AddScoped<ProductManagementStore>();

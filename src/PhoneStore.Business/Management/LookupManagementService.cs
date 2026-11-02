@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using PhoneStore.Data.Management;
@@ -39,7 +40,7 @@ public sealed class LookupManagementService(LookupManagementStore store) : ILook
         {
             return ManagementResult.Fail($"Tên {title} đã tồn tại. Vui lòng chọn tên khác.");
         }
-        catch (Exception exception) when (exception is DbUpdateException or SqlException)
+        catch (Exception exception) when (exception is DbUpdateException or DbException)
         {
             return ManagementResult.Fail("Không thể lưu dữ liệu. Vui lòng kiểm tra kết nối và thử lại.");
         }
@@ -61,7 +62,7 @@ public sealed class LookupManagementService(LookupManagementStore store) : ILook
                 ? ManagementResult.Success(id)
                 : ManagementResult.Fail("Dữ liệu không còn tồn tại. Vui lòng tải lại danh sách.");
         }
-        catch (Exception exception) when (exception is DbUpdateException or SqlException)
+        catch (Exception exception) when (exception is DbUpdateException or DbException)
         {
             return ManagementResult.Fail("Không thể cập nhật trạng thái. Vui lòng kiểm tra kết nối và thử lại.");
         }

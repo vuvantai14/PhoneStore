@@ -170,7 +170,7 @@ public sealed class ProductImagesDialog : Form
         using var selection = new OpenFileDialog
         {
             Title = "Chọn ảnh sản phẩm", Multiselect = false, CheckFileExists = true,
-            Filter = "Ảnh sản phẩm (*.jpg;*.jpeg;*.png;*.webp)|*.jpg;*.jpeg;*.png;*.webp",
+            Filter = "Ảnh sản phẩm (*.jpg;*.jpeg;*.png)|*.jpg;*.jpeg;*.png",
             RestoreDirectory = true
         };
         if (selection.ShowDialog(this) != DialogResult.OK) return;

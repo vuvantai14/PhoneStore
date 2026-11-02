@@ -10,7 +10,7 @@ public sealed class ProductManagementService(ProductManagementStore store, IProd
     : IProductManagementService
 {
     private const string DatabaseError = "Chưa thể lưu thay đổi. Vui lòng kiểm tra kết nối dữ liệu và thử lại.";
-    private const string CleanupNotice = "Đã bỏ liên kết ảnh; tệp chưa được xóa an toàn, cần kiểm tra thư mục ảnh.";
+    private const string CleanupNotice = "Đã bỏ liên kết ảnh; tệp được giữ để tránh xóa nhầm khi có thao tác đồng thời. Cần đối chiếu liên kết trước khi dọn tệp:";
 
     public Task<IReadOnlyList<ProductManagementRow>> ListAsync(ProductManagementQuery query, CancellationToken cancellationToken = default) =>
         store.ListAsync(query, cancellationToken);
@@ -118,7 +118,7 @@ public sealed class ProductManagementService(ProductManagementStore store, IProd
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
-            result = ManagementResult.Fail("Không thể thêm ảnh. Vui lòng chọn ảnh JPG/JPEG, PNG hoặc WebP hợp lệ và kiểm tra thư mục lưu ảnh.");
+            result = ManagementResult.Fail("Không thể thêm ảnh. Chỉ tải lên JPEG/PNG giải mã được, tối đa 10 MB, mỗi chiều 4096 và 16 triệu điểm ảnh. WebP chưa được hỗ trợ. Kiểm tra tệp và thư mục lưu ảnh.");
         }
         catch (Exception ex) when (ex is DbException or DbUpdateException)
         {
@@ -167,14 +167,14 @@ public sealed class ProductManagementService(ProductManagementStore store, IProd
         const string notice = "Vui lòng tải lại danh sách ảnh. Tệp được giữ an toàn; ảnh không còn liên kết có thể cần dọn dẹp thủ công.";
         try
         {
-            // A failed/cancelled commit can have an unknown outcome. Never remove its file
-            // unless a fresh query confirms that no committed image association uses it.
-            if (await store.IsImageUrlReferencedAsync(imageUrl, CancellationToken.None)) return notice;
-            return imageStorage.TryDelete(imageUrl) ? null : notice;
+            // A fresh reference check cannot make a later filesystem delete atomic with SQL.
+            // Retain validated files after any DB attempt; report orphans for controlled cleanup.
+            if (await store.IsImageUrlReferencedAsync(imageUrl, CancellationToken.None)) return notice + " " + imageUrl;
+            return notice + " " + imageUrl;
         }
         catch (Exception ex) when (ex is DbException or IOException or UnauthorizedAccessException)
         {
-            return notice;
+            return notice + " " + imageUrl;
         }
     }
 
@@ -209,11 +209,11 @@ public sealed class ProductManagementService(ProductManagementStore store, IProd
         {
             if (await store.IsImageUrlReferencedAsync(removedUrl, cancellationToken))
                 return ManagementResult.Success(imageId, "Đã bỏ liên kết ảnh; tệp được giữ vì sản phẩm khác còn sử dụng.");
-            return ManagementResult.Success(imageId, imageStorage.TryDelete(removedUrl) ? null : CleanupNotice);
+            return ManagementResult.Success(imageId, CleanupNotice + " " + removedUrl);
         }
         catch (Exception ex) when (ex is DbException or IOException or UnauthorizedAccessException)
         {
-            return ManagementResult.Success(imageId, CleanupNotice);
+            return ManagementResult.Success(imageId, CleanupNotice + " " + removedUrl);
         }
     }
 

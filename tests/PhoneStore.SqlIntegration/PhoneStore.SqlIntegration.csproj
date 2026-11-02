@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WPF" />
     <ProjectReference Include="../../src/PhoneStore.Admin/PhoneStore.Admin.csproj" />
   </ItemGroup>
 </Project>

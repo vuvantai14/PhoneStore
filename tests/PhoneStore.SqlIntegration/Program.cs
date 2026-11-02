@@ -23,6 +23,28 @@ internal static partial class Program
     [STAThread]
     static int Main(string[] args)
     {
+        if (args is ["--preflight-test-admin-s29.8d.2c.1"])
+        {
+            try { TestAdminCredentialPreflightAsync().GetAwaiter().GetResult(); return 0; }
+            catch { Console.Error.WriteLine("STOP: test Admin preflight failed; no credential update."); return 1; }
+        }
+        if (args is ["--reset-test-admin-approved-s29.8d.2c.1"])
+            return ResetApprovedTestAdminAsync().GetAwaiter().GetResult();
+        if (args is ["--check-images-s29.8d.2b"])
+        {
+            try { RunImageFileChecksAsync().GetAwaiter().GetResult(); return 0; }
+            catch (Exception ex) { Console.Error.WriteLine($"STOP: {ex.GetType().Name}: {ex.Message}"); return 1; }
+        }
+        if (args is ["--execute-approved-s29.8d.2b"])
+        {
+            try { RunImageSqlChecksAsync().GetAwaiter().GetResult(); return 0; }
+            catch (Exception ex) { Console.Error.WriteLine($"STOP: {ex.GetType().Name}: {ex.Message}"); return 1; }
+        }
+        if (args is ["--execute-approved-s29.8d.2a"])
+        {
+            try { RunAdminCrudAsync().GetAwaiter().GetResult(); return 0; }
+            catch (Exception ex) { Console.Error.WriteLine($"STOP: {ex.GetType().Name}: {ex.Message}"); return 1; }
+        }
         if (args is ["--execute-approved-s29.8c.5-http-sync"])
         {
             try { RunHttpCommerceAsync("customer@s29-8c5-sync.test").GetAwaiter().GetResult(); return 0; }
