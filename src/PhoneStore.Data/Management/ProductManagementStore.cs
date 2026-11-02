@@ -28,7 +28,8 @@ public sealed class ProductManagementStore(PhoneStoreDbContext db)
         db.Products.AsNoTracking().Where(p => p.ProductId == id).Select(p => new ProductEdit
         {
             ProductName = p.ProductName, BrandId = p.BrandId, CategoryId = p.CategoryId,
-            Price = p.Price, StockQuantity = p.StockQuantity, RAM = p.RAM, Storage = p.Storage,
+            Price = p.Price, StockQuantity = p.StockQuantity, OriginalStockQuantity = p.StockQuantity,
+            RAM = p.RAM, Storage = p.Storage,
             Chip = p.Chip, Screen = p.Screen, Camera = p.Camera, Battery = p.Battery,
             OperatingSystem = p.OperatingSystem, Description = p.Description, IsActive = p.IsActive
         }).SingleOrDefaultAsync(ct);
@@ -59,6 +60,30 @@ public sealed class ProductManagementStore(PhoneStoreDbContext db)
 
     public Task<Product?> FindAsync(int id, CancellationToken ct) =>
         db.Products.SingleOrDefaultAsync(p => p.ProductId == id, ct);
+
+    public Task<Product?> FindForSaveAsync(int id, CancellationToken ct) =>
+        db.Products.AsNoTracking().SingleOrDefaultAsync(p => p.ProductId == id, ct);
+
+    // All submitted fields change in ONE statement, or none do. The stock predicate
+    // must be evaluated by the database, not just checked in application code.
+    public Task<int> UpdateIfStockMatchesAsync(Product product, int originalStock, CancellationToken ct) =>
+        db.Products.Where(p => p.ProductId == product.ProductId && p.StockQuantity == originalStock)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(p => p.ProductName, product.ProductName)
+                .SetProperty(p => p.BrandId, product.BrandId)
+                .SetProperty(p => p.CategoryId, product.CategoryId)
+                .SetProperty(p => p.Price, product.Price)
+                .SetProperty(p => p.StockQuantity, product.StockQuantity)
+                .SetProperty(p => p.RAM, product.RAM)
+                .SetProperty(p => p.Storage, product.Storage)
+                .SetProperty(p => p.Chip, product.Chip)
+                .SetProperty(p => p.Screen, product.Screen)
+                .SetProperty(p => p.Camera, product.Camera)
+                .SetProperty(p => p.Battery, product.Battery)
+                .SetProperty(p => p.OperatingSystem, product.OperatingSystem)
+                .SetProperty(p => p.Description, product.Description)
+                .SetProperty(p => p.IsActive, product.IsActive)
+                .SetProperty(p => p.UpdatedAt, product.UpdatedAt), ct);
 
     public Task<bool> ExistsAsync(int id, CancellationToken ct) =>
         db.Products.AsNoTracking().AnyAsync(p => p.ProductId == id, ct);

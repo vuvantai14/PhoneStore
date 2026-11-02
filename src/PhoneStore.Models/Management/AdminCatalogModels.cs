@@ -31,6 +31,8 @@ public sealed class ProductEdit
     public int CategoryId { get; set; }
     public decimal Price { get; set; }
     public int StockQuantity { get; set; }
+    // Snapshot from opening an existing product; never replace it with the submitted stock.
+    public int? OriginalStockQuantity { get; set; }
     public string? RAM { get; set; }
     public string? Storage { get; set; }
     public string? Chip { get; set; }

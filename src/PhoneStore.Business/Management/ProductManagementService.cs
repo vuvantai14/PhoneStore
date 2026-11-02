@@ -29,10 +29,12 @@ public sealed class ProductManagementService(ProductManagementStore store, IProd
         var error = Validate(edit);
         if (error is not null) return ManagementResult.Fail(error);
         if (id is <= 0) return ManagementResult.Fail("Sản phẩm không hợp lệ.");
+        if (id.HasValue && (edit.OriginalStockQuantity is null or < 0))
+            return ManagementResult.Fail("Thiếu tồn kho gốc. Vui lòng đóng và mở lại sản phẩm trước khi lưu.");
         try
         {
             await using var transaction = await store.BeginAsync(cancellationToken);
-            var product = id.HasValue ? await store.FindAsync(id.Value, cancellationToken) : new Product();
+            var product = id.HasValue ? await store.FindForSaveAsync(id.Value, cancellationToken) : new Product();
             if (product is null) return ManagementResult.Fail("Sản phẩm không còn tồn tại. Vui lòng tải lại danh sách.");
             var brandActive = await store.BrandActiveAsync(edit.BrandId, cancellationToken);
             var categoryActive = await store.CategoryActiveAsync(edit.CategoryId, cancellationToken);
@@ -61,9 +63,14 @@ public sealed class ProductManagementService(ProductManagementStore store, IProd
             {
                 product.CreatedAt = DateTime.UtcNow;
                 store.Add(product);
+                await store.SaveAsync(cancellationToken);
             }
-            else product.UpdatedAt = DateTime.UtcNow;
-            await store.SaveAsync(cancellationToken);
+            else
+            {
+                product.UpdatedAt = DateTime.UtcNow;
+                if (await store.UpdateIfStockMatchesAsync(product, edit.OriginalStockQuantity!.Value, cancellationToken) != 1)
+                    return ManagementResult.Fail("Tồn kho đã thay đổi hoặc sản phẩm không còn tồn tại. Không có thay đổi nào được lưu. Vui lòng đóng và mở lại sản phẩm để tải dữ liệu mới.");
+            }
             await transaction.CommitAsync(cancellationToken);
             return ManagementResult.Success(product.ProductId);
         }

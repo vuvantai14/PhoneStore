@@ -6,6 +6,7 @@ namespace PhoneStore.Admin.Dialogs;
 public sealed class ProductEditDialog : Form
 {
     private readonly Func<ProductEdit, CancellationToken, Task<ManagementResult>> _save;
+    private readonly int? _originalStockQuantity;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly TableLayoutPanel _fields;
     private readonly Label _error;
@@ -37,6 +38,7 @@ public sealed class ProductEditDialog : Form
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(save);
         _save = save;
+        _originalStockQuantity = edit?.OriginalStockQuantity;
         SuspendLayout();
         Name = nameof(ProductEditDialog);
         Text = edit is null ? "Thêm sản phẩm" : "Chỉnh sửa sản phẩm";
@@ -222,6 +224,7 @@ public sealed class ProductEditDialog : Form
         {
             ProductName = _name.Text.Trim(), BrandId = brand.Id, CategoryId = category.Id,
             Price = _price.Value, StockQuantity = decimal.ToInt32(_stock.Value),
+            OriginalStockQuantity = _originalStockQuantity,
             RAM = _ram.Text.Trim(), Storage = _storage.Text.Trim(), Chip = _chip.Text.Trim(),
             Screen = _screen.Text.Trim(), Camera = _camera.Text.Trim(), Battery = _battery.Text.Trim(),
             OperatingSystem = _os.Text.Trim(), Description = _description.Text.Trim(), IsActive = _active.Checked
