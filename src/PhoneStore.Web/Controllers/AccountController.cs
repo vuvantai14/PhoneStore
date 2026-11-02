@@ -8,11 +8,12 @@ using Microsoft.EntityFrameworkCore;
 using PhoneStore.Business.Authentication;
 using PhoneStore.Models.Authentication;
 using PhoneStore.Web.Models;
+using PhoneStore.Web.Purchasing;
 
 namespace PhoneStore.Web.Controllers;
 
 [Route("account")]
-public class AccountController(IAuthService auth) : Controller
+public class AccountController(IAuthService auth, SessionCart cart) : Controller
 {
     [AllowAnonymous, HttpGet("register")]
     public IActionResult Register() => User.Identity?.IsAuthenticated == true ? RedirectToAction("Index", "Home") : View(new RegisterViewModel());
@@ -76,6 +77,11 @@ public class AccountController(IAuthService auth) : Controller
     [Authorize, HttpPost("logout"), ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
+        // The cart and checkout token live in the browser session, independently
+        // from the authentication cookie. Clear both so the next customer using
+        // the same browser cannot inherit the previous customer's cart.
+        cart.Clear();
+        cart.ClearCheckoutToken();
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return RedirectToAction("Index", "Home");
     }

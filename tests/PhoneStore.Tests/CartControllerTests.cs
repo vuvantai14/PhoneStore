@@ -1,11 +1,18 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Caching.Memory;
+using PhoneStore.Business.Authentication;
 using PhoneStore.Business.Purchasing;
 using PhoneStore.Data.Purchasing;
+using PhoneStore.Models.Authentication;
 using PhoneStore.Models.Purchasing;
 using PhoneStore.Web.Controllers;
 using PhoneStore.Web.Models;
@@ -15,6 +22,33 @@ namespace PhoneStore.Tests;
 
 public sealed class CartControllerTests
 {
+    [Fact]
+    public async Task Logout_clears_cart_and_checkout_token_before_signing_out()
+    {
+        var context = Context();
+        var cart = new SessionCart(new FixedAccessor { HttpContext = context });
+        cart.Write([new CartItem(25, 2)]);
+        var token = cart.CheckoutToken();
+        var authentication = new RecordingAuthenticationService();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddMvcCore();
+        services.AddSingleton<IAuthenticationService>(authentication);
+        context.RequestServices = services.BuildServiceProvider();
+        var controller = new AccountController(new UnusedAuthService(), cart)
+        {
+            ControllerContext = new(new ActionContext(context, new RouteData(), new ControllerActionDescriptor()))
+        };
+
+        var result = Assert.IsType<RedirectToActionResult>(await controller.Logout());
+
+        Assert.Empty(cart.Read());
+        Assert.False(cart.ValidToken(token));
+        Assert.Equal(CookieAuthenticationDefaults.AuthenticationScheme, authentication.SignedOutScheme);
+        Assert.Equal("Index", result.ActionName);
+        Assert.Equal("Home", result.ControllerName);
+    }
+
     [Fact]
     public async Task Completed_submission_token_is_rotated_for_the_next_independent_checkout()
     {
@@ -132,6 +166,32 @@ public sealed class CartControllerTests
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
+    }
+    sealed class UnusedAuthService : IAuthService
+    {
+        public Task<RegistrationResult> RegisterAsync(string fullName, string email, string? phone,
+            string password, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<CustomerIdentity?> LoginAsync(string email, string password,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<CustomerIdentity?> GetActiveCustomerAsync(int userId,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+    sealed class RecordingAuthenticationService : IAuthenticationService
+    {
+        public string? SignedOutScheme { get; private set; }
+        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
+            Task.FromResult(AuthenticateResult.NoResult());
+        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? properties) =>
+            Task.CompletedTask;
+        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? properties) =>
+            Task.CompletedTask;
+        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal,
+            AuthenticationProperties? properties) => Task.CompletedTask;
+        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? properties)
+        {
+            SignedOutScheme = scheme;
+            return Task.CompletedTask;
+        }
     }
     sealed class MemorySession : ISession
     {
