@@ -6,15 +6,17 @@
     var culture = CultureInfo.GetCultureInfo("vi-VN");
     var orderDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(Model.OrderDate, DateTimeKind.Utc), TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
 }
-<div class="container purchasing-page">
-    @if (TempData["OrderMessage"] is string message) { <p role="status">@message</p> }
-    <section class="order-success-heading"><span class="eyebrow">@OrderStatusLabels.Display(Model.Status)</span><h1>Đơn hàng @Model.OrderCode</h1><p>Ngày đặt @orderDate.ToString("dd/MM/yyyy HH:mm")</p></section>
+<div class="container purchasing-page order-detail-page">
+    <nav class="breadcrumbs" aria-label="Đường dẫn"><a href="/orders">Đơn hàng của tôi</a><span aria-hidden="true">/</span><span aria-current="page">Chi tiết đơn hàng</span></nav>
+    @if (TempData["OrderMessage"] is string message) { <p class="purchase-message" role="status">@message</p> }
+    <section class="catalog-heading"><span class="order-status status-@Model.Status.ToString().ToLowerInvariant()">@OrderStatusLabels.Display(Model.Status)</span><h1>Chi tiết đơn hàng</h1><p class="order-code">@Model.OrderCode</p><p>Ngày đặt @orderDate.ToString("dd/MM/yyyy HH:mm")</p></section>
     <div class="purchase-layout"><section class="shipping-panel"><h2>Thông tin giao hàng</h2>
         <dl class="receipt-info"><div><dt>Người nhận</dt><dd>@Model.ReceiverName</dd></div><div><dt>Số điện thoại</dt><dd>@Model.ReceiverPhone</dd></div><div><dt>Địa chỉ</dt><dd>@Model.ShippingAddress</dd></div>@if (!string.IsNullOrWhiteSpace(Model.Note)) { <div><dt>Ghi chú</dt><dd>@Model.Note</dd></div> }</dl>
         @if (Model.Status is PhoneStore.Models.Enums.OrderStatus.Pending or PhoneStore.Models.Enums.OrderStatus.Confirmed)
         {
-            <form asp-controller="Orders" asp-action="Cancel" asp-route-id="@Model.OrderId" method="post">
-                <button type="submit" class="button">Hủy đơn hàng</button>
+            <div class="cancel-order-notice"><h3>Bạn muốn hủy đơn hàng?</h3><p>Kiểm tra lại đơn hàng trước khi xác nhận hủy. Thao tác này sẽ kết thúc đơn hàng hiện tại.</p></div>
+            <form asp-controller="Orders" asp-action="Cancel" asp-route-id="@Model.OrderId" method="post" class="cancel-order-form" data-ui-submit data-pending-label="Đang gửi yêu cầu…" data-confirm-cancel="Bạn có chắc muốn hủy đơn @Model.OrderCode?">
+                <button type="submit" class="button button-danger">Hủy đơn hàng</button>
             </form>
         }
         <a class="button" href="/orders">← Tất cả đơn hàng</a>

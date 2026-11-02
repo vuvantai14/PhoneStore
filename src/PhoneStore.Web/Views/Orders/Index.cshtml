@@ -6,20 +6,25 @@
     var culture = CultureInfo.GetCultureInfo("vi-VN");
     var zone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 }
-<div class="container purchasing-page">
-    <section class="order-success-heading"><span class="eyebrow">TÀI KHOẢN</span><h1>Đơn hàng của tôi</h1><p>Theo dõi trạng thái các đơn hàng đã đặt.</p></section>
+<div class="container purchasing-page orders-page">
+    <nav class="breadcrumbs" aria-label="Đường dẫn"><a href="/">Trang chủ</a><span aria-hidden="true">/</span><span aria-current="page">Đơn hàng của tôi</span></nav>
+    <section class="catalog-heading"><span class="eyebrow">TÀI KHOẢN</span><h1>Đơn hàng của tôi</h1><p>Theo dõi trạng thái và xem lại thông tin đơn hàng của bạn.</p></section>
     @if (Model.Count == 0)
     {
-        <section class="shipping-panel"><h2>Chưa có đơn hàng.</h2><p>Đơn hàng hoàn tất từ trang thanh toán sẽ xuất hiện tại đây.</p><a class="button button-primary" href="/products">Xem sản phẩm</a></section>
+        <section class="empty-state"><h2>Bạn chưa có đơn hàng.</h2><p>Đơn hàng được ghi nhận sau khi đặt hàng sẽ xuất hiện tại đây.</p><a class="button button-primary" href="/products">Khám phá sản phẩm <span aria-hidden="true">→</span></a></section>
     }
     else
     {
-        <section class="shipping-panel"><div class="receipt-info">
+        <section class="order-list" aria-label="Danh sách đơn hàng">
         @foreach (var order in Model)
         {
             var localDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(order.OrderDate, DateTimeKind.Utc), zone);
-            <div><dt><a href="/orders/@order.OrderId">@order.OrderCode</a></dt><dd>@localDate.ToString("dd/MM/yyyy HH:mm") · @OrderStatusLabels.Display(order.Status) · @order.TotalAmount.ToString("N0", culture) ₫</dd></div>
+            <article class="order-card">
+                <div class="order-card-heading"><h2><a href="/orders/@order.OrderId">@order.OrderCode</a></h2><span class="order-status status-@order.Status.ToString().ToLowerInvariant()">@OrderStatusLabels.Display(order.Status)</span></div>
+                <dl class="order-card-facts"><div><dt>Ngày đặt hàng</dt><dd>@localDate.ToString("dd/MM/yyyy HH:mm")</dd></div><div><dt>Tổng tiền</dt><dd class="order-card-price">@order.TotalAmount.ToString("N0", culture) ₫</dd></div></dl>
+                <a class="button order-detail-link" href="/orders/@order.OrderId" aria-label="Xem chi tiết đơn @order.OrderCode">Xem chi tiết <span aria-hidden="true">→</span></a>
+            </article>
         }
-        </div></section>
+        </section>
     }
 </div>

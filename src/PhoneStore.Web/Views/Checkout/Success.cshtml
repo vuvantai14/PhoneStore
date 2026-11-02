@@ -5,7 +5,7 @@
     var orderDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(Model.OrderDate, DateTimeKind.Utc),
         TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
 }
-<div class="container purchasing-page">
+<div class="container purchasing-page order-success-page">
     <section class="order-success-heading"><span class="success-symbol" aria-hidden="true">✓</span><span class="eyebrow">ĐẶT HÀNG THÀNH CÔNG</span><h1>Cảm ơn bạn đã đặt hàng.</h1><p>Đơn hàng <strong>@Model.OrderCode</strong> đã được ghi nhận.</p></section>
     <div class="purchase-layout"><section class="shipping-panel"><h2>Thông tin đơn hàng</h2>
         <dl class="receipt-info"><div><dt>Mã đơn hàng</dt><dd>@Model.OrderCode</dd></div><div><dt>Ngày đặt</dt><dd>@orderDate.ToString("dd/MM/yyyy HH:mm")</dd></div><div><dt>Người nhận</dt><dd>@Model.ReceiverName</dd></div><div><dt>Số điện thoại</dt><dd>@Model.ReceiverPhone</dd></div><div><dt>Địa chỉ giao hàng</dt><dd>@Model.ShippingAddress</dd></div></dl>
