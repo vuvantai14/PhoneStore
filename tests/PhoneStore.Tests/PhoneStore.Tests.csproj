@@ -17,5 +17,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/PhoneStore.Business/PhoneStore.Business.csproj" />
+    <ProjectReference Include="../../tools/PhoneStore.AdminBootstrap/PhoneStore.AdminBootstrap.csproj" />
   </ItemGroup>
 </Project>

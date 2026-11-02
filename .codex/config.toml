@@ -1,0 +1,11 @@
+# PhoneStore: routine local work runs inside the workspace sandbox.
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+approvals_reviewer = "user"
+
+[sandbox_workspace_write]
+network_access = false
+writable_roots = []
+
+[windows]
+sandbox = "elevated"

@@ -7,12 +7,23 @@ namespace PhoneStore.Tests;
 
 internal sealed class TestDatabase : IAsyncDisposable
 {
-    private readonly SqliteConnection connection = new("Data Source=:memory:");
+    private readonly SqliteConnection connection;
+    private readonly string? temporaryFile;
+    private TestDatabase(bool useTemporaryFile)
+    {
+        temporaryFile = useTemporaryFile
+            ? Path.Combine(Path.GetTempPath(), "PhoneStore-bootstrap-" + Guid.NewGuid().ToString("N") + ".db") : null;
+        connection = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = temporaryFile ?? ":memory:", Mode = temporaryFile is null ? SqliteOpenMode.Memory : SqliteOpenMode.ReadWriteCreate,
+            Cache = SqliteCacheMode.Private, Pooling = false
+        }.ToString());
+    }
     public PhoneStoreDbContext Db { get; private set; } = null!;
 
-    public static async Task<TestDatabase> CreateAsync()
+    public static async Task<TestDatabase> CreateAsync(bool useTemporaryFile = false)
     {
-        var database = new TestDatabase();
+        var database = new TestDatabase(useTemporaryFile);
         database.connection.CreateFunction("SYSUTCDATETIME", () => DateTime.UtcNow);
         await database.connection.OpenAsync();
         database.Db = new PhoneStoreDbContext(new DbContextOptionsBuilder<PhoneStoreDbContext>()
@@ -41,5 +52,6 @@ internal sealed class TestDatabase : IAsyncDisposable
     {
         await Db.DisposeAsync();
         await connection.DisposeAsync();
+        if (temporaryFile is not null) File.Delete(temporaryFile);
     }
 }
