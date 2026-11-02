@@ -1,7 +1,7 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
-Cập nhật 2026-11-02 — S29.9E **PASS source/browser cách ly, PARTIAL main**: Login/Register/Profile/AccessDenied đã đồng bộ tokens; 4 views + CSS + resolver lỗi nhiều ID trong JS. Build0warnings/errors; targeted40/40testsPASS, Edge36/36trạng thái×viewport375/768/1024/1440PASS,19screenshots. Không POST/DML main/deploy/restart/stage/commit/push. Xem `S29_9E_AUTH_PROFILE_UI_UX.md`. READY chuẩn bị nghiệm thu tổng thể sau duyệt triển khai D/E; E còn unstaged.
-S29.9B/C PASS. D source/browser cách ly PASS (build0warnings/errors,162tests,40browserchecks), main còn PARTIAL. HEAD hiện `ece7b67` — Shopping cart, checkout, customer order — được tạo ngoài thao tác agent lượt E; views/report D giữ nguyên. Xem `S29_9D_CART_CHECKOUT_ORDERS.md`, `S29_9B_2_BROWSER_ACCEPTANCE.md`, `S29_9C_CATALOG_PRODUCT_DETAIL.md`.
+Cập nhật 2026-11-02 — S29.9F **CURRENT runtime, PASS browser chỉ đọc; PARTIAL sau POST nghiệp vụ thật**: Web mớiPID14764/bin/S29.9F/5015/Production/mainDB; shutdown mềmWeb6652PASS. 11màn×4viewport375/768/1024/1440PASS, Cart cóhàng/CheckoutGETPASS bằng1item session tạm rồi trảgiỏtrống; không POSTcheckout/profile/cancel hoặc SQLDML. SửaCSSheaderđăngnhập1024chồngsearch,6biênviewportPASS. Build0warnings/errors; khônglặpunit (E40/D162PASS lịch sử),38screenshots. Xem `S29_9F_CUSTOMER_WEB_RUNTIME_ACCEPTANCE.md`. READY sangUI/UXAdmin nhiệm vụriêng; khôngstage/commit/push.
+HEAD hiện `368daed` — Login, Register Profile — commitE từthao tácngoàiagentF; `ece7b67` làD, sourceD/E giữ nguyên trừCSSfixF. SELECTmainFtrước/sau: Products40/Images40/tồn733/Orders4/Users2, khácsnapshotcũ740/1đơn; runtimeSQLđúngPhoneStoreDB. POSTnghiệpvụmainkhôngnghiệmthu, giữPARTIAL. B/C/D/E reports là bằng chứng theo phạm vi/ngày trước đó.
 Đọc đầu mỗi phiên. Ưu tiên source và kết quả thực tế khi tài liệu mâu thuẫn; chỉ kiểm tra phần liên quan nhiệm vụ.
 
 ## 1. Kiến trúc, môi trường và cấu hình
@@ -115,6 +115,7 @@ S29.9B/C PASS. D source/browser cách ly PASS (build0warnings/errors,162tests,40
 - Word/Excel UC01–UC12/SCR01–SCR12/rubric chấm điểm chưa được xác minh; không tự suy đáp ứng toàn bộ tài liệu chưa có.
 
 ## 8. Nhiệm vụ hiện tại và bước tiếp theo
+- [S29.9F runtime](S29_9F_CUSTOMER_WEB_RUNTIME_ACCEPTANCE.md): D/E đã lênmain mới, Customer tựlogin, Orders/CancelledDetail/Profile/Cart/CheckoutGETPASS. FchỉsửaCSSheader,docs/screenshots; chờ user quyết địnhcommit/push. Không thao tácAdmin ởF; READY chuẩn bị UIAdmin sauchỉđạo.
 - [S29.9E Auth/Profile UI](S29_9E_AUTH_PROFILE_UI_UX.md): preview Razor không SQL PASS, summary/link/error/hint/loading/pageshow/keyboard/contrast PASS; không thay đổi auth/session/backend. Chưa nghiệm thu trên runtime main với Customer thật; không stage/commit/push. Giữ toàn bộ công việc D, không audit lại các màn hình đã PASS.
 - [S29.9D UI](S29_9D_CART_CHECKOUT_ORDERS.md): 5 Razor views + CSS/JS; browser cách ly PASS (native invalid/summary/link focus/Tab/Shift+Tab/loading/pageshow/confirmation-dismiss). Main chỉ GET cart200; Razor mới chưa deploy, không ghi SQL. Skill đọc trực tiếp do `py` chưa khả dụng; script/harness tạm ở obj ignored.
 - [S29.9B.2 acceptance](S29_9B_2_BROWSER_ACCEPTANCE.md) và [S29.9C](S29_9C_CATALOG_PRODUCT_DETAIL.md) đã thay trạng thái B.1 PARTIAL: Home/catalog/detail PASS Edge CDP đúng 4 viewport, hero/fallback/tablet CTA đã sửa. B/C build0warning/error,162testsPASS; không đổi nghiệp vụ.

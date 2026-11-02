@@ -308,6 +308,11 @@ textarea{font:inherit;color:var(--text);width:100%;max-width:100%;min-width:0;bo
 .access-denied-page .button { width:100%; }
 .account-state-symbol { display:grid; place-items:center; width:64px; height:64px; margin:0 auto 24px; color:var(--primary); background:var(--primary-soft); border:1px solid var(--border); border-radius:20px; }
 .account-state-symbol svg { width:28px; height:28px; }
+/* Keep the signed-in account controls clear of search at small desktop widths. */
+@media(min-width:1001px) and (max-width:1199px) {
+    .header-inner { flex-wrap:wrap; padding-block:10px; gap:10px 18px; }
+    .header-search { order:4; flex-basis:100%; max-width:none; margin-left:0; }
+}
 @media(max-width:768px) {
     .customer-account-page { padding-block:32px 48px; }
     .customer-account-page .auth-card { padding:32px; }
