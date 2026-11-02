@@ -18,6 +18,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.IsActive).HasDefaultValue(true);
         builder.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
         builder.HasIndex(x => x.Email).IsUnique();
+        builder.HasIndex(x => x.RoleId);
+        builder.HasIndex(x => x.RoleId, "UX_Users_SingleAdmin")
+            .IsUnique().HasFilter("[RoleId] = 1");
         builder.HasOne(x => x.Role).WithMany(x => x.Users).HasForeignKey(x => x.RoleId).OnDelete(DeleteBehavior.NoAction);
     }
 }

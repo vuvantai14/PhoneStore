@@ -25,16 +25,14 @@ public sealed class AuthService(AuthUserStore store, IPasswordHasher<User> hashe
         {
             if (await store.FindByEmailAsync(email, cancellationToken) is not null)
                 return RegistrationResult.DuplicateEmail;
-            var roleId = await store.CustomerRoleIdAsync(cancellationToken);
-            if (roleId is null) return RegistrationResult.CustomerRoleMissing;
             var user = new User
             {
                 FullName = fullName, Email = email, Phone = phone,
-                RoleId = roleId.Value, IsActive = true, CreatedAt = DateTime.UtcNow
+                IsActive = true, CreatedAt = DateTime.UtcNow
             };
             user.PasswordHash = hasher.HashPassword(user, password);
-            return await store.CreateAsync(user, cancellationToken)
-                ? RegistrationResult.Success : RegistrationResult.DuplicateEmail;
+            return await store.CreateCustomerAsync(user.FullName, user.Email, user.Phone,
+                user.PasswordHash, cancellationToken);
         }
         catch (Exception exception) when (exception is DbException or DbUpdateException)
         {

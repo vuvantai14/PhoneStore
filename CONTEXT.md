@@ -247,7 +247,22 @@ Before every future task:
 
 ## 10. Current Progress
 
-Completed:
+### Latest verified milestone — S29.4 (2026-11-02)
+
+Primary progress source: [docs/PROGRESS.md](docs/PROGRESS.md). This section is a short summary, not a live environment check.
+- Local environment restored to .NET SDK 8.0.427, EF Core 8.0.28, SQL Server `localhost` with Windows Authentication.
+- AdminBootstrap exists as a separate, controlled tool. Registration is Customer-only; the official rule permits at most one Admin, including inactive accounts.
+- VERIFIED SQL isolation test: new `PhoneStoreDB_MigrationTest` received InitialCreate and `20261102122856_EnforceSingleAdmin`; filtered unique index and role-identity constraint were verified. Duplicate Admin was rejected, multiple Customers accepted, and test rows rolled back (Users = 0).
+- VERIFIED S29.4 build: 0 warnings/errors; unit tests: 72/72 passed. SQL migration tests and unit tests are separate evidence.
+- PARTIAL UI: Web Home/Products/Login returned HTTP 200 at `http://localhost:5015`; WinForms displayed its responsive login window. Both retained the main database configuration. HTTP smoke emitted an HTTPS redirect-port warning; authenticated business workflows were not tested.
+- Main `PhoneStoreDB` remains ONLINE with only InitialCreate applied: **EnforceSingleAdmin has NOT been applied and no Admin account has been created**. The last SELECT recorded Roles = 2 and all seven other business tables empty.
+- Next steps require separate approval for applying the migration to the main database and creating the first Admin. No catalog import/seed is authorized. See PROGRESS.md for detailed evidence, risks and pending work.
+
+### Historical milestones — retained as originally recorded
+
+The S1–S17.3.1 entries below describe previous environments and observations, including the old server and catalog. They do not establish current data, connectivity or readiness; use the latest summary and PROGRESS.md above.
+
+Completed (historical record):
 - S1 Scope
 - S2 Functional Analysis
 - S3 Use Cases / Business Flows

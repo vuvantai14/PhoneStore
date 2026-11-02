@@ -20,6 +20,7 @@ Never use EnsureDeleted or database drop for environment recovery. Do not create
 These are agent instructions, not a database firewall or a replacement for the filesystem sandbox. Never claim all destructive commands are technically blocked by workspace-write.
 
 ## Persistent progress and session workflow
+- `docs/PROGRESS.md` is the primary source of current project progress. `CONTEXT.md` provides architecture/background and historical milestones; keep its Current Progress summary short and linked to PROGRESS.md. Neither overrides source code, actual test evidence or user authorization.
 - At the start of each session, read `docs/PROGRESS.md` before planning or inspecting source files.
 - Read only source/configuration files directly relevant to the current task. Do not rescan the entire repository or repeat a full inventory while PROGRESS.md remains applicable.
 - Check freshness using the task context and targeted evidence. If progress conflicts with source code or actual test results, prioritize source and tests; correct the affected progress entry rather than assuming completion.

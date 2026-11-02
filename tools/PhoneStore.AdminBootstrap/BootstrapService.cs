@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using PhoneStore.Data.Context;
 using PhoneStore.Models.Entities;
+using PhoneStore.Models.Authentication;
 
 namespace PhoneStore.AdminBootstrap;
 
@@ -52,8 +53,10 @@ public sealed class BootstrapService(PhoneStoreDbContext db, IPasswordHasher<Use
                 // with a deadlock/unique constraint error; never automatically retry writes.
                 await using var transaction = request.Execute
                     ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
-                var role = await db.Roles.AsNoTracking().SingleOrDefaultAsync(r => r.RoleName == "Admin", ct);
+                var role = await db.Roles.AsNoTracking().SingleOrDefaultAsync(r => r.RoleName == SystemRoles.Admin, ct);
                 if (role is null) return new(false, false, "Thiếu role Admin; không tự tạo role hoặc migration.");
+                if (role.RoleId != SystemRoles.AdminId)
+                    return new(false, false, "Ánh xạ role Admin không đúng ID hệ thống; dừng để kiểm tra, không sửa role.");
                 if (await db.Users.AsNoTracking().AnyAsync(u => u.RoleId == role.RoleId, ct))
                     return new(false, false, "Đã có Admin (kể cả bị khóa); không tạo thêm hoặc ghi đè.");
                 if (await db.Users.AsNoTracking().AnyAsync(u => u.Email.Trim().ToUpper() == email.ToUpper(), ct))

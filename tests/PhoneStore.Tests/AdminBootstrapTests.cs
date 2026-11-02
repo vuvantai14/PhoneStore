@@ -115,16 +115,25 @@ public sealed class AdminBootstrapTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Any_existing_admin_including_inactive_blocks_creation(bool active)
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Any_existing_admin_including_inactive_blocks_creation(bool active, bool execute)
     {
         await using var test = await TestDatabase.CreateAsync(useTemporaryFile: true);
         test.Db.Users.Add(new User { FullName = "Existing Admin", Email = "other@example.com",
             RoleId = 1, PasswordHash = "original-hash", IsActive = active });
         await test.Db.SaveChangesAsync();
-        Assert.False((await Service(test).RunAsync(Execute(test))).Succeeded);
-        Assert.Equal("original-hash", (await test.Db.Users.SingleAsync()).PasswordHash);
+        var request = execute ? Execute(test) : new BootstrapRequest("First Admin", "admin@example.com");
+        var result = await Service(test).RunAsync(request);
+        Assert.False(result.Succeeded);
+        Assert.False(result.Created);
+        var existing = await test.Db.Users.SingleAsync();
+        Assert.Equal("original-hash", existing.PasswordHash);
+        Assert.Equal("other@example.com", existing.Email);
+        Assert.Equal(1, existing.RoleId);
+        Assert.Equal(active, existing.IsActive);
     }
 
     [Fact]
