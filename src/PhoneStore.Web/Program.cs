@@ -43,6 +43,8 @@ builder.Services.AddScoped<CartPresenter>();
 builder.Services.AddSingleton<CheckoutSubmissionGuard>();
 builder.Services.AddScoped<PurchaseStore>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<PhoneStore.Data.Management.OrderManagementStore>();
+builder.Services.AddScoped<PhoneStore.Business.Management.IOrderManagementService, PhoneStore.Business.Management.OrderManagementService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ProductCatalogReader>();
 builder.Services.AddScoped<AuthUserStore>();

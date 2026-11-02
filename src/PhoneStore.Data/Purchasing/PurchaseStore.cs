@@ -16,8 +16,33 @@ public sealed class PurchaseStore(PhoneStoreDbContext db)
         db.Users.AsNoTracking().Include(u => u.Role)
             .SingleOrDefaultAsync(u => u.UserId == id && u.IsActive && u.Role.RoleName == "Customer", ct);
 
-    public Task<List<Product>> ProductsForOrderAsync(int[] ids, CancellationToken ct) =>
-        db.Products.Where(p => ids.Contains(p.ProductId)).OrderBy(p => p.ProductId).ToListAsync(ct);
+    public void ClearTracking() => db.ChangeTracker.Clear();
+
+    public Task<int?> CheckoutOrderAsync(int userId, string code, CancellationToken ct) =>
+        db.Orders.AsNoTracking().Where(o => o.UserId == userId && o.OrderCode == code)
+            .Select(o => (int?)o.OrderId).SingleOrDefaultAsync(ct);
+
+    public async Task LockCheckoutAsync(string code, CancellationToken ct)
+    {
+        if (!db.Database.IsSqlServer()) return;
+        var resource = "PhoneStore:checkout:" + code;
+        // Transaction-owned, shared by all Web processes; no automatic retry on timeout.
+        await db.Database.ExecuteSqlInterpolatedAsync($"DECLARE @r int; EXEC @r = sys.sp_getapplock @Resource={resource}, @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000; IF @r < 0 THROW 51020, 'Checkout lock unavailable', 1;", ct);
+    }
+
+    public async Task<List<Product>> ProductsForOrderAsync(int[] ids, CancellationToken ct)
+    {
+        if (!db.Database.IsSqlServer())
+            return await db.Products.Where(p => ids.Contains(p.ProductId)).OrderBy(p => p.ProductId).ToListAsync(ct);
+        var products = new List<Product>();
+        foreach (var id in ids.Distinct().Order())
+        {
+            var product = await db.Products.FromSqlInterpolated($"SELECT * FROM [Products] WITH (UPDLOCK, HOLDLOCK) WHERE [ProductId]={id}")
+                .SingleOrDefaultAsync(ct);
+            if (product is not null) products.Add(product);
+        }
+        return products;
+    }
 
     public Task<List<CartProduct>> CartProductsAsync(int[] ids, CancellationToken ct) =>
         db.Products.AsNoTracking().Where(p => ids.Contains(p.ProductId))
@@ -35,6 +60,7 @@ public sealed class PurchaseStore(PhoneStoreDbContext db)
         db.Orders.AsNoTracking().Where(o => o.OrderId == orderId && o.UserId == userId)
             .Select(o => new OrderReceipt
             {
+                OrderId = o.OrderId,
                 OrderCode = o.OrderCode, OrderDate = o.OrderDate, TotalAmount = o.TotalAmount,
                 ReceiverName = o.ReceiverName, ReceiverPhone = o.ReceiverPhone, ShippingAddress = o.ShippingAddress,
                 Note = o.Note, Status = o.Status,

@@ -9,4 +9,5 @@ public interface IOrderManagementService
     Task<OrderManagementDetail?> GetAsync(int id, CancellationToken ct = default);
     IReadOnlyList<OrderStatus> NextStatuses(OrderStatus current);
     Task<ManagementResult> UpdateStatusAsync(int id, OrderStatus expected, OrderStatus target, CancellationToken ct = default);
+    Task<ManagementResult> CancelForCustomerAsync(int id, int customerId, CancellationToken ct = default);
 }

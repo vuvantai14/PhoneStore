@@ -12,6 +12,7 @@ public sealed record CustomerOrderRow(int OrderId, string OrderCode, DateTime Or
     OrderStatus Status, string ReceiverName);
 public sealed class OrderReceipt
 {
+    public int OrderId { get; init; }
     public string OrderCode { get; init; } = string.Empty;
     public DateTime OrderDate { get; init; }
     public decimal TotalAmount { get; init; }

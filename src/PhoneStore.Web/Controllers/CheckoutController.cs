@@ -32,6 +32,14 @@ public class CheckoutController(SessionCart cart, CartPresenter presenter, IOrde
     [HttpPost(""), ValidateAntiForgeryToken]
     public async Task<IActionResult> Index(CheckoutViewModel model, CancellationToken ct)
     {
+        // A committed submission survives process restart/session-token clearing.
+        // Looking up an owned order is read-only; an invalid token never creates an order.
+        try
+        {
+            var existing = await orders.GetCheckoutOrderIdAsync(UserId, model.SubmissionToken, ct);
+            if (existing.HasValue) return RedirectToAction(nameof(Success), new { id = existing.Value });
+        }
+        catch (DbException) { return BackToCart("Chưa thể xác minh đơn hàng. Vui lòng thử lại sau."); }
         if (!cart.ValidToken(model.SubmissionToken)) return BackToCart("Phiên thanh toán không hợp lệ. Vui lòng mở lại giỏ hàng.");
         var submission = guard.Get(UserId, model.SubmissionToken!);
         await submission.Gate.WaitAsync(ct);
@@ -41,8 +49,8 @@ public class CheckoutController(SessionCart cart, CartPresenter presenter, IOrde
             model.Cart = await presenter.GetAsync(ct);
             if (!model.Cart.CanCheckout) return BackToCart();
             if (!ModelState.IsValid) return View(model);
-            var result = await orders.CreateAsync(UserId, cart.Read(),
-                new ShippingInfo(model.ReceiverName, model.ReceiverPhone, model.ShippingAddress, model.Note), ct);
+            var result = await orders.CreateIdempotentAsync(UserId, cart.Read(),
+                new ShippingInfo(model.ReceiverName, model.ReceiverPhone, model.ShippingAddress, model.Note), model.SubmissionToken, ct);
             if (result.OrderId is null)
             {
                 ModelState.AddModelError(string.Empty, result.Error ?? "Chưa thể đặt hàng.");

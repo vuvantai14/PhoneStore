@@ -7,7 +7,7 @@ namespace PhoneStore.Web.Models;
 public sealed record CartLineViewModel(CartItem Item, CartProduct? Product)
 {
     public decimal LineTotal => (Product?.Price ?? 0) * Item.Quantity;
-    public bool Available => Product is { IsActive: true } && Item.Quantity <= Product.StockQuantity;
+    public bool Available => Item.Quantity > 0 && Product is { IsActive: true } && Item.Quantity <= Product.StockQuantity;
 }
 public sealed class CartViewModel
 {

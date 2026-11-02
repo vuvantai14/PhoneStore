@@ -28,17 +28,30 @@ public sealed class OrderManagementService(OrderManagementStore store) : IOrderM
     public IReadOnlyList<OrderStatus> NextStatuses(OrderStatus current) =>
         Allowed.TryGetValue(current, out var statuses) ? statuses : [];
 
-    public async Task<ManagementResult> UpdateStatusAsync(int id, OrderStatus expected, OrderStatus target,
-        CancellationToken ct = default)
+    public Task<ManagementResult> UpdateStatusAsync(int id, OrderStatus expected, OrderStatus target,
+        CancellationToken ct = default) => UpdateCoreAsync(id, expected, target, null, ct);
+
+    public Task<ManagementResult> CancelForCustomerAsync(int id, int customerId, CancellationToken ct = default) =>
+        customerId <= 0 ? Task.FromResult(ManagementResult.Fail("Không thể hủy đơn hàng này."))
+            : UpdateCoreAsync(id, null, OrderStatus.Cancelled, customerId, ct);
+
+    private async Task<ManagementResult> UpdateCoreAsync(int id, OrderStatus? expected, OrderStatus target,
+        int? customerId, CancellationToken ct)
     {
-        if (id <= 0 || !Enum.IsDefined(expected) || !Enum.IsDefined(target))
+        if (id <= 0 || (expected.HasValue && !Enum.IsDefined(expected.Value)) || !Enum.IsDefined(target))
             return ManagementResult.Fail("Đơn hàng hoặc trạng thái không hợp lệ.");
         try
         {
             await using var transaction = await store.BeginAsync(ct);
             var order = await store.LockAsync(id, ct);
             if (order is null) return ManagementResult.Fail("Đơn hàng không còn tồn tại. Vui lòng tải lại danh sách.");
-            if (order.Status != expected)
+            if (customerId.HasValue)
+            {
+                if (order.UserId != customerId.Value || !await store.IsActiveCustomerAsync(customerId.Value, ct))
+                    return ManagementResult.Fail("Không thể hủy đơn hàng này.");
+                if (order.Status == OrderStatus.Cancelled) return ManagementResult.Success(id);
+            }
+            if (expected.HasValue && order.Status != expected.Value)
                 return ManagementResult.Fail("Trạng thái đơn hàng đã thay đổi. Vui lòng tải lại trước khi thao tác.");
             if (!NextStatuses(order.Status).Contains(target))
                 return ManagementResult.Fail("Không thể chuyển đơn hàng sang trạng thái đã chọn.");

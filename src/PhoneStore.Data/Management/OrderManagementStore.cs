@@ -48,9 +48,24 @@ public sealed class OrderManagementStore(PhoneStoreDbContext db)
             .SingleOrDefaultAsync(ct);
     }
 
-    public Task<List<OrderDetail>> DetailsForCancellationAsync(int orderId, CancellationToken ct) =>
-        db.OrderDetails.Include(detail => detail.Product).Where(detail => detail.OrderId == orderId)
-            .OrderBy(detail => detail.OrderDetailId).ToListAsync(ct);
+    public Task<bool> IsActiveCustomerAsync(int userId, CancellationToken ct) =>
+        db.Users.AnyAsync(u => u.UserId == userId && u.IsActive && u.Role.RoleName == "Customer", ct);
+
+    public async Task<List<OrderDetail>> DetailsForCancellationAsync(int orderId, CancellationToken ct)
+    {
+        if (!db.Database.IsSqlServer())
+            return await db.OrderDetails.Include(d => d.Product).Where(d => d.OrderId == orderId)
+                .OrderBy(d => d.OrderDetailId).ToListAsync(ct);
+        var details = await db.OrderDetails.Where(d => d.OrderId == orderId).ToListAsync(ct);
+        // Same lock order as checkout; different orders can share products.
+        foreach (var id in details.Select(d => d.ProductId).Distinct().Order())
+        {
+            var product = await db.Products.FromSqlInterpolated($"SELECT * FROM [Products] WITH (UPDLOCK, HOLDLOCK) WHERE [ProductId]={id}")
+                .SingleOrDefaultAsync(ct);
+            foreach (var detail in details.Where(d => d.ProductId == id)) detail.Product = product!;
+        }
+        return details;
+    }
 
     public Task SaveAsync(CancellationToken ct) => db.SaveChangesAsync(ct);
     public void ClearTracking() => db.ChangeTracker.Clear();
