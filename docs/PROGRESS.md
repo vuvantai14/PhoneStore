@@ -1,5 +1,7 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
-Cập nhật: 2026-11-02, S29.9B.1 **PARTIAL**: Edge thật phát hiện hero 375px P1 + brand fallback P2, source đã sửa/build/tests PASS nhưng Web tự dừng trước tái nghiệm thu; chưa deploy/DB DML. Đây là snapshot.
+
+S29.9B.2/S29.9C (2026-11-02): **PASS** browser UI. Home được nghiệm thu Edge/CDP ở 375/768/1024/1440; catalog/detail đã nâng cấp bằng design tokens hiện có, 40 cards và ảnh hợp lệ, search/filter/sort/detail giữ nguyên nghiệp vụ. Build 0 warnings/errors; 162/162 tests PASS. Xem `S29_9B_2_BROWSER_ACCEPTANCE.md` và `S29_9C_CATALOG_PRODUCT_DETAIL.md`.
+Cập nhật: 2026-11-02, S29.9B **PASS** và S29.9C **PASS**; browser responsive thực tế đã nghiệm thu, không có DB DML.
 Đọc đầu mỗi phiên. Ưu tiên source và kết quả thực tế khi tài liệu mâu thuẫn; chỉ kiểm tra phần liên quan nhiệm vụ.
 
 ## 1. Kiến trúc, môi trường và cấu hình
