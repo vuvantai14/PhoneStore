@@ -50,6 +50,7 @@ internal static class AdminServices
         services.AddScoped<OrderManagementStore>();
         services.AddScoped<IOrderManagementService, OrderManagementService>();
         services.AddScoped<ReportingStore>();
+        services.AddScoped<IReportingStore>(provider => provider.GetRequiredService<ReportingStore>());
         services.AddScoped<IReportingService, ReportingService>();
         services.AddSingleton<CatalogManagementGateway>();
         services.AddTransient<LoginForm>();

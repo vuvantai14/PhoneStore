@@ -5,7 +5,7 @@ using PhoneStore.Models.Reporting;
 
 namespace PhoneStore.Data.Reporting;
 
-public sealed class ReportingStore(PhoneStoreDbContext db)
+public sealed class ReportingStore(PhoneStoreDbContext db) : IReportingStore
 {
     public async Task<DashboardSnapshot> DashboardAsync(int lowStockThreshold, CancellationToken ct)
     {
@@ -38,7 +38,8 @@ public sealed class ReportingStore(PhoneStoreDbContext db)
     }
 
     public async Task<ReportSnapshot> ReportAsync(DateOnly fromDate, DateOnly toDate,
-        DateTime startUtc, DateTime endExclusiveUtc, int lowStockThreshold, CancellationToken ct)
+        DateTime startUtc, DateTime endExclusiveUtc, int localOffsetMinutes,
+        int lowStockThreshold, CancellationToken ct)
     {
         var orders = db.Orders.AsNoTracking().Where(order => order.OrderDate >= startUtc && order.OrderDate < endExclusiveUtc);
         var totalOrders = await orders.CountAsync(ct);
@@ -55,7 +56,7 @@ public sealed class ReportingStore(PhoneStoreDbContext db)
         var outOfStock = await db.Products.AsNoTracking().CountAsync(product => product.IsActive && product.StockQuantity == 0, ct);
         var lowStock = await db.Products.AsNoTracking().CountAsync(product => product.IsActive && product.StockQuantity <= lowStockThreshold, ct);
         var alerts = await LowStock(lowStockThreshold, 50, ct);
-        var trendRows = await completed.GroupBy(order => order.OrderDate.Date)
+        var trendRows = await completed.GroupBy(order => order.OrderDate.AddMinutes(localOffsetMinutes).Date)
             .Select(group => new { Date = group.Key, Revenue = group.Sum(order => order.TotalAmount) })
             .OrderBy(point => point.Date).ToListAsync(ct);
         var trend = trendRows.Select(point => new RevenuePoint(point.Date, point.Revenue)).ToArray();

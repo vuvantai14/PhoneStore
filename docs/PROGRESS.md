@@ -1,5 +1,5 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
-Cập nhật: 2026-11-02 13:50 Asia/Bangkok, D.2C.5 Product13 tạo/sửa/tìm/softinactive UI+SQLPASS; filterPARTIAL, dừngtrướcảnh. Đây là snapshot.
+Cập nhật: 2026-11-02, D.4C.3 Admin tổng hợp CONDITIONAL READY; core/runtime PASS, known limits+backup/config guard chờ duyệt deploy riêng. Đây là snapshot.
 Đọc đầu mỗi phiên. Ưu tiên source và kết quả thực tế khi tài liệu mâu thuẫn; chỉ kiểm tra phần liên quan nhiệm vụ.
 
 ## 1. Kiến trúc, môi trường và cấu hình
@@ -45,13 +45,13 @@ Cập nhật: 2026-11-02 13:50 Asia/Bangkok, D.2C.5 Product13 tạo/sửa/tìm/s
 | Lịch sử/chi tiết/ownership | VERIFIED UI main C.7/7A; foreign ownership PASS tests/HTTP cách ly |
 | Hủy/hoàn kho | VERIFIED main Confirmed→Cancelled, kho38→37→38; double cancel PASS cách ly, không gửi lặp main |
 | Hồ sơ Customer self-service | PASS source/tests/deploy/GET/lưu thủ công và khôi phục UI D.1C.2; AddressNULL/cookie/greeting/invariants PASS; đề xuất đóng D.1 |
-| Admin login/phân quyền | VERIFIED login main C.6B; role/Customer rejection PASS tests; desktop logout NOT TESTED |
-| Dashboard | VERIFIED đọc hiện tại40SP/740kho/1Customer/1Cancelled/0Completed/0doanhthu |
-| Product/Brand/Category/ảnh | D.2A SQL/servicePASS; D.2B JPEG/PNG fullDecode/safeFile/concurrency PASS, WebP mới từchối; PARTIAL vì chưaUI D.2C/deploy |
+| Admin login/phân quyền | D.3 PASS WinForms test: logout/xóa session, sai mật khẩu, Admin login lại; Customer forbidden PASS automated/NOT TESTED UI |
+| Dashboard | D.3 PASS WinForms+SQL test:4activeSP/9kho/4Customer/10Orders/1Completed/1trdoanhthu |
+| Product/Brand/Category/ảnh | D2A/B SQL/testPASS; D2C coreCRUD WinForms PASS: lookup add/edit/search/deactivate/reactivate, Product CRUD/softdelete/filter, image add/6reject/unlink/primary; ca phụ còn PARTIAL, chưa deploy |
 | Quản lý Customer Admin | PARTIAL: đọc/bảo vệAdmin có evidence, sửa/khóaGUI chưa nghiệmthu; ngoài D.2A |
 | Stale stock | VERIFIED SQL/dialog thật B.1 + regression; đã triển khai C.6B, không còn chờ deploy |
 | Admin quản lý đơn | VERIFIED UI cách ly C.5 toàn workflow; main C.7A Confirm thật và đọc Cancelled |
-| Reports | PARTIAL: main đọc0 đúng; source tổng/trend/average chỉ Completed, thiếu regression doanh thu dương/biên ngày |
+| Reports | D.4B fixed Bangkok timezone; D.4C.1 Admin test UI PASS range01–02/same-day02/empty01, chưa deploy main |
 | AdminBootstrap | VERIFIED S29.6 đã tạo Admin; không chạy lại --execute |
 
 ## 5. Mốc và bằng chứng cần giữ
@@ -92,7 +92,7 @@ Cập nhật: 2026-11-02 13:50 Asia/Bangkok, D.2C.5 Product13 tạo/sửa/tìm/s
 - Ảnh runtime: `C:\PhoneStore\PhoneStore\src\PhoneStore.Web\wwwroot\uploads\products`; cần backup riêng, không tự xóa/ghi đè.
 
 ## 7. Tests và rủi ro còn mở
-- Gần nhất D.2C buildsolution0warnings/errors,155/155 PASS,0skip; outputbin/S29.8D.2C/. D2B18filecasesWIC và27SQLassertionsriêng PASS.
+- Gần nhất D.4B buildsolution0warnings/errors,161/161 PASS,0skip; SQL report/auth read-only + gateway fake PASS; outputbin/S29.8D.4B-final/.
 - D.1C.1 chạy lại22/22profile PASS (SQLite/HTTP thật cách ly), output bin/S29.8D.1C.1-tests; khôngfullsuite/deploy/mainPOST.
 - LệnhD2B: `dotnet build PhoneStore.sln --no-restore -p:OutputPath=bin/S29.8D.2B/`; `dotnet test PhoneStore.sln --no-build --no-restore -p:OutputPath=bin/S29.8D.2B/ --verbosity minimal`.
 - Suite SQLite: Authentication, Bootstrap, SingleAdminPolicy/Constraint, Checkout, OrderWorkflow, ProductStockConcurrency, CommerceWorkflow, CartController.
@@ -100,7 +100,7 @@ Cập nhật: 2026-11-02 13:50 Asia/Bangkok, D.2C.5 Product13 tạo/sửa/tìm/s
 - Có18testsCRUD+8safety/WIC/SQLshared/concurrentprimary; WebP policyreject, GUI/report/CustomerCRUD/logout/stresschưađủ; orphan giữ cóchủđích,khôngautodelete.
 - Original-stock guard không phải rowversion mọi field/ABA; cart theo browser session; legacyCreateAsync không token nhưng Web dùng Idempotent.
 - Revenue tổng/trend/average chỉ Completed; BestSellers/SalesValue dùng Confirmed/Shipping/Completed, không cùng chỉ số doanh thu.
-- DateOnly report được coi UTC nhưng UI ngày local: cần chốt timezone/test biên ngày. Admin gateway kiểm session snapshot, chưa revalidate DB từng command.
+- [D.4C.3](S29_8D_4C_3_ADMIN_ACCEPTANCE_SUMMARY.md): Admin CONDITIONAL READY. Core CRUD/Dashboard/Reports/Auth/Orders + revoke IsActive/RoleId runtime PASS; partial DisplayOrder/close-during-save/Brand text/Customer-write và race check→commit. Deploy cần backup+main-config staging riêng.
 - HTTPS redirect thiếu port khi chạy HTTP vẫn warning đã biết; không phát hiện runtime failure mới qua audit đọc.
 - Word/Excel UC01–UC12/SCR01–SCR12/rubric chấm điểm chưa được xác minh; không tự suy đáp ứng toàn bộ tài liệu chưa có.
 
@@ -139,7 +139,7 @@ Cập nhật: 2026-11-02 13:50 Asia/Bangkok, D.2C.5 Product13 tạo/sửa/tìm/s
 - Usertựnhậppassẩnx2terminal,tựlogin vàxácnhận;UI13368shellđúngtestAdmin/SQLtestDBPASS03:59:38UTC;khôngsecretslog/file/chat. Main/test9snapshotnoncredentials và40ảnhnguyên.
 - D2C1utility build0warning/error,giữattempt/passwordtest,khôngresetlặp. D2C3 testPID5944 appcopy59hashPASS;userlogin/shellSQLTestAdmin/SQLsessiontestDBPASS(openTx0);Dashboard3SP/8kho/10đơn,Products3/Brands1/Categories1 tảiPASS. Config/env/DI pinảnhriêng,uploads0file(chưaupload). UI tạo/sửa/tìm Brand6+Category6 S29D2C;Categoryrequired/duplicate báo rõ;Brandduplicate không thêmrow nhưng chưađọcđượctext. 13:42 UIA đồngthời thấy ProductEditDialog+LookupEditDialog cũ: dừng trướcSaveProduct,chờuserHủy/đóngmodal;0Product/0Image mới. Main9snapshot+40ảnhnguyên;test7bảngnguyên,Brands/Categories chỉthêm2fixtureID6active,giữđểtiếp,chưacleanup. Evidence *-D2C3-before/comparison.json+D2C3-fixture-checkpoint.json. Khôngbuild/testlại/deploy/mainDML.
 - D.2C.2 PARTIAL 13:35Bangkok: PID13368/10736/19388 không còn, không có PhoneStore process hoặc listener5015; dừng theo điều kiện precheck, không tự restart/CRUD. Config test vẫn đúng DB/ảnh riêng0file. SELECT main40/40/tồn740/Users2/Order1Cancelled/Detail1; test3Products/0Images/tồn8/Users5/10Orders;40ảnhhash nguyên. Chỉ docs, không build/test lại; chờ mở lại Admin test/login để tiếp. D.3 reports/auth-session, D.4 tổng nghiệm thu sau D.2.
-- D2C.5 13:47–13:50 testPID9840/SQLtestDB/ảnhriêng/Brand6+Category6active,1dialogPASS. UI tạo1ProductId13 S29D2C Product UI giá1230000/kho5; sửa tên thêmEdited/giá1250000/môtả,SQLkhớp;exactsearch1row;confirmsoftinactivePASS. Numericâm→0khiblur,thiếutênbáorõ/khôngghi. FilterstatusUIAuncertain→dừngkhôngretry;chưaảnh/stalestockmới. Main9snapshot+40ảnhhashnguyên/40SP/40ảnh/740/1Cancelled/1Customer/1Adminactive;3Products cũvàBrands/Categories testnguyên. GiữProduct13inactive/kho5/0ảnh,khôngcleanup. EvidenceD2C5-*.json;khôngsource/build/test/deploy/mainDML. Chờmanualfilter/phêduyệtảnhriêng.
+- D2C coreCRUD/D.3 Auth PASS; D.4B chỉ deploy test, main chưa deploy. C.2C.2 cuối: User1 Admin-active/login, test5Users/2Brand/2Cat/5Product/4Image/10Order/10Detail stock14; main9bảng2/2/8/1/40/40/1/1/2 stock740/1Cancelled/1Admin+40hash nguyên.
 
 ## 9. Phê duyệt và giới hạn lâu dài
 - Đã duyệt main migration/Admin/import,deployC.6B/D.1B,1Customer/1OrderC.7; D.1C.2 khôiphục3fieldUser2quaUI đãPASS. Không suy quyền ghi giao dịch/CRUD tiếp theo.

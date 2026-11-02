@@ -67,6 +67,37 @@ public sealed class AuthenticationTests
         Assert.Equal(AdminLoginStatus.InvalidCredentials, (await AdminService(test).LoginAsync(user.Email, "Admin@123")).Status);
     }
 
+    [Fact]
+    public async Task Fresh_admin_authorization_rechecks_active_and_role()
+    {
+        await using var test = await TestDatabase.CreateAsync();
+        var adminRoleId = await test.Db.Roles.Where(x => x.RoleName == "Admin").Select(x => x.RoleId).SingleAsync();
+        var customerRoleId = await test.Db.Roles.Where(x => x.RoleName == "Customer").Select(x => x.RoleId).SingleAsync();
+        var user = new User { FullName = "Admin Test", Email = "admin@test.local", RoleId = adminRoleId,
+            IsActive = true, CreatedAt = DateTime.UtcNow, PasswordHash = "not-used" };
+        test.Db.Users.Add(user); await test.Db.SaveChangesAsync(); test.Db.ChangeTracker.Clear();
+        var service = AdminService(test);
+
+        Assert.True(await service.IsCurrentAdminAsync(user.UserId));
+        var stored = await test.Db.Users.SingleAsync(x => x.UserId == user.UserId);
+        stored.IsActive = false; await test.Db.SaveChangesAsync(); test.Db.ChangeTracker.Clear();
+        Assert.False(await service.IsCurrentAdminAsync(user.UserId));
+        stored = await test.Db.Users.SingleAsync(x => x.UserId == user.UserId);
+        stored.IsActive = true; stored.RoleId = customerRoleId;
+        await test.Db.SaveChangesAsync(); test.Db.ChangeTracker.Clear();
+        Assert.False(await service.IsCurrentAdminAsync(user.UserId));
+    }
+
+    [Fact]
+    public async Task Fresh_admin_authorization_fails_closed_when_database_is_unavailable()
+    {
+        var test = await TestDatabase.CreateAsync();
+        var service = AdminService(test);
+        await test.DisposeAsync();
+
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => service.IsCurrentAdminAsync(1));
+    }
+
     private static PasswordHasher<User> Hasher() => new();
     private static AuthService CustomerService(TestDatabase test) => new(new AuthUserStore(test.Db), Hasher());
     private static AdminAuthService AdminService(TestDatabase test) => new(new AuthUserStore(test.Db), Hasher());

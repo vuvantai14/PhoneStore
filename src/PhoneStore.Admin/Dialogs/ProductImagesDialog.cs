@@ -176,7 +176,7 @@ public sealed class ProductImagesDialog : Form
         if (selection.ShowDialog(this) != DialogResult.OK) return;
         await RunAsync(async () =>
         {
-            var result = await _gateway.WithProductsAsync(service =>
+            var result = await _gateway.WithProductsWriteAsync(service =>
                 service.AddImageAsync(_productId, selection.FileName, _lifetime.Token));
             await HandleResultAsync(result, result.Id);
         });
@@ -190,7 +190,7 @@ public sealed class ProductImagesDialog : Form
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
         await RunAsync(async () =>
         {
-            var result = await _gateway.WithProductsAsync(service =>
+            var result = await _gateway.WithProductsWriteAsync(service =>
                 service.RemoveImageAsync(_productId, image.ImageId, _lifetime.Token));
             await HandleResultAsync(result);
         });
@@ -202,7 +202,7 @@ public sealed class ProductImagesDialog : Form
         if (_busy || image is null) return;
         await RunAsync(async () =>
         {
-            var result = await _gateway.WithProductsAsync(service => operation(service, image, _lifetime.Token));
+            var result = await _gateway.WithProductsWriteAsync(service => operation(service, image, _lifetime.Token));
             await HandleResultAsync(result, image.ImageId);
         });
     }

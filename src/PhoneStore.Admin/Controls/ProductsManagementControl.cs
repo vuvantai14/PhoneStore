@@ -255,7 +255,7 @@ public sealed class ProductsManagementControl : UserControl
                 return;
             }
             using var dialog = new ProductEditDialog(data.Edit, data.Options, (edit, cancellationToken) =>
-                _gateway.WithProductsAsync(service => service.SaveAsync(id, edit, cancellationToken)));
+                _gateway.WithProductsWriteAsync(service => service.SaveAsync(id, edit, cancellationToken)));
             if (dialog.ShowDialog(FindForm()) == DialogResult.OK) await ReloadRowsAsync(id);
             else if (!IsDisposed) _status.Text = "Danh sách sản phẩm sẵn sàng.";
         });
@@ -271,7 +271,7 @@ public sealed class ProductsManagementControl : UserControl
                 MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
         await RunAsync(async () =>
         {
-            var result = await _gateway.WithProductsAsync(service =>
+            var result = await _gateway.WithProductsWriteAsync(service =>
                 service.SetActiveAsync(selected.ProductId, !selected.IsActive, _lifetime.Token));
             if (IsDisposed || _lifetime.IsCancellationRequested) return;
             if (result.Succeeded) await ReloadRowsAsync(selected.ProductId);

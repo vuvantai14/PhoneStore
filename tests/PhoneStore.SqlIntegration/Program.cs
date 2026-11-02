@@ -23,6 +23,16 @@ internal static partial class Program
     [STAThread]
     static int Main(string[] args)
     {
+        if (args is ["--selftest-admin-authorization-s29.8d.4b"])
+        {
+            try { RunAdminAuthorizationGatewayChecksAsync().GetAwaiter().GetResult(); return 0; }
+            catch (Exception ex) { Console.Error.WriteLine($"STOP: {ex.GetType().Name}: {ex.Message}"); return 1; }
+        }
+        if (args is ["--check-readonly-s29.8d.4b"])
+        {
+            try { RunReportingAuthorizationReadOnlyAsync().GetAwaiter().GetResult(); return 0; }
+            catch (Exception ex) { Console.Error.WriteLine($"STOP: {ex.GetType().Name}: {ex.Message}"); return 1; }
+        }
         if (args is ["--preflight-test-admin-s29.8d.2c.1"])
         {
             try { TestAdminCredentialPreflightAsync().GetAwaiter().GetResult(); return 0; }

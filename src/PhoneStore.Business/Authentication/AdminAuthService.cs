@@ -8,6 +8,9 @@ namespace PhoneStore.Business.Authentication;
 
 public sealed class AdminAuthService(AuthUserStore store, IPasswordHasher<User> hasher) : IAdminAuthService
 {
+    public Task<bool> IsCurrentAdminAsync(int userId, CancellationToken cancellationToken = default) =>
+        store.IsActiveAdminAsync(userId, cancellationToken);
+
     public async Task<AdminLoginResult> LoginAsync(string email, string password,
         CancellationToken cancellationToken = default)
     {

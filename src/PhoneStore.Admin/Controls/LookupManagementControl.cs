@@ -157,7 +157,7 @@ public sealed class LookupManagementControl : UserControl
         if (!add && row is null) return;
         using var dialog = new LookupEditDialog(kind,
             row is null ? null : new LookupEdit(row.Name, row.Description, row.IsActive),
-            edit => gateway.WithLookupsAsync(service => service.SaveAsync(kind, row?.Id, edit)));
+            edit => gateway.WithLookupsWriteAsync(service => service.SaveAsync(kind, row?.Id, edit)));
         if (dialog.ShowDialog(FindForm()) == DialogResult.OK)
             await ReloadAsync();
     }
@@ -174,7 +174,7 @@ public sealed class LookupManagementControl : UserControl
         SetBusy(true);
         try
         {
-            var result = await gateway.WithLookupsAsync(service => service.SetActiveAsync(kind, row.Id, active));
+            var result = await gateway.WithLookupsWriteAsync(service => service.SetActiveAsync(kind, row.Id, active));
             if (IsDisposed) return;
             if (!result.Succeeded)
             {

@@ -14,6 +14,11 @@ public sealed class AuthUserStore(PhoneStoreDbContext db)
     public Task<User?> FindByIdAsync(int id, CancellationToken cancellationToken) =>
         db.Users.AsNoTracking().Include(u => u.Role).SingleOrDefaultAsync(u => u.UserId == id, cancellationToken);
 
+    public Task<bool> IsActiveAdminAsync(int id, CancellationToken cancellationToken) => id <= 0
+        ? Task.FromResult(false)
+        : db.Users.AsNoTracking().AnyAsync(u => u.UserId == id && u.IsActive
+            && u.Role.RoleName == SystemRoles.Admin, cancellationToken);
+
     // Registration never accepts an entity, role id, or role navigation from callers.
     public async Task<RegistrationResult> CreateCustomerAsync(string fullName, string email, string? phone,
         string passwordHash, CancellationToken cancellationToken)

@@ -1,5 +1,13 @@
 # S29.8B.1 SQL Server / WinForms opt-in verification
 
+## S29.8D.4B read-only reporting/authorization
+
+`--check-readonly-s29.8d.4b` is pinned to `localhost/PhoneStoreDB_StockConcurrencyTest` by the existing guard.
+It performs no writes: it verifies Bangkok report range/trend translation, empty range, Completed-only revenue,
+and active Admin fresh authorization against existing isolated data.
+`--selftest-admin-authorization-s29.8d.4b` uses fakes only and verifies allow, revoke/session-clear/event,
+and fail-closed database-error behavior before the write delegate is invoked.
+
 This executable is separate from the solution test suite. It writes only to the approved
 `localhost/PhoneStoreDB_StockConcurrencyTest`, never the application database.
 Every EF command verifies the connection string, `DB_NAME()` and server before execution.

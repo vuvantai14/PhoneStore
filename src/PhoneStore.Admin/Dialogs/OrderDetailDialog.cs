@@ -92,7 +92,7 @@ public sealed class OrderDetailDialog : Form
         SetBusy(true);
         try
         {
-            var result = await gateway.WithOrdersAsync(service => service.UpdateStatusAsync(orderId, expected, target));
+            var result = await gateway.WithOrdersWriteAsync(service => service.UpdateStatusAsync(orderId, expected, target));
             if (!result.Succeeded) { status.Text = result.Error; return; }
             HasChanges = true;
         }

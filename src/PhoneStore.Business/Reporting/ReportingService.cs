@@ -5,7 +5,7 @@ using PhoneStore.Models.Reporting;
 
 namespace PhoneStore.Business.Reporting;
 
-public sealed class ReportingService(ReportingStore store) : IReportingService
+public sealed class ReportingService(IReportingStore store) : IReportingService
 {
     public const int LowStockThreshold = 5;
 
@@ -19,10 +19,9 @@ public sealed class ReportingService(ReportingStore store) : IReportingService
         if (toDate == DateOnly.MaxValue) return ReportLoadResult.Fail("Ngày kết thúc không hợp lệ.");
         try
         {
-            var start = DateTime.SpecifyKind(fromDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
-            var endExclusive = DateTime.SpecifyKind(toDate.AddDays(1).ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
-            return ReportLoadResult.Success(await store.ReportAsync(fromDate, toDate, start, endExclusive,
-                LowStockThreshold, ct));
+            var range = ReportingCalendar.ToUtcRange(fromDate, toDate);
+            return ReportLoadResult.Success(await store.ReportAsync(fromDate, toDate, range.StartUtc,
+                range.EndExclusiveUtc, range.OffsetMinutes, LowStockThreshold, ct));
         }
         catch (Exception exception) when (exception is DbException or DbUpdateException)
         {

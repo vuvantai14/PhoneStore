@@ -7,6 +7,7 @@ internal sealed class AdminApplicationContext : ApplicationContext
 {
     private readonly IServiceProvider services;
     private readonly AdminSession session;
+    private readonly Management.CatalogManagementGateway gateway;
     private LoginForm? login;
     private MainForm? shell;
 
@@ -14,6 +15,8 @@ internal sealed class AdminApplicationContext : ApplicationContext
     {
         this.services = services;
         session = services.GetRequiredService<AdminSession>();
+        gateway = services.GetRequiredService<Management.CatalogManagementGateway>();
+        gateway.AuthorizationRevoked += OnAuthorizationRevoked;
         ShowLogin();
     }
 
@@ -61,6 +64,18 @@ internal sealed class AdminApplicationContext : ApplicationContext
         ShowLogin();
     }
 
+    private void OnAuthorizationRevoked(object? sender, EventArgs args)
+    {
+        var currentShell = shell;
+        if (currentShell is null || currentShell.IsDisposed || !currentShell.IsHandleCreated) return;
+        currentShell.BeginInvoke(new Action(() =>
+        {
+            if (session.Current is not null) return;
+            CloseShell();
+            if (login is null) ShowLogin();
+        }));
+    }
+
     private void CloseShell()
     {
         if (shell is null) return;
@@ -82,6 +97,7 @@ internal sealed class AdminApplicationContext : ApplicationContext
     {
         if (disposing)
         {
+            gateway.AuthorizationRevoked -= OnAuthorizationRevoked;
             session.Clear();
             CloseLogin();
             CloseShell();

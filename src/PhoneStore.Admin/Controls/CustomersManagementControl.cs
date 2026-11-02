@@ -71,7 +71,7 @@ public sealed class CustomersManagementControl : UserControl
         if (busy || Selected is not { } row) return;
         var fresh = await gateway.WithCustomersAsync(service => service.GetAsync(row.UserId));
         if (fresh is null) { status.Text = "Khách hàng không còn tồn tại. Vui lòng tải lại."; return; }
-        using var dialog = new CustomerEditDialog(fresh, edit => gateway.WithCustomersAsync(service => service.UpdateAsync(row.UserId, edit)));
+        using var dialog = new CustomerEditDialog(fresh, edit => gateway.WithCustomersWriteAsync(service => service.UpdateAsync(row.UserId, edit)));
         if (dialog.ShowDialog(FindForm()) == DialogResult.OK) await ReloadAsync();
     }
 
@@ -84,7 +84,7 @@ public sealed class CustomersManagementControl : UserControl
         SetBusy(true);
         try
         {
-            var result = await gateway.WithCustomersAsync(service => service.SetActiveAsync(row.UserId, next));
+            var result = await gateway.WithCustomersWriteAsync(service => service.SetActiveAsync(row.UserId, next));
             if (!result.Succeeded) status.Text = result.Error; else { SetBusy(false); await ReloadAsync(); }
         }
         catch (Exception ex) { status.Text = ManagementUi.ErrorMessage(ex); }
