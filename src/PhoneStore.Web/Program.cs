@@ -49,6 +49,8 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ProductCatalogReader>();
 builder.Services.AddScoped<AuthUserStore>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<CustomerProfileStore>();
+builder.Services.AddScoped<ICustomerProfileService, CustomerProfileService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<CustomerCookieEvents>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
@@ -94,3 +96,5 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+
+public partial class Program { }

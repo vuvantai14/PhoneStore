@@ -1,0 +1,17 @@
+@model CustomerProfileViewModel
+@{ ViewData["Title"] = "Hồ sơ của tôi"; }
+<div class="container auth-page">
+    <section class="auth-card" aria-labelledby="profile-title">
+        <h1 id="profile-title">Hồ sơ của tôi</h1>
+        <p>Email: <span>@Model.Email</span> (không thể thay đổi tại đây)</p>
+        @if (TempData["ProfileSuccess"] is string message) { <p role="status">@message</p> }
+        <form asp-controller="Profile" asp-action="Index" method="post" class="auth-form">
+            <div asp-validation-summary="ModelOnly" class="auth-errors" role="alert"></div>
+            <div class="field"><label asp-for="FullName"></label><input asp-for="FullName" autocomplete="name" /><span asp-validation-for="FullName" class="field-error"></span></div>
+            <div class="field"><label asp-for="Phone"></label><input asp-for="Phone" type="tel" autocomplete="tel" /><span asp-validation-for="Phone" class="field-error"></span></div>
+            <div class="field"><label asp-for="Address"></label><textarea asp-for="Address" autocomplete="street-address"></textarea><span asp-validation-for="Address" class="field-error"></span></div>
+            <button type="submit" class="button button-primary">Lưu hồ sơ</button>
+        </form>
+        <p><a href="/orders">Đơn hàng của tôi</a></p>
+    </section>
+</div>

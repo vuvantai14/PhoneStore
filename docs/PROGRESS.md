@@ -1,163 +1,139 @@
-# PhoneStore — Tiến độ và điểm tiếp tục
-Cập nhật: 2026-11-02 (ngày client, Asia/Bangkok; giữ ngày/múi giờ lịch sử đã ghi). Đọc đầu mỗi phiên; đây không phải trạng thái live.
-Ưu tiên mã nguồn và kiểm thử thực tế nếu có mâu thuẫn. Chỉ kiểm tra lại phần liên quan nhiệm vụ.
-## 1. Tổng quan và môi trường
-- Root C:\PhoneStore\PhoneStore, PhoneStore.sln; .NET 8/SDK 8.0.427, EF/tooling 8.0.28, Web MVC/Admin WinForms.
-- Kiến trúc chính: Web/Admin → Business → Data → Models; Web cũng đăng ký Data services.
-- Solution: Models, Data, Business, Web, Admin, Tests và AdminBootstrap.
-- SQL Server 2022 Developer, instance mặc định MSSQLSERVER; server hiện tại `localhost`.
-- Database: `PhoneStoreDB`; Windows Authentication; key `ConnectionStrings:PhoneStoreConnection`.
-- Web appsettings mặc định/Development và Admin appsettings cùng trỏ localhost.
-- PhoneStoreDbContextFactory đọc Web config; biến ConnectionStrings__PhoneStoreConnection có thể ghi đè.
-## 2. Cách hiểu trạng thái
-- VERIFIED: có bằng chứng theo phạm vi; PARTIAL: có mã/bằng chứng một phần, chưa đủ runtime/tích hợp.
-- NOT IMPLEMENTED: chưa thấy triển khai trong phạm vi đã kiểm kê; UNKNOWN: thiếu bằng chứng/dữ liệu.
-## 3. Trạng thái chức năng
-| Hạng mục | Trạng thái và bằng chứng |
+﻿# PhoneStore — Tiến độ và điểm tiếp tục
+Cập nhật: 2026-11-02, Asia/Bangkok, sau S29.8D.1C.2 PASS. Đây là snapshot có ngày kiểm tra, không phải cam kết trạng thái live.
+Đọc đầu mỗi phiên. Ưu tiên source và kết quả thực tế khi tài liệu mâu thuẫn; chỉ kiểm tra phần liên quan nhiệm vụ.
+
+## 1. Kiến trúc, môi trường và cấu hình
+- Root `C:\PhoneStore\PhoneStore`, `PhoneStore.sln`; .NET 8 / SDK 8.0.427, EF/tooling 8.0.28.
+- Customer ASP.NET Core MVC và Admin WinForms → Business → Data → Models; EF Core/SQL Server.
+- Solution gồm Models, Data, Business, Web, Admin, Tests, AdminBootstrap; CatalogImport/SQL integration harness riêng.
+- SQL Server 2022 Developer, MSSQLSERVER; alias localhost, server thực tế DESKTOP-ES9362P.
+- Main: PhoneStoreDB, Windows Authentication; key ConnectionStrings:PhoneStoreConnection.
+- Connection: `Server=localhost;Database=PhoneStoreDB;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true`.
+- Web appsettings/default/Development và Admin appsettings dùng main; factory đọc Web config, env có thể ghi đè.
+- CONTEXT.md dùng cho kiến trúc/lịch sử; Current Progress vẫn S29.4 và có server cũ, không dùng làm trạng thái runtime.
+
+## 2. Quy ước bằng chứng
+- VERIFIED/PASS thực tế: đã chạy, luôn ghi main hay cách ly và phạm vi; không suy thành mọi ca đều đạt.
+- PASS test tự động: có kết quả test đã ghi ngày, không thay nghiệm thu UI; PARTIAL: triển khai/bằng chứng chưa đủ.
+- NOT IMPLEMENTED/MISSING: chưa có chức năng; UNKNOWN/NOT TESTED: thiếu bằng chứng, không mặc định là lỗi.
+- Báo cáo tổng hợp mới nhất: [S29.8D](S29_8D_FUNCTIONAL_AUDIT.md).
+
+## 3. Runtime và SQL gần nhất — S29.8D.1C.2
+- SELECT 2026-11-02 03:26:20 UTC / 10:26:20 Bangkok: localhost/DESKTOP-ES9362P, PhoneStoreDB ONLINE.
+- Products40, Images40, Brands8, Category1, Users2, Roles2, Orders1, OrderDetails1, tổng tồn740.
+- Admin duy nhất UserId1/admin@admin.com/RoleId1/active; Customer UserId2/tai123@gmail.com/RoleId2/active.
+- Customer đã khôi phục tài vũ/09032657212/AddressNULL bằng UI1lần theo duyệtD.1C.2; SQL/Web/greeting khớp, không đăng nhập lại.
+- OrderId1, code ORD-05E65B3F0F705464636B525624, Cancelled, 3490000; Product25 vivo Y17s tồn38.
+- History: 20261001150857_InitialCreate + 20261102122856_EnforceSingleAdmin; không migration mới cần apply cho C.
+- UX_Users_SingleAdmin unique/enabled/filter RoleId1; CK_Roles_AdminIdentity enabled/trusted.
+- Web PID19388: `src/PhoneStore.Web/bin/Debug/net8.0/PhoneStore.Web.exe --urls http://localhost:5015` (D.1B mới).
+- Admin PID10736: `src/PhoneStore.Admin/bin/Debug/net8.0-windows/PhoneStore.Admin.exe`; đang đăng nhập.
+- D.1B Web60/60 runtime khớp staging, backup62/62 và101preservedhash PASS; SQL session cả2 PID main, sleeping/open transaction0.
+- GET D: Home6/Products40/Login/Register/Cart HTTP200; search iPhone6, brand1 có6, khoảng10–20triệu có17.
+- Detail25 HTTP200, ID0 HTTP404, ảnh40/40 JPEG HTTP200; Customer /orders/1 Đã hủy, không nút hủy.
+- Admin D chỉ đọc7 màn hình: Products40/Brands8/Categories1/Customers1/Orders1; Dashboard/Reports doanh thu0, tồn740.
+
+## 4. Chức năng hiện tại
+| Nhóm | Trạng thái / phạm vi bằng chứng |
 |---|---|
-| Customer đăng ký/đăng nhập | VERIFIED ở service/test SQLite: AuthService, AuthenticationTests |
-| Phân quyền và ownership đơn | VERIFIED ở mã/service test: OrdersController, PurchaseStore, CheckoutTests |
-| Catalog/search/filter/detail | VERIFIED SQL/HTTP40 sản phẩm ở S29.7F/S29.8A; related source, chưa test riêng |
-| Giỏ hàng | PARTIAL: SessionCart, CartPresenter, CartController; chưa kiểm thử HTTP/session đầy đủ |
-| Checkout/giá snapshot/trừ kho | VERIFIED ở service SQLite: OrderService, PurchaseStore, CheckoutTests |
-| Lịch sử/chi tiết đơn | VERIFIED ở truy vấn/service test; giao diện UNKNOWN |
-| Admin login | VERIFIED service/tests, người dùng xác nhận login/live data ở S29.8A; logout UI chưa thử |
-| Sản phẩm/ảnh/thương hiệu/danh mục/khách hàng | PARTIAL: Management services/stores và WinForms controls/dialogs |
-| Chuyển trạng thái/hủy/hoàn kho | VERIFIED ở workflow test SQLite; SQL Server concurrency UNKNOWN |
-| Dashboard/Reports | PARTIAL: ReportingStore/Service và controls; chưa có test báo cáo trong suite |
-| Customer Account W09 | NOT IMPLEMENTED theo kiểm kê: tài liệu liệt kê nhưng chưa thấy action/view |
-| UI Web/WinForms và SQL integration đầy đủ | PARTIAL: S29.4 HTTP smoke + LoginForm; nghiệp vụ UI chưa thử |
-| AdminBootstrap | VERIFIED tạo Admin SQL S29.6; đăng nhập UI thủ công vẫn chờ xác nhận |
-## 4. Database/khôi phục — lịch sử kiểm kê
-- Lúc kiểm kê localhostSQL2022 ONLINE,Roles2/cácbảngkhác0,InitialCreate; counts lịch sử không thay trạng thái live ở mục29. TLSsandbox từng lỗi nhưng SELECT ngoài sandboxPASS, không đổiTLS.
-- Servercũ taiiiii\SERVER, khôngtựkếtnối. S29.7A xácminhDB mới saucàilại,Web dùngDB mới/catalogn0;khôngdo filter.
-## 5. Nguồn catalog/ảnh cũ — lịch sử S29.7A
-- Chưa tìm thấy backup/export/ảnh gốc trongworkspace/Git/vịtrílocalđãkiểm;Windows.oldkhôngcó. Khôngchứngminhngườinàoxóa;clonekhôngkhôiphụcdataruntime.
-- CatalogImport40definitionsdemo;40ảnhAIvềsauđượcngườidùngchấpnhậndemo/importởS29.7F. Khôngtựrerun/import/restore hoặc kếtnốiservercũ.
-## 6. Mốc và kiểm thử
-- Kiểm kê: 26/26 SQLite; S29: 51/51; S29.3/S29.4: 72/72 PASS, build 0 warning/error.
-- S29.1 dry-run SQL PASS, không ghi; S29.5B apply chính PASS; S29.6 tạo Admin PASS, chi tiết bên dưới.
-- S29.4 SQL isolation và UI smoke là bằng chứng riêng; chưa có xác nhận thủ công login và nghiệp vụ UI.
-## 7. Rủi ro và giới hạn
-- Admin tạo S29.6; người dùng xác nhận login và UI đọc kiểm S29.8A; thao tác ghi UI chưa kiểm.
-- P1 stale stock đã sửa source/tests ở S29.8B (mục21); chưa xác minh SQL concurrency/UI bản mới, apps đang chạy vẫn binary cũ.
-- Chưa kiểm chứng SQL Server locking/concurrency, retry/commit outcome hoặc end-to-end Web–Admin.
-- Doanh thu tổng/trend/average chỉ Completed; BestSellers/SalesValue gồm Confirmed/Shipping/Completed.
-- Chống checkout trùng dùng memory cache trong tiến trình, chưa kiểm chứng nhiều instance/restart.
-- CONTEXT/S17 là bằng chứng lịch sử; có kết luận sẵn sàng S18 mâu thuẫn báo cáo S17.3 blocked.
-- Chưa thấy Word/Excel UC01–UC12/SCR01–SCR12 hoặc PROGRESS cũ; không tự suy diễn yêu cầu từ đó.
-- Mất hội thoại Codex không thể phục hồi bằng Git; dữ liệu/ảnh chưa commit không có trong clone.
-## 8. Git và file liên quan
-- HEAD lúc kiểm kê: 9587df1/main; luôn kiểm tra git status/diff theo nhiệm vụ, không tự commit/push.
-## 9. Hiện tại, phê duyệt và bước tiếp theo
-- S29.5B apply chính PASS; S29.6 được phê duyệt riêng và tạo Admin PASS, Users/Admin=1/1.
-- Email đã chọn admin@admin.com, tên Quản trị viên PhoneStore, role Admin ID 1; chi tiết tại mục 15.
-## 10. Kết thúc mỗi nhiệm vụ
-- Ghi ngày, trạng thái trước → sau và phạm vi bằng chứng; cập nhật mục liên quan thay vì nối log dài.
-- Ghi file thay đổi, lệnh test/kết quả thật; nếu không chạy thì ghi rõ, không tái sử dụng PASS như kết quả mới.
-- Ghi lỗi/rủi ro còn lại, công việc dở, bước tiếp theo và giới hạn phê duyệt.
-- Giữ khoảng 150 dòng trở xuống, không sao chép hội thoại, mật khẩu, hash hoặc log dài.
-- Không commit/push/reset/clean/history rewrite, xóa dữ liệu, restore/drop/seed/import/migrate
-  hoặc thay đổi database thật nếu chưa được cho phép; không bật full access/bỏ toàn bộ approvals.
-- Hướng dẫn agent không thay thế sandbox hoặc database firewall; không tuyên bố mọi lệnh nguy hiểm bị chặn.
-## 11. Một Admin duy nhất — S29.3 (2026-11-02)
-- Chính thức: tối đa 1 Admin, kể cả inactive; trước bootstrap có thể 0; Customer có nhiều tài khoản.
-- Store CreateCustomerAsync không nhận User/RoleId, tự tra Customer role, chặn pending changes; AuthService caller duy nhất.
-- Bootstrap riêng, kiểm tra AdminId=1; WinForms không tạo Admin, quản lý Customer không đổi role.
-- Mapping Admin=1 đã có trong InitialCreate/seed; SystemRoles ghi quy ước này.
-- Migration 20261102122856_EnforceSingleAdmin thêm UX_Users_SingleAdmin WHERE RoleId=1 và CK_Roles_AdminIdentity.
-- Giữ IX_Users_RoleId; preflight THROW nếu mapping sai/thiếu hoặc >1 Admin, không tự sửa/xóa dữ liệu.
-- Test SQLite + script offline PASS; restore PASS, build 0 warning/error, unit tests 72/72 PASS.
-- File S29.3: AuthService/AuthUserStore, Role/UserConfiguration, SystemRoles, BootstrapService,
-  migration/Designer/snapshot, SingleAdminConstraintTests. Ràng buộc đã apply ở S29.5B (mục 14).
-## 12. S29.4 — SQL Server cách ly và UI smoke (2026-11-02)
-- DB_ID test=0 trước tạo; PhoneStoreDB_MigrationTest nhận InitialCreate+EnforceSingleAdmin thành công.
-- Role Admin=1, unique filtered index và check identity enabled/trusted; Users test cuối=0 sau ROLLBACK.
-- tests/sql/S29_4_EnforceSingleAdmin.sql: guard DB test, chặn Admin thứ hai active/inactive, cho 2 Customer, chặn đổi role.
-- sqlcmd lỗi SET QUOTED_IDENTIFIER lúc đầu; bổ sung SET session rồi PASS. Không ghi business rows ở DB chính.
-- Build 0 warning/error, unit tests 72/72 PASS; Home/Products/Login HTTP200 ở localhost:5015.
-- WinForms LoginForm hiển thị ở S29.4; chưa kiểm thử đăng nhập; cảnh báo Web HTTP thiếu HTTPS redirect port.
-- Hai ứng dụng giữ DB chính; migration chính và Admin được thực hiện riêng ở mục 14/15, không suy từ UI smoke.
-## 13. S29.5 / S29.5A — backup (2026-11-02)
-- Preflight chính ONLINE/FULL/MULTI_USER, InitialCreate, Roles=2, Users và sáu bảng nghiệp vụ khác=0.
-- FULL BACKUP COPY_ONLY/CHECKSUM/COMPRESSION PASS; file mới timestamp UTC+GUID, không ghi đè.
-- File: C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\PhoneStoreDB_FULL_COPYONLY_20261102_123908.738Z_131E14FF3BAC44C391332C4392CC2B72.bak
-- backup_set_id=1; 2026-11-02 04:39:08 PST; file=523264 byte, compressed=521823, logical=3686400.
-- VERIFYONLY WITH CHECKSUM PASS. Windows ACL chặn Get-Item; metadata đọc qua SQL, không đổi quyền.
-- Chưa thử restore; file ở cùng ổ C với DB. VERIFYONLY không bảo đảm phục hồi thực tế.
-## 14. S29.5B — apply chính PASS (2026-11-02)
-- Phê duyệt có điều kiện, preflight/VERIFYONLY/header đúng target PASS; Data build/script đúng transaction/THROW.
-- Đã apply đúng 20261102122856_EnforceSingleAdmin với --no-build và --connection localhost/PhoneStoreDB, exit0, không retry.
-- SELECT history đúng hai migrations mỗi bản 1 lần; unique filter RoleId=1 enabled, check AdminIdentity enabled/trusted.
-- Sau apply: ONLINE, Roles1Admin/2Customer, Users/Admin0, sáu bảng nghiệp vụ khác0; HTTP Home/Products/Login200.
-- Không DML để test constraint/seed/import/restore/Down; unit tests S29.4 gần nhất72/72; Admin tạo riêng ở mục15.
-## 15. S29.6 — tạo Admin PASS (2026-11-02)
-- Được duyệt riêng; preflight localhost/DESKTOP-ES9362P, PhoneStoreDB ONLINE, EnforceSingleAdmin, Users/Admin=0/0.
-- Chạy đúng một lần: dotnet run --project tools/PhoneStore.AdminBootstrap --no-build -- --name="Quản trị viên PhoneStore" --email=admin@admin.com --execute --confirm-server=localhost --confirm-database=PhoneStoreDB
-- SELECT VERIFIED: Users/Admin=1/1; UserId1, admin@admin.com, Quản trị viên PhoneStore, RoleId1/Admin, IsActive=1.
-- PhoneStoreDB ONLINE; Roles=1 Admin/2 Customer, history giữ InitialCreate+EnforceSingleAdmin; sáu bảng nghiệp vụ khác=0.
-- Không đọc/hiển thị hash, không tạo Customer/catalog, không seed/import/migrate/restore/rollback, không retry/commit/push.
-## 16. S29.7 — UI thủ công chờ người dùng (2026-11-02)
-- Web Home/Products/Login HTTP200 localhost:5015; Admin PID21812 hiện cửa sổ/responding; không suy login PASS.
-## 17. S29.7C — chuẩn bị ảnh (2026-11-02)
-- Tạo đúng wwwroot/uploads/products và checklist PRODUCT_IMAGES.md; Admin upload dùng GUID, importer dùng slug; không ghi DB.
-## 18. S29.7D — kiểm tra ảnh (2026-11-02)
-- 40/40 JPEG decode800x800/≤10MiB/HTTP200, khớp tên, không trùng hash; kỹ thuật PASS, nội dung AI PARTIAL.
-- Đã xem40 ảnh: crop/chữ méo ở một số file; chi tiết từng file trong PRODUCT_IMAGES.md; giữ HUONG_DAN.txt ghi nguồn AI.
-## 19. S29.7E/F — catalog import PASS (2026-11-01)
-- Người dùng chấp nhận40 ảnh AI demo; duyệt backup/import riêng. FULL COPY_ONLY/CHECKSUM/COMPRESSION PASS 16:36:47 PST/backup_set2.
-- Backup: C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\PhoneStoreDB_S29_7F_PREIMPORT_20261102_001906872Z_47B0A15271A6437A8D5FB05E41E61A38.bak
-- VERIFYONLY CHECKSUM/header đúng DB/server PASS; file538112 byte. Backup cùng ổC/chưa thử restore; ảnh cần sao lưu riêng.
-- Import đúng1 lần exit0:40Products/40Images/8Brands/1Category,tồn740;40 primary/order0/name-brand-price-stock-image khớp. Không thayUsers/Admin/migrations.
-- HTTP40/40 detail+ảnh200, Home6/cards40;ảnh runtime giữ nguyên. Importer có thể ghi đè khi chạy lại, không tự rerun/cleanup.
-## 20. S29.8A — audit chức năng (2026-11-01), lịch sử
-- Chi tiết docs/S29_8A_FUNCTIONAL_AUDIT.md: Web search/filter/sort PASS, account/profile MISSING, cart/auth/order E2E PARTIAL; ưu tiên chức năng trước UI/UX.
-- WinForms authenticated7 màn hình đọc PASS:40 SP/8 brands/1 category/tồn740, tìm iPhone6; Customer/Orders0. SQL FK/check/index đúng; không DML.
-- 72/72 tests PASS lúc audit. P1 stale stock theo source chuyển sang sửa S29.8B; thiếu SQL concurrency/idempotency và report có đơn vẫn PARTIAL.
-## 21. S29.8B — source/regression PASS (2026-11-02)
-- Sửa DTO OriginalStockQuantity, ProductManagementStore conditional ExecuteUpdate, ProductManagementService và ProductEditDialog giữ snapshot/hiển thị conflict; không migration/checkout/UI hình thức.
-- UPDATE toàn bộ trường WHERE ProductId AND StockQuantity=original; affected0 từ chối mọi thay đổi, yêu cầu đóng/mở form. Thiếu snapshot từ chối; create giữ nguyên. Snapshot không thay version mọi trường/ABA.
-- ProductStockConcurrencyTests thêm11 cases: valid save/checkout stale/hai form/missing snapshot/create/deleted/WHERE atomic/rollback/checkout sau edit. SQLite83/83 PASS; build0warning/error, restore PASS; output bin/S29.8B/.
-- Main app chưa nạp code mới; SQL/UI verification tiếp ở mục22, deployment chờ mục23. Không ghi DB chính/source migrations/ảnh/commit/push.
-## 22. S29.8B.1 — SQL/dialog PASS (2026-11-02 Asia/Bangkok)
-- Được duyệt riêng tạo PhoneStoreDB_StockConcurrencyTest sau DB_ID NULL, apply2 migrations CHỈ DB mới; giữ DB, không drop/restore.
-- Opt-in tests/PhoneStore.SqlIntegration guard connection/DB_NAME/server trướcEF, không main. Fixture lúc B.1:1Admin/1Customer/1SP,2Orders; password random memory.
-- SQL checkout10→9/staleSave rejected, hai form, UPDATE hai connections affected[1,0], valid save/rollback PASS; dialog thật hiện conflict/không lưu. Main không đổi; tests83/83.
-- Full shell login/navigation test chưa làm; Admin test6796 lúc B.1 ở login. C bổ sung fixture/kết quả ở mục24; không chạy lại mode B.1 trên fixture đã có.
-## 23. S29.8B.2 — staging PASS, CHƯA TRIỂN KHAI (2026-11-02)
-- B.2 build bin/S29.8B.2/net8.0-windows PASS0warning/error/tests83/83;4DLL khớp B.1 SQL-tested,config localhost/PhoneStoreDB và uploads đúng. Manifest trong staging.
-- Chưa nhận xác nhận đóng main/thay binary; không deploy. S29.8C xác minh hash main vẫn khác B.2, chỉ còn Web8692 chạy; không tự mở Admin.
-- Nếu triển khai: hủy form chưa lưu/đóng mềmPID đã xác minh, backup binary mới, copy đủ DLL giữconfig, hashcheck/restart sau duyệt; không force/SQL/ảnh. Staging B.2 không chứa chức năng C mới.
-## 24. S29.8C — commerce source/tests PASS, CHƯA DEPLOY (2026-11-02 Asia/Bangkok)
-- Báo cáo docs/S29_8C_COMMERCE_REPORT.md; audit+source+tests/SQL/HTTP cách ly PASS, không migration. Checkout tokenGUID→OrderCodeSHA256(user+token)26hex/indexunique + sp_getapplock/transaction/readback, không retry.
-- Checkout/hủy khóa UPDLOCK,HOLDLOCK theoProductId trong Serializable; activeCustomer, cleartracking khi kết thúc; Customer cancel ownership/CSRF chỉ Pending/Confirmed, repeatCancelled không hoàn thêm; Admin workflow cũ giữ.
-- Files nghiệp vụ: OrderService/interface/PurchaseStore; OrderManagementService/interface/store; OrderReceipt; Checkout/OrdersController/Program/OrderDetail view/Cart.Available. Thêm CartControllerTests/CommerceWorkflowTests/Web reference và SQL/HTTP harness.
-- Build0warning/error/tests105/105 ở C; SQL doublecheckout1order, replaynewcontext, doublecancel hoàn1, laststock1 chỉ1thắng, checkout/cancel rollback PASS. HTTP auth/cart/CSRF/serverprice/ownership/history/cancel PASS trên helper5016.
-- HTTP lượt đầu lỗi test đọcTempData2lần, dừng trướccheckout; SELECT0order rồi fixture khác, khôngDELETE/retrytransaction. Test cuối C:Products3/Users4/Orders7/Details7/stock9,0,0/history2; C.5 cập nhật tiếp.
-- Main chỉSELECT40Products/tồn740/40Images/Users1Admin/Orders0/history2, Web8692 không dừng. C chưa deploy; cart thuộcbrowser session, legacyCreateAsync nội bộ khôngtoken/Web dùngIdempotent; UI Admin nghiệm thu mục25.
-## 25. S29.8C.5 — nghiệm thu PASS (2026-11-02 Asia/Bangkok)
-- docs/S29_8C_5_ACCEPTANCE_DEPLOYMENT.md: actual OrdersManagementControl/OrderDetailDialog SQLguard PASS list/search/filter/detail/confirm→shipping→completed/cancel/restock1lần; khôngfullshelllogin (testsession reflection).
-- HTTP helper5016 PASS AdminConfirmed→Customerhistory/detail/cancelrepeat;2tests keyscopeuser/tokenrotation bổ sung,107/107PASS/build0warning/error/diffcheckPASS.
-- TestDBretained3Productsstock8,0,0/Users5/Orders10(5Cancelled,1Completed,4Pending),khôngcleanup/drop/restore. Main40SP/tồn740/40ảnh/Users1Admin/Orders0/history2 khôngđổi.
-- Staging hashverified: Web/bin/S29.8C.5-staging/net8.0, Admin/bin/S29.8C.5-staging/net8.0-windows,manifest mỗi bộ; configmain/ảnhresolveđúng.
-- Binarybackup121files/33427203bytes/hashPASS: src/PhoneStore.Admin/obj/S29.8C.5-binary-backups/20261102_013925853Z_de37e8a4ab1c44039836ca8a78baeecf (Web,Admin,manifest); khôngclean trướcdeploy.
-## 26–28. S29.8C.6/6A — shutdown lịch sử (2026-11-02)
-- CtrlCkhôngshutdown Web8692/launcher3008;duyệtCtrlBreakriêng→đúng1event trênconsole198294chỉWeb/launcher/helper→logshutdown/exit/cổngtrốngPASS. Khôngforce/copy/restart trong6A.
-## 29. S29.8C.6B — ĐÃ TRIỂN KHAI, SMOKE PASS (2026-11-02 Asia/Bangkok)
-- Duyệt copy/restart riêng;preflightbackup121/staging121/sourcehashPASS,107/107testsbaseline. Copy118binaryWeb60/Admin58,giữ3appsettings;posthash118/118/config+uploadsnguyên.
-- Copylệnhđầu dừngtrướcthayfile vìhelpernestedJSONarray;kiểmtừnghashmain/stagingnguyênrồisửaparsing/copy,khôngrollback/sourcechange.
-- Web22736 Debug/net8.0 exe --urls http://localhost:5015/contentrootWeb/Development;Admin10736 Debug/net8.0-windows exe. Envpinmainlocalhost/PhoneStoreDB/WindowsAuth/uploadsabsolute;SQLsessionscả2main.
-- SmokePASS Home6/Products40/Login/Cart200,Orders/checkoutanonymous302login,40detailnameprice-stock-image/40ảnhJPEG200. Usertựnhậppasswordlogin;UIchỉnavigation Dashboard40/tồn740/Products40/Brands8/Orders0 PASS.
-- MainONLINE40SP/40Images/8Brands/1Category/Users1Adminactive/Roles2/Orders0/Details0/tồn740/history2giữnguyên;khôngDBwrite/migrate/seed/import/restore/commit/push.
-- Logs obj/S29.8C.6B-20261102_015659699Z.{stdout,stderr}.log khôngruntimeerror;HTTPSmissingportwarningHTTPcũ. Docs/S29_8C_6B_DEPLOYMENT_RESULT.md +objcopyplan/processrecord chứa118hash/PIDs;backup/staginggiữ.
-## 30–31. S29.8C.7/7A — GIAO DỊCH MAIN PASS (2026-11-02 Asia/Bangkok)
-- Được duyệt1Customer tai123@gmail.com/tài vũ,1OrdervivoY17sProduct25qty1giá3490000. Preflight118binaryhash/Web22736/Admin10736/mainONLINE/emailchưacó/Orders0/stock38/total740PASS;khôngsource/config/binary/migration.
-- FULLbackup COPY_ONLY/CHECKSUM/COMPRESSION+VERIFYONLYPASS trướcghi,set3/file566272byte,09:08:40BKK(02:08:40UTC).
-- Backup: C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\PhoneStoreDB_S29_8C_7_PRETRANSACTION_20261102_020840231Z_83DE6E0E3458420896EA6963BCAB5F59.bak
-- Usertựnhậppasswordregister/loginWeb;SQLUserId2/CustomerRole2active/Users2/Admin1giữ;khôngpassword/hash/token/cookielog. Browserriêngobj,cart1line/qty1/3490000,checkoutformđúng1lần.
-- OrderId1/OrderDetailId1/Customer2/codeORD-05E65B3F0F705464636B525624/price3490000;OrderDate02:12:17.802441UTC. Pendingstock37/total739. UIAutomationGridGetItemnotsupported→dừngPARTIAL banđầu,chưaConfirm.
-- 7A usertrực tiếpđốichiếudetail/bấmConfirm+hộpthoại;SQLConfirmedstock37/739 vàCustomerWebĐãxácnhậnPASS. Sauhướngdẫn/chờuserCancel1lần,nhậnxácnhậnWebĐãhủy;khôngscript/APIghi thayUI.
-- Hậukiểm SQL/Web/Admin CancelledPASS:Order1/Details1/Users2/Product25stock38/total740/catalog40/40/8/1/AdminRole1active/history2. AdminsnapshotConfirmedcũđượcđóng/mởlạichỉđọc→Đãhủy/terminal/nocancelbutton.
-- SELECTlặpchỉđọc09:20:45BKK vẫnstock38/740,khônghoànthêm. Khônggửi requesthủylặp theo7A;khôngtuyênbốđãtestwriterepeatmain. Stockdelta38→37→38 chínhxác1;40productsnamebrandpricestockactive khớpdefinitions,ảnhhashnguyên.
-- EvidenceWeb/obj/S29.8C.7-{pending-receipt,confirmed-order,cancelled-order}.png;report docs/S29_8C_7_TRANSACTION_ACCEPTANCE_RESULT.md cậpnhậtPASS/giữlịchsửPARTIAL. GiữCustomer/order/detail,khôngDELETE/stockadjust/restore/seed/import/commit/push.
-- Chỉdocs+evidenceruntimecậpnhật;107testsbaselinekhôngrerun. DỪNGchờchỉđạotiếp,khôngđơnthứ2/checkoutlại hoặcphạmvinghiệmthumớichưađượcduyệt.
+| Customer đăng ký/login | VERIFIED main C.7, người dùng tự nhập mật khẩu; sai/inactive/role PASS tests |
+| Customer logout | VERIFIED HTTP cách ly C; không logout phiên main trong audit |
+| Catalog/search/filter/sort/detail/ảnh | VERIFIED main A/C.6B/D theo ca đã chạy; chưa phủ mọi tổ hợp filter |
+| Giỏ hàng | VERIFIED add qty1 main C.7; update/remove/invalid/stock/session PASS tests + HTTP cách ly |
+| Checkout/giá snapshot/trừ kho | VERIFIED main một giao dịch C.7 và SQL/SQLite cách ly; không retry outcome không rõ |
+| Checkout idempotency/concurrency | VERIFIED SQL/HTTP cách ly C/C.5; chưa test replay ghi trên main |
+| Lịch sử/chi tiết/ownership | VERIFIED UI main C.7/7A; foreign ownership PASS tests/HTTP cách ly |
+| Hủy/hoàn kho | VERIFIED main Confirmed→Cancelled, kho38→37→38; double cancel PASS cách ly, không gửi lặp main |
+| Hồ sơ Customer self-service | PASS source/tests/deploy/GET/lưu thủ công và khôi phục UI D.1C.2; AddressNULL/cookie/greeting/invariants PASS; đề xuất đóng D.1 |
+| Admin login/phân quyền | VERIFIED login main C.6B; role/Customer rejection PASS tests; desktop logout NOT TESTED |
+| Dashboard | VERIFIED đọc hiện tại40SP/740kho/1Customer/1Cancelled/0Completed/0doanhthu |
+| Sản phẩm/ảnh/lookup/Customer | PARTIAL toàn CRUD; đọc main PASS, còn thiếu write/UI acceptance rộng |
+| Stale stock | VERIFIED SQL/dialog thật B.1 + regression; đã triển khai C.6B, không còn chờ deploy |
+| Admin quản lý đơn | VERIFIED UI cách ly C.5 toàn workflow; main C.7A Confirm thật và đọc Cancelled |
+| Reports | PARTIAL: main đọc0 đúng; source tổng/trend/average chỉ Completed, thiếu regression doanh thu dương/biên ngày |
+| AdminBootstrap | VERIFIED S29.6 đã tạo Admin; không chạy lại --execute |
+
+## 5. Mốc và bằng chứng cần giữ
+- Kiểm kê sau cài Windows: 26/26 tests; DB mới Roles2/còn lại0; không tìm thấy backup/export/ảnh gốc trong phạm vi đã kiểm.
+- Server cũ taiiiii\SERVER không còn là cấu hình chạy; không tự kết nối. Git/clone không khôi phục dữ liệu runtime mất.
+- S29 bootstrap source/tests51; S29.3/4 suite72, test EnforceSingleAdmin trên PhoneStoreDB_MigrationTest PASS.
+- Quy tắc chính thức: tối đa1 Admin kể cả inactive; Customer nhiều tài khoản. Store tạo Customer không nhận RoleId tùy chọn.
+- S29.5B đã apply EnforceSingleAdmin vào main theo duyệt; S29.6 tạo Admin duy nhất theo duyệt.
+- S29.7C/D: checklist [PRODUCT_IMAGES](PRODUCT_IMAGES.md),40 JPEG800x800; ảnh AI được người dùng chấp nhận minh họa demo.
+- S29.7F: backup/import được duyệt riêng, chạy importer đúng1lần;40/40/8/1/tồn740; không tự chạy lại vì có thể ghi đè.
+- S29.8A [audit cũ](S29_8A_FUNCTIONAL_AUDIT.md) phát hiện stale stock; các kết luận commerce cũ đã được C thay thế.
+- S29.8B: DTO original stock + atomic conditional UPDATE toàn edit; affected0 từ chối, dialog giữ form/báo xung đột;83tests PASS.
+- S29.8B.1 SQL thật/dialog: checkout10→9/stale save từ chối, hai connection affected[1,0], valid save/rollback PASS.
+- PhoneStoreDB_StockConcurrencyTest được duyệt tạo/ghi riêng; giữ nguyên, không drop/cleanup/rerun fixture B.1.
+- S29.8B.2 chỉ staging lịch sử; bản B đã được đưa vào main cùng C.6B, không triển khai B.2 cũ đè C.
+- [S29.8C](S29_8C_COMMERCE_REPORT.md):105tests; transaction/stock locks, durable token OrderCode+unique/sp_getapplock, owner cancel và atomic restock.
+- Checkout/cancel khóa UPDLOCK,HOLDLOCK theo ProductId trong Serializable, clear tracking, không tự retry giao dịch.
+- [C.5](S29_8C_5_ACCEPTANCE_DEPLOYMENT.md):107tests; actual Orders controls/dialog SQL test PASS confirm→shipping→completed/cancel/filter/invalid; session test bằng reflection, không phải full login.
+- C.5 HTTP cách ly PASS auth/cart/CSRF/ownership/price/status sync/replay; không đồng nhất với107 xUnit tests.
+- TestDB cuối C.5:3Products stock8/0/0,5Users,10Orders (5Cancelled/1Completed/4Pending); D không ghi/kiểm lại fixture này.
+- C.6A shutdown Ctrl+Break được duyệt riêng, PASS đúng console cũ; không suy cách shutdown cho PID mới.
+- [C.6B deployment](S29_8C_6B_DEPLOYMENT_RESULT.md):118binary thay/3appsettings giữ;118hash PASS, Web/Admin main smoke PASS, user login thật.
+- Staging: Web/bin/S29.8C.5-staging/net8.0 và Admin/bin/S29.8C.5-staging/net8.0-windows, dưới src/PhoneStore.*.
+- Binary backup121files: `src/PhoneStore.Admin/obj/S29.8C.5-binary-backups/20261102_013925853Z_de37e8a4ab1c44039836ca8a78baeecf`; giữ manifest, không clean.
+- [C.7/7A](S29_8C_7_TRANSACTION_ACCEPTANCE_RESULT.md): đúng1Customer/1Order/1Detail thật; UserId2/OrderId1/DetailId1.
+- C.7 checkout qty1 đúng1lần, Pendingstock37/tổng739; user Confirm qua Admin thật, Customer thấy Confirmed.
+- User Cancel đúng1lần qua Web; Web/Admin/SQL Cancelled, stock38/tổng740. Không request hủy lặp main.
+- SELECT lặp và đối chiếu40catalog/ảnh không đổi; giữ Customer/đơn Cancelled/Detail làm bằng chứng, không xóa.
+- Screenshot trong Web/obj: S29.8C.7-pending-receipt.png, confirmed-order.png, cancelled-order.png (cùng tiền tố).
+
+## 6. Backup và ảnh
+- Backup SQL trong `C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup`.
+- S29.5A: `PhoneStoreDB_FULL_COPYONLY_20261102_123908.738Z_131E14FF3BAC44C391332C4392CC2B72.bak`.
+- S29.7F: `PhoneStoreDB_S29_7F_PREIMPORT_20261102_001906872Z_47B0A15271A6437A8D5FB05E41E61A38.bak`.
+- Gần nhất trước C.7: `PhoneStoreDB_S29_8C_7_PRETRANSACTION_20261102_020840231Z_83DE6E0E3458420896EA6963BCAB5F59.bak`.
+- C.7 backup02:08:40UTC/09:08:40Bangkok,566272bytes/set3;FULL COPY_ONLY/CHECKSUM/COMPRESSION + VERIFYONLY CHECKSUM PASS.
+- Backup trước giao dịch không chứa Customer2/Order1 mới; chưa thử restore, cùng ổC, VERIFYONLY không thay restore rehearsal.
+- Ảnh runtime: `C:\PhoneStore\PhoneStore\src\PhoneStore.Web\wwwroot\uploads\products`; cần backup riêng, không tự xóa/ghi đè.
+
+## 7. Tests và rủi ro còn mở
+- Gần nhất D.1B: build0warnings/errors,129/129 PASS,0skip;107 baseline +22profile (12service/10HTTP); restore D.1 PASS.
+- D.1C.1 chạy lại22/22profile PASS (SQLite/HTTP thật cách ly), output bin/S29.8D.1C.1-tests; khôngfullsuite/deploy/mainPOST.
+- Lệnh: `dotnet build PhoneStore.sln --no-restore -p:OutputPath=bin/S29.8D.1B-build/`; `dotnet test PhoneStore.sln --no-build --no-restore -p:OutputPath=bin/S29.8D.1B-build/ --verbosity minimal`.
+- Suite SQLite: Authentication, Bootstrap, SingleAdminPolicy/Constraint, Checkout, OrderWorkflow, ProductStockConcurrency, CommerceWorkflow, CartController.
+- SQL/HTTP/UI harness riêng opt-in trong tests/PhoneStore.SqlIntegration; không chạy audit read-only để tránh ghi fixture.
+- Chưa có suite báo cáo/CRUD lookup/ảnh/Customer đầy đủ; desktop logout, RememberMe dài ngày, stress/commit không rõ chưa nghiệm thu đủ.
+- Original-stock guard không phải rowversion mọi field/ABA; cart theo browser session; legacyCreateAsync không token nhưng Web dùng Idempotent.
+- Revenue tổng/trend/average chỉ Completed; BestSellers/SalesValue dùng Confirmed/Shipping/Completed, không cùng chỉ số doanh thu.
+- DateOnly report được coi UTC nhưng UI ngày local: cần chốt timezone/test biên ngày. Admin gateway kiểm session snapshot, chưa revalidate DB từng command.
+- HTTPS redirect thiếu port khi chạy HTTP vẫn warning đã biết; không phát hiện runtime failure mới qua audit đọc.
+- Word/Excel UC01–UC12/SCR01–SCR12/rubric chấm điểm chưa được xác minh; không tự suy đáp ứng toàn bộ tài liệu chưa có.
+
+## 8. Nhiệm vụ hiện tại và bước tiếp theo
+- S29.8D audit hoàn thành, toàn hệ thống PARTIAL; D.1 profile source/tests PASS, D.1B đã triển khai/GET main PASS.
+- [D.1 report](S29_8D_1_CUSTOMER_PROFILE.md): CustomerProfile DTO/store/service/interface, ProfileController/model/view, Program DI/public test entry, layout link,2test files/test csproj và docs.
+- Chỉ GET/POST /account/profile, Customer active từ claimID; UPDATE có điều kiện chỉ FullName/Phone/Address; Email readonly, không bind ID/role/hash; CSRF+validation server.
+- Đổi tên cập nhật Name claim và giữ expiry/persistent cookie; tests overposting/owner/anonymous/inactive/role/CSRF/validation/error/session PASS.
+- WebApplicationFactory chạy Program/MVC/cookie/filter thật với SQLite và DataProtection ephemeral; không SQL test writes, không tạo môi trường SQL mới.
+- [D.1B deployment](S29_8D_1B_PROFILE_DEPLOYMENT.md): CtrlC20giây không thoát; recheck console chỉ Web/helper và SQL idle rồi CtrlBreak1lần, log shutdown/exit/5015trống PASS; không force.
+- D.1B copy60runtime từ staging62, giữ2appsettings; backup62hash và101Admin/uploads/source-confighash giữ nguyên; chỉ restart Web19388, Admin10736 giữ.
+- Artifact/backup/staging/manifests/log: `src/PhoneStore.Web/obj/S29.8D.1B-20261102_024935357Z_9be18a0a8d6a413d9cfa63304bc5d7f7`; giữ, khôngclean.
+- Hậu kiểm D.1B mainONLINE40/40/8/1,Users2,Order1Cancelled,Detail1,tồn740,Customer tên tài vũ; cảWeb19388/Admin10736 SQLmain, khôngghi.
+- Browser sessionCustomer cũ còn hợp lệ; clicklinkHome→Hồsơ PASS đúngowner/emailreadonly/noSensitiveFields; anonymous302login;40detail/40ảnh200.
+- [D.1C acceptance](S29_8D_1C_PROFILE_ACCEPTANCE.md): được duyệt sửa tạm/khôi phục User2 qua UI; preflight đúngPID19388/10736/main/customer và60Web+101preservedhash PASS.
+- Gốc SELECT: tài vũ/09032657212/AddressNULL; nhập form Khách hàng Kiểm thử/0900000000/Địa chỉ kiểm thử PhoneStore, thửmouseclick Lưu1lần.
+- Helper timeout không xác nhận success; DỪNG, khôngretry/khôi phục tự động. DOM còn giá trị thử chưa lưu, greeting tên cũ; chưa chứng minh POST thực sự được gửi, không kết luận app lỗi.
+- SELECT sau dừng hồ sơ vẫn gốc/email-role-active giữ nguyên;9/9 snapshot bảng không đổi (Users không đọc credentials),catalog40/40/tồn740/Order1Cancelled/Admin1active.
+- D.1C PARTIAL, cookie sau đổi tên/restore NOT TESTED;129testsbaseline D.1B, khôngrerun. Chỉdocs+evidenceobj; khôngsource/SQLDML/binarychange.
+- Artifact `src/PhoneStore.Web/obj/S29.8D.1C-20261102_031553601Z_0f70f82b55224b31a97cc4420a0835cf`; giữedit.attempt, khôngxóa marker/rerunhelper để thửghi.
+- [D.1C.1 diagnosis](S29_8D_1C_1_PROFILE_DIAGNOSIS.md): quan sátDOM cho greetingtênmới; SELECT3fieldđãtestvalues, userxácnhận tựbấmLưu. CheckpointgốcC.1 chỉlàlịchsử.
+- Formaction/method/name/CSRFpresent đúng, nativevalid3field, nosubmitJS/listeners trực tiếp, noerror. Log3UPDATE nhưng0HTTPrequestmetadata; helperPOSTcũ UNKNOWN, nghi vấn scrollsmooth→tọađộclick chưaổnđịnh, chưa chứngminh.
+- C.1.1 chỉđọc main,22tests PASS;8bảngkhác nguyên, Users SELECTchiếu3fieldgốc đểso khớp snapshot→cácfieldkhác/Adminnguyên. Web60hashnguyên, khôngsourcefix.
+- [D.1C.2 restore](S29_8D_1C_2_PROFILE_RESTORE.md) PASS sau duyệt riêng: kiểmtra đúngowner/3giátrị/nút rồi nativebuttonclick1lần;1POST302→GET200/reloadGET200, successmessage và greetingtài vũ, sessiongiữ.
+- SQLUser2=tài vũ/09032657212/AddressNULL,Email/Role2/active giữ;9/9snapshotgốc khớp (Userskhôngcredentials),40SP/40ảnh/kho740/Order1Cancelled/Detail1/Adminnguyên.
+- Web19388/Admin10736/hash60+101 nguyên; khôngsourcefix/build/testmới, chỉdocs/helper/evidence restore-C2-* trongartifactD.1C; giữattempt, khôngrerun.
+- Đềxuấtđóng S29.8D.1, chuyển S29.8D.2 CRUDAdmin khi cóchỉđạo; chưa tựthửghiCRUDmain hoặc thêmfixtureSQL.
+- Sau đó D.2 nghiệm thu/hoàn thiện CRUD quản trị, D.3 reports/auth-session, D.4 tổng nghiệm thu; mở rộng sau, UI/UX cuối.
+- Không coi phê duyệt C.7 một giao dịch hoặc D.1 source/tests là quyền tạo thêm tài khoản/đơn hay triển khai/ghi main.
+
+## 9. Phê duyệt và giới hạn lâu dài
+- Đã duyệt main migration/Admin/import,deployC.6B/D.1B,1Customer/1OrderC.7; D.1C.2 khôiphục3fieldUser2quaUI đãPASS. Không suy quyền ghi giao dịch/CRUD tiếp theo.
+- Không tự tạo Admin thứ hai, đổi role/password, thêm demo, chỉnh tồn thủ công hoặc xóa bằng chứng giao dịch.
+- Không ghi main, migrate/seed/import/restore/drop/truncate/DELETE, thay binary/restart hoặc cleanup dữ liệu khi chưa được duyệt đúng thao tác.
+- Không commit/push/reset/clean/history rewrite; không bật full access/bỏ approvals; bảo vệ secrets và thay đổi người dùng.
+- Không tự kết nối server cũ, không tạo/drop DB test mới hoặc chạy lại harness có ghi khi chưa thuộc phạm vi được duyệt.
+- Kết thúc mỗi nhiệm vụ: cập nhật trước/sau, file thay đổi, lệnh/kết quả thực tế, lỗi còn lại/bước tiếp; không ghi log dài hoặc mật khẩu/hash/cookie/token.
