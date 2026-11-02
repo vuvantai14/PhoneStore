@@ -12,11 +12,29 @@ obj/
 # Visual Studio Code local settings
 .vscode/
 
+# Local Codex/agent tooling and caches
+.agents/
+
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+secrets.json
+appsettings.*.local.json
+
 # Local SDK cache used in restricted environments
 .dotnet-local/
 
 # Product images entered through Admin are runtime data.
 src/PhoneStore.Web/wwwroot/uploads/products/
+
+# SQL Server data and backups
+*.bak
+*.bacpac
+*.mdf
+*.ldf
 
 # Logs and OS files
 *.log

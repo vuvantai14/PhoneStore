@@ -1,5 +1,5 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
-Cập nhật: 2026-11-02, E.4B deploy **PASS**, cart logout runtime PASS; tổng thể PARTIAL vì user checkout ngoài kịch bản tạo Order2 Pending, tồn739. Đây là snapshot.
+Cập nhật: 2026-11-02, S29.9B.1 **PARTIAL**: Edge thật phát hiện hero 375px P1 + brand fallback P2, source đã sửa/build/tests PASS nhưng Web tự dừng trước tái nghiệm thu; chưa deploy/DB DML. Đây là snapshot.
 Đọc đầu mỗi phiên. Ưu tiên source và kết quả thực tế khi tài liệu mâu thuẫn; chỉ kiểm tra phần liên quan nhiệm vụ.
 
 ## 1. Kiến trúc, môi trường và cấu hình
@@ -113,6 +113,10 @@ Cập nhật: 2026-11-02, E.4B deploy **PASS**, cart logout runtime PASS; tổng
 - Word/Excel UC01–UC12/SCR01–SCR12/rubric chấm điểm chưa được xác minh; không tự suy đáp ứng toàn bộ tài liệu chưa có.
 
 ## 8. Nhiệm vụ hiện tại và bước tiếp theo
+- [S29.9B.1 Browser acceptance](S29_9B_1_BROWSER_ACCEPTANCE.md): Edge headless thật đã chụp 375/768/1024/1440 vào `docs/artifacts/S29.9B.1`; runtime CSS hash CURRENT ở checkpoint đầu. Phát hiện hero mobile tràn/cắt (P1) và logo lỗi chồng fallback (P2); chỉ sửa `site.css` (`min-width`/wrap/mobile heading và `[hidden]`). Sau đó Web PID12640 tự thoát/cổng5015 trống, không tự restart nên chưa có ảnh sau sửa/keyboard/reduced-motion/full-page. Build cách ly 0 warning/error, 162/162 tests PASS. S29.9B còn PARTIAL, S29.9C NOT READY đến khi được phép khởi động và tái nghiệm thu browser.
+- [S29.9B Foundation/Home](S29_9B_CUSTOMER_WEB_FOUNDATION_HOME.md): chỉ sửa `site.css`; tokens/typography/spacing/touch target/focus/reduced-motion/Home responsive được chuẩn hóa, không đổi Razor/nghiệp vụ. Build cách ly 0 warning/error, 162/162 tests và HTTP Home/Products/Login/CSS PASS; browser 375/768/1024/1440 + keyboard/screen-reader còn NOT TESTED. READY có điều kiện cho S29.9C sau nghiệm thu browser; không deploy/restart/DB DML.
+- [S29.9A UI/UX audit](S29_9A_UI_UX_AUDIT.md): Codex nhận diện `ui-ux-pro-max` và đã audit source toàn bộ Web/Admin; không sửa source/runtime/DB. Kết luận READY có điều kiện cho S29.9B Web trước. Điểm ưu tiên: font 9–12px, disabled contrast 2.56:1, error-focus/checkout/cancel, reduced-motion chưa phủ transform, token/responsive Web; DPI/keyboard/status/chart semantics Admin. `py` hiện báo không có Python nên search design-system chưa chạy, không có output cũ; audit dùng SKILL/checklist trực tiếp. Tests/build không chạy vì documentation-only.
+- S29.9-SKILL: đã kiểm tra gói chính thức `ui-ux-pro-max-cli` 2.15.0 và cài project-local vào `.agents/skills/` bằng CLI đã tải/kiểm tra, không global, không `--force`, không sửa UI/DB/runtime. `ui-ux-pro-max` có SKILL.md + 68 file (~3.57 MB); CLI chính thức còn tạo 6 skill phụ đi kèm. README nói có `--dry-run` nhưng npm 2.15.0 thực tế không khai báo option này, nên đã audit mã trước khi init. Node24.22.1/npm11.19.1/Codex0.164.0; Python3 chưa khả dụng (chỉ Windows Store alias), vì vậy search.py chưa chạy và trạng thái PARTIAL. Cần người dùng tự cài Python3 rồi mở phiên Codex mới để nhận skill và chạy smoke search; không cài Python/global CLI tự động.
 - S29.8D audit hoàn thành, toàn hệ thống PARTIAL; D.1 profile source/tests PASS, D.1B đã triển khai/GET main PASS.
 - [D.1 report](S29_8D_1_CUSTOMER_PROFILE.md): CustomerProfile DTO/store/service/interface, ProfileController/model/view, Program DI/public test entry, layout link,2test files/test csproj và docs.
 - Chỉ GET/POST /account/profile, Customer active từ claimID; UPDATE có điều kiện chỉ FullName/Phone/Address; Email readonly, không bind ID/role/hash; CSRF+validation server.

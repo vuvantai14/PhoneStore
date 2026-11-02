@@ -29,3 +29,13 @@ These are agent instructions, not a database firewall or a replacement for the f
 - Keep only useful current facts and milestone evidence; do not copy chat transcripts, long logs, passwords, hashes or other secrets into progress notes.
 - For documentation-only tasks, record that tests were not rerun. Never invent validation results or rerun database writes to refresh progress.
 - No commit, push, Git reset or database change without explicit authorization. Existing safety rules above continue to apply.
+
+## GitHub checkpoint workflow
+- Work code-first: read only `docs/PROGRESS.md`, the current task report and directly affected source/configuration files. Do not repeat repository-wide audits or checks that remain valid and are unaffected by the new diff.
+- Prefer targeted build/tests while iterating. Run full regression only for broad/shared changes or an important acceptance checkpoint.
+- After a stable requested stage has appropriate build/tests, create a scoped Git checkpoint on the current branch and push it to the already configured verified remote. The user authorized this ongoing checkpoint workflow on 2026-11-02; report the commit hash and push result. If authentication/push fails, keep the local commit and report the error.
+- Before each checkpoint, inspect status/diff and exclude unrelated user changes, secrets, runtime data, database files/backups, `bin/`, `obj/`, local tooling and caches. Never create or change a remote/repository implicitly.
+- Use concise stage-based Conventional Commit messages such as `feat(ui): complete S29.9B customer web foundation`.
+- Never force-push, rewrite history, reset, clean, discard changes, auto-revert or auto-rollback. A Git checkpoint replaces routine manual source/DLL/runtime backups; make SQL backups only for approved risky database operations.
+- Keep completion reports short: changed files, targeted validation, remaining issue, commit hash and push outcome. Do not generate manifests, hashes or long reports unless the task or concrete risk requires them.
+- This workflow does not authorize deploy/restart, database/schema/data changes, destructive operations, framework/business-scope changes, or committing secrets/runtime data. Those existing approval rules remain in force.
