@@ -1,18 +1,20 @@
 @model HomeViewModel
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment WebEnvironment
 @{
     ViewData["Title"] = "Trang chủ";
-    var heroProduct = Model.Products.FirstOrDefault();
-    var heroImage = heroProduct is null ? null : ProductImageUrl.LocalOrPlaceholder(heroProduct.ImageUrl);
+    var heroBanner = WebEnvironment.WebRootFileProvider.GetFileInfo("images/banner/bannerhome.jpg").Exists
+        ? "/images/banner/bannerhome.jpg"
+        : null;
     var brandIcons = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
-        ["Apple"] = "apple.jpg",
-        ["Google"] = "google.jpg",
-        ["OnePlus"] = "oneplus.jpg",
-        ["OPPO"] = "oppo.jpg",
-        ["realme"] = "realme.jpg",
-        ["Samsung"] = "samsung.jpg",
-        ["vivo"] = "vivo.jpg",
-        ["Xiaomi"] = "xiaomi.jpg"
+        ["Apple"] = "apple.svg",
+        ["Google"] = "google.svg",
+        ["OnePlus"] = "oneplus.svg",
+        ["OPPO"] = "oppo.svg",
+        ["realme"] = "realme.svg",
+        ["Samsung"] = "samsung.svg",
+        ["vivo"] = "vivo.svg",
+        ["Xiaomi"] = "xiaomi.svg"
     };
 }
 
@@ -25,9 +27,19 @@
             <a class="button home-hero-button" href="/products">Khám phá ngay <span aria-hidden="true">→</span></a>
         </div>
         <div class="home-hero-visual" aria-hidden="true">
-            <span class="hero-glow hero-glow-one"></span><span class="hero-glow hero-glow-two"></span>
-            @if (heroImage is not null) { <img src="@heroImage" alt="" width="440" height="440" /> }
-            else { <div class="hero-phone-placeholder"><span></span></div> }
+            @if (heroBanner is not null)
+            {
+                <img class="hero-banner-image"
+                     src="@heroBanner"
+                     alt=""
+                     width="2172"
+                     height="724"
+                     loading="eager" />
+            }
+            else
+            {
+                <div class="hero-phone-placeholder"><span></span></div>
+            }
         </div>
     </div>
 </section>
@@ -36,21 +48,20 @@
     @if (Model.Brands.Count > 0)
     {
         <section class="home-section" id="brands" aria-labelledby="brands-title">
-            <div class="home-section-heading home-section-heading-centered"><div><span class="home-kicker"></span><h2 id="brands-title">Thương hiệu bạn yêu thích</h2></div><a class="home-section-link" href="/products">Xem tất cả <span aria-hidden="true">→</span></a></div>
+            <div class="home-section-heading home-section-heading-centered"><div><h2 id="brands-title">Thương hiệu bạn yêu thích</h2></div><a class="home-section-link" href="/products">Xem tất cả <span aria-hidden="true">→</span></a></div>
             <div class="home-brand-grid">
                 @foreach (var brand in Model.Brands)
                 {
-                    <a href="/products?brandId=@brand.Id" aria-label="Xem sản phẩm @brand.Name" title="@brand.Name">
+                    var logoPath = brandIcons.TryGetValue(brand.Name, out var iconFile)
+                        && WebEnvironment.WebRootFileProvider.GetFileInfo($"images/brands/{iconFile}").Exists
+                        ? $"/images/brands/{iconFile}" : null;
+                    <a class="@(logoPath is null ? "brand-card-without-logo" : "brand-card-with-logo")" href="/products?brandId=@brand.Id" aria-label="Xem sản phẩm @brand.Name" title="@brand.Name">
                         <span class="brand-logo-wrap">
-                            @if (brandIcons.TryGetValue(brand.Name, out var iconFile))
+                            @if (logoPath is not null)
                             {
-                                <img class="brand-logo" src="/uploads/products/@iconFile" alt="@brand.Name" title="@brand.Name" onerror="this.hidden=true;this.nextElementSibling.hidden=false" />
-                                <span class="brand-logo-fallback" hidden aria-hidden="true">@brand.Name[..1]</span>
+                                <span class="brand-logo-box"><img class="brand-logo brand-logo--@(System.IO.Path.GetFileNameWithoutExtension(logoPath))" src="@logoPath" alt="" loading="lazy" width="104" height="40" onerror="this.hidden=true;this.closest('a').classList.add('brand-card-without-logo')" /></span>
                             }
-                            else
-                            {
-                                <span class="brand-logo-fallback" aria-hidden="true">@brand.Name[..1]</span>
-                            }
+                            <span class="brand-name">@brand.Name</span>
                         </span>
                     </a>
                 }
@@ -59,24 +70,20 @@
     }
 
     <section class="home-section" aria-labelledby="newest-title">
-        <div class="home-section-heading home-section-heading-centered"><div><span class="home-kicker"></span><h2 id="newest-title">Điện thoại mới nhất</h2><p></p></div><a class="home-section-link" href="/products">Xem tất cả <span aria-hidden="true">→</span></a></div>
+        <div class="home-section-heading home-section-heading-centered"><div><h2 id="newest-title">Điện thoại mới nhất</h2></div><a class="home-section-link" href="/products">Xem tất cả <span aria-hidden="true">→</span></a></div>
         @if (Model.Products.Count == 0) { <partial name="_EmptyCatalog" model='@("Chưa có sản phẩm.")' /> }
-        else { <div class="home-product-grid">@foreach (var product in Model.Products) { <partial name="_ProductCard" model="product" /> }</div> }
+        else { <div class="home-product-grid">@foreach (var product in Model.Products) { <partial name="_HomeProductCard" model="product" /> }</div> }
     </section>
 
-    <section class="home-section" aria-labelledby="best-sellers-title">
+    @if (Model.BestSellers.Count > 0)
+    {
+      <section class="home-section" aria-labelledby="best-sellers-title">
         <div class="home-section-heading home-section-heading-centered">
-            <div><span class="home-kicker">Sản phẩm nổi bật</span><h2 id="best-sellers-title">Sản phẩm bán chạy</h2><p></p></div>
+            <div><span class="home-kicker">Sản phẩm nổi bật</span><h2 id="best-sellers-title">Sản phẩm bán chạy</h2></div>
         </div>
-        @if (Model.BestSellers.Count == 0)
-        {
-            <div class="home-best-sellers-empty">Chưa có dữ liệu sản phẩm bán chạy.</div>
-        }
-        else
-        {
-            <div class="home-product-grid">@foreach (var product in Model.BestSellers) { <partial name="_ProductCard" model="product" /> }</div>
-        }
-    </section>
+        <div class="home-product-grid">@foreach (var product in Model.BestSellers) { <partial name="_HomeProductCard" model="product" /> }</div>
+      </section>
+    }
 
     <section class="home-services" aria-label="Dịch vụ PhoneStore">
         <article><span class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h11v11H3zM14 10h4l3 3v4h-7z"/><circle cx="7" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></svg></span><div><h2>Giao hàng toàn quốc</h2><p>Nhận hàng thuận tiện tại địa chỉ của bạn.</p></div></article>

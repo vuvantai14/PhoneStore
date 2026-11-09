@@ -18,7 +18,7 @@ public class HomeController : Controller
 
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var products = await _products.GetDiversifiedNewestAsync(6, cancellationToken);
+        var products = await _products.GetDiversifiedNewestAsync(12, cancellationToken);
         var bestSellers = await _products.GetBestSellersAsync(6, cancellationToken);
         var brands = await _products.GetBrandsAsync(cancellationToken);
         return View(new HomeViewModel
