@@ -1,5 +1,25 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-11 — S29.10A.1 **READY FOR USER RUN, tinh chỉnh Docker Compose theo chuẩn v2**:
+- Đã xóa bỏ thuộc tính `version: '3.8'` đã lỗi thời trong Compose specification v2.x.
+- Chuẩn hóa healthcheck SQL Server: Sử dụng biến môi trường `${MSSQL_SA_PASSWORD:-PhoneStore@2026!}` đồng bộ từ `.env`, bọc trong dấu nháy đơn trong shell command tránh lỗi ký tự đặc biệt, hỗ trợ đường dẫn `tools18` kèm cờ `-C` (TrustServerCertificate) và fallback `tools`.
+- Đồng bộ thông tin kết nối giữa `db` và `web`: Host `db`, cổng 1433, CSDL `PhoneStoreDockerDB`, tài khoản `sa` với cùng mật khẩu từ `${MSSQL_SA_PASSWORD}`, ánh xạ cổng host giữ nguyên Web 8080 và SQL 14333.
+- Files đã cập nhật: `docker-compose.yml`, `docs/PROGRESS.md`. Không tự chạy Docker/migration/test, không commit/push.
+
+Cập nhật 2026-11-11 — S29.10A **READY FOR REVIEW, hoàn tất thiết lập Docker Compose & GitHub Actions CI**:
+- **Docker Compose & Container hóa**:
+  - `Dockerfile`: Multi-stage build (.NET 8 SDK -> ASP.NET Core 8.0 runtime) cho `PhoneStore.Web`, tối ưu layer caching và image size.
+  - `.dockerignore`: Loại trừ sạch sẽ `bin/`, `obj/`, user files, thư mục Admin/Tools/Tests không liên quan.
+  - `docker-compose.yml`: Gồm 2 services: `db` (SQL Server 2022 `mssql/server:2022-latest`) với persistent volume `phonestore_mssql_data` + healthcheck (`SELECT 1`), và `web` (`phonestore-web`) phụ thuộc vào `db` (`service_healthy`). Cổng ánh xạ an toàn (Web: 8080, SQL: 14333) cách ly hoàn toàn với môi trường Windows.
+  - `.env.example`: Cung cấp file mẫu cấu hình biến môi trường, bảo mật mật khẩu không commit Git.
+- **GitHub Actions CI (`.github/workflows/ci.yml`)**:
+  - Trigger: `push`/`pull_request` trên `main` và `workflow_dispatch`.
+  - Job 1 (`windows-latest`): Restore, build toàn bộ Solution Release (bao gồm WinForms Admin) và chạy bộ 162+ unit tests (`PhoneStore.Tests.csproj`).
+  - Job 2 (`ubuntu-latest`): Build Docker image `PhoneStore.Web` kiểm tra đóng gói container trên Linux độc lập.
+- **Tài liệu**: Tạo `docs/DOCKER_AND_CI_GUIDE.md` hướng dẫn đầy đủ từ cài đặt, chạy, xem log, dọn dẹp đến minh chứng nộp giảng viên.
+- **Files đã tạo/sửa**: `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `.env.example`, `.github/workflows/ci.yml`, `docs/DOCKER_AND_CI_GUIDE.md`, `docs/PROGRESS.md`.
+- **Tuân thủ nghiêm ngặt**: Không đụng database Windows, không chạy container tự động, không stage/commit/push. Chờ user review.
+
 Cập nhật 2026-11-11 — S29.9H.6 **READY FOR USER TEST, sửa dứt điểm trạng thái phân trang và bộ lọc**:
 - **Nguyên nhân lỗi**:
   - `ProductsController.cs` tự động ép `filter.BrandIds` chứa Apple & Samsung và `filter.InStockOnly = true` khi query string thiếu tham số (do tàn dư quy tắc cũ S29.9H.4).

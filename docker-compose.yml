@@ -1,0 +1,51 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: phonestore-db
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:-PhoneStore@2026!}"
+      MSSQL_PID: "Developer"
+    ports:
+      - "${SQL_PORT:-14333}:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '${MSSQL_SA_PASSWORD:-PhoneStore@2026!}' -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P '${MSSQL_SA_PASSWORD:-PhoneStore@2026!}' -Q 'SELECT 1'
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - phonestore-net
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: phonestore-web
+    environment:
+      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Development}"
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__PhoneStoreConnection: "Server=db,1433;Database=${DB_NAME:-PhoneStoreDockerDB};User Id=sa;Password=${MSSQL_SA_PASSWORD:-PhoneStore@2026!};TrustServerCertificate=True;MultipleActiveResultSets=true;"
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - phonestore-net
+
+volumes:
+  mssql_data:
+    name: phonestore_mssql_data
+
+networks:
+  phonestore-net:
+    name: phonestore_network
+    driver: bridge

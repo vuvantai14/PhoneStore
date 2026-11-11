@@ -1,0 +1,41 @@
+# Git & VCS
+**/.git
+**/.github
+
+# IDE & Editor settings
+**/.vs
+**/.vscode
+**/.idea
+**/*.user
+**/*.suo
+**/*.userosscache
+**/*.sln.docstates
+
+# Build outputs & temporary files
+**/bin/
+**/obj/
+**/TestResults/
+**/*.log
+
+# Project-specific non-Web folders & docs
+.agents/
+.codex/
+.config/
+.test-artifacts/
+database/
+docs/
+tests/
+tools/
+
+# Docker & local environment
+.dockerignore
+Dockerfile
+docker-compose*.yml
+.env
+.env.*
+!.env.example
+
+# Documentation & project instructions
+AGENTS.md
+CONTEXT.md
+README.md
