@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using PhoneStore.Data.Context;
 using PhoneStore.Models.Entities;
+using PhoneStore.Models.Enums;
 using PhoneStore.Models.Purchasing;
 
 namespace PhoneStore.Data.Purchasing;
@@ -68,10 +69,23 @@ public sealed class PurchaseStore(PhoneStoreDbContext db)
                     .Select(d => new PurchasedItem(d.Product.ProductName, d.Quantity, d.UnitPrice)).ToList()
             }).SingleOrDefaultAsync(ct);
 
-    public async Task<IReadOnlyList<CustomerOrderRow>> CustomerOrdersAsync(int userId, CancellationToken ct) =>
-        await db.Orders.AsNoTracking().Where(order => order.UserId == userId)
+    public Task<IReadOnlyList<CustomerOrderRow>> CustomerOrdersAsync(int userId, CancellationToken ct) =>
+        CustomerOrdersAsync(userId, null, null, null, ct);
+
+    public async Task<IReadOnlyList<CustomerOrderRow>> CustomerOrdersAsync(int userId, OrderStatus? status, DateTime? fromUtc, DateTime? toExclusiveUtc, CancellationToken ct)
+    {
+        var query = db.Orders.AsNoTracking().Where(order => order.UserId == userId);
+        if (status.HasValue)
+            query = query.Where(order => order.Status == status.Value);
+        if (fromUtc.HasValue)
+            query = query.Where(order => order.OrderDate >= fromUtc.Value);
+        if (toExclusiveUtc.HasValue)
+            query = query.Where(order => order.OrderDate < toExclusiveUtc.Value);
+
+        return await query
             .OrderByDescending(order => order.OrderDate).ThenByDescending(order => order.OrderId)
             .Select(order => new CustomerOrderRow(order.OrderId, order.OrderCode, order.OrderDate,
                 order.TotalAmount, order.Status, order.ReceiverName)).ToListAsync(ct);
+    }
 }
 

@@ -1,5 +1,57 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-12 — S29.9N.1 **READY FOR USER TEST, Hoàn thiện bộ lọc và validation My Orders**:
+- **Khắc phục lỗi nghiệp vụ bộ lọc thời gian**: Loại bỏ hoàn toàn cơ chế tự động đảo ngày (`auto-swap`) khi `Từ ngày > Đến ngày` của S29.9N; thay bằng validation chặt chẽ 2 lớp (Client & Server).
+- **Validation quy tắc lọc**:
+  - Với kiểu lọc "Khoảng ngày tùy chọn" (`range`): Bắt buộc nhập đầy đủ cả `fromDate` và `toDate` (báo lỗi *"Vui lòng nhập đầy đủ Từ ngày và Đến ngày."* nếu thiếu).
+  - Nếu `fromDate > toDate`: Báo lỗi rõ ràng *"Từ ngày không được lớn hơn Đến ngày."*.
+  - Với kiểu lọc "Theo ngày" (`day`): Bắt buộc chọn ngày (báo lỗi nếu để trống).
+  - Phòng thủ an toàn (Không query DB khi lỗi): Khi validation thất bại, `OrdersController` lập tức ngắt luồng, không gọi `PurchaseStore.CustomerOrdersAsync`, trả về danh sách rỗng và gán `ErrorMessage` hiển thị alert trực quan, tuyệt đối không gây lỗi HTTP 500.
+- **Client-side Interceptor**: Bổ sung validation tức thời trước khi submit form trong `Index.cshtml`, hiển thị thông báo alert đỏ nổi bật, focus vào input lỗi và ngăn submit sai lên server.
+- **Khảo sát phân trang (Pagination Audit)**:
+  - Hiện trạng: Luồng `OrdersController.Index` và `PurchaseStore.CustomerOrdersAsync` chưa hỗ trợ phân trang (đang tải toàn bộ đơn hàng của khách hàng theo bộ lọc).
+  - Đề xuất phương án Server-side Pagination 10 đơn/trang: Tích hợp `page` / `pageSize = 10` vào `OrderFilterViewModel`, tính `TotalCount` bằng `CountAsync` và phân trang bằng `.Skip().Take()`, render thanh điều hướng phân trang đồng bộ với Catalog. Giữ nguyên không tự ý sửa code phân trang khi chưa được phê duyệt.
+- **Files đã sửa**:
+  - `src/PhoneStore.Web/Models/PurchaseViewModels.cs`
+  - `src/PhoneStore.Web/Controllers/OrdersController.cs`
+  - `src/PhoneStore.Web/Views/Orders/Index.cshtml`
+  - `src/PhoneStore.Web/wwwroot/css/site.css`
+  - `docs/PROGRESS.md`
+- **Bảo toàn**: Giữ nguyên layout Compact đã duyệt ở S29.9N, kiểm soát phân quyền theo `UserId`, không chạm DB/migration, không commit/push. Chờ user kiểm tra trực tiếp trên Chrome tại `http://localhost:5015/orders`.
+
+Cập nhật 2026-11-12 — S29.9N **READY FOR USER TEST, Compact My Orders UI/UX + Advanced Date Filters**:
+- Viết lại markup `Views/Orders/Index.cshtml`: bỏ banner xanh lớn và dòng "TÀI KHOẢN", thay bằng header thu gọn (breadcrumb `Trang chủ / Đơn hàng của tôi`, H1 22px, mô tả ngắn, căn giữa tối đa 1180px); danh sách đơn hàng compact dạng hàng ngang cao ~84px gồm Icon 48x48px, Mã đơn + Ngày đặt, Tổng tiền xanh PhoneStore, Badge trạng thái thực tế và nút `Xem chi tiết →`.
+- Bộ lọc nâng cao: hỗ trợ lọc Trạng thái (Tất cả, Chờ xác nhận, Đã xác nhận, Đang giao, Hoàn thành, Đã hủy) và Thời gian đặt (Tất cả, Theo ngày, Theo tháng/năm, Theo năm, Khoảng ngày tùy chọn). Tự động ẩn/hiện và disable/enable các trường input không liên quan qua JS nhẹ để query string GET luôn sạch sẽ, chính xác.
+- Backend & Truy vấn: mở rộng `PurchaseStore.CustomerOrdersAsync`, `IOrderService`, `OrderService` với overload lọc `status, fromUtc, toExclusiveUtc` trực tiếp trên SQL Server qua EF Core, tính toán mốc thời gian chuẩn múi giờ Việt Nam (`SE Asia Standard Time`, UTC+7), bao quát trọn vẹn cả ngày kết thúc; kiểm soát đầu vào an toàn, tự động đảo ngày nếu `fromDate > toDate`.
+- Xử lý trạng thái trống: phân biệt giữa "chưa có đơn hàng nào" và "không tìm thấy đơn hàng phù hợp" khi lọc có nút "Đặt lại bộ lọc".
+- CSS mới append cuối `site.css`, scope `.orders-compact` (responsive 991px → tinh gọn bảng, 680px → chuyển card compact xếp dọc).
+- Giữ nguyên: bảo toàn 100% quyền sở hữu đơn hàng (`UserId`), không sửa DB/migration, không sửa trang khác, giữ nguyên overload cũ cho test.
+- Kiểm tra: cần user kiểm tra trực tiếp trên Chrome tại `http://localhost:5015/orders`.
+
+Cập nhật 2026-11-12 — S29.9M **READY FOR USER TEST, Compact Order Detail UI/UX**:
+- Viết lại markup `Views/Orders/Detail.cshtml`: bỏ banner xanh lớn, thay bằng header nhỏ gọn gồm breadcrumb ngang hàng `Đơn hàng của tôi / Chi tiết đơn hàng`, tiêu đề 22px kèm badge trạng thái thực tế từ backend (`.order-status`), dòng meta hiển thị mã đơn hàng và ngày đặt, link "← Tất cả đơn hàng" dẫn về `/orders`.
+- Bố cục 2 cột 65% / 35% bo góc 14px nền trắng, tối đa 1180px căn giữa, đồng bộ phong cách với Compact Checkout và Success.
+- Thông tin giao hàng (cột trái): hiển thị Người nhận, Số điện thoại (link tel), Địa chỉ giao hàng, Ghi chú; mỗi hàng gọn 40–44px.
+- Khu vực hủy đơn: thiết kế thành hộp nhỏ gọn ở cuối cột trái (`.order-detail-cancel-box`), thông báo ngắn và nút "Hủy đơn hàng" đỏ viền (`button-cancel-outline`), giữ nguyên điều kiện trạng thái (`Pending` / `Confirmed`), method POST, antiforgery token và bước xác nhận dialog `confirm()`.
+- Sản phẩm đã đặt (cột phải): hiển thị danh sách sản phẩm thu gọn (Tên, số lượng, đơn giá, thành tiền), Tổng cộng nổi bật màu xanh PhoneStore 20px, cho phép trang mở rộng tự nhiên.
+- CSS mới append cuối `site.css`, scope `.order-detail-compact` (responsive 991px → 1 cột, 680px → field xếp gọn, nút hủy full-width).
+- Giữ nguyên: Controller (`OrdersController.Detail`, `OrdersController.Cancel`), model `OrderReceipt`, date formatting UTC+7, kiểm tra quyền sở hữu đơn hàng, không sửa DB/migration.
+- Kiểm tra: cần user kiểm tra trực tiếp trên Chrome tại `http://localhost:5015/orders/{id}` (hoặc id 6).
+
+Cập nhật 2026-11-12 — S29.9L **READY FOR USER TEST, Compact Order Success UI/UX**:
+- Viết lại markup `Views/Checkout/Success.cshtml`: thay khối thông báo lớn bằng thẻ thông báo thành công gọn gàng (`.success-notice-card`) gồm icon tích xanh lá, H1 "Đặt hàng thành công!", mã đơn hàng nổi bật; breadcrumb một hàng `Trang chủ / Đơn hàng / Đặt hàng thành công`; layout 2 cột 65% / 35% bo góc 14px nền trắng đồng bộ với Compact Checkout.
+- Thông tin đơn hàng (cột trái): hiển thị đầy đủ Mã đơn hàng (chống tràn mã dài), Ngày đặt, Người nhận, Số điện thoại (link tel), Địa chỉ giao hàng và Ghi chú; cuối thẻ bổ sung 2 nút điều hướng chuẩn route MVC: "Xem đơn hàng của tôi" (`/orders`) và "Tiếp tục mua sắm" (`/products`).
+- Sản phẩm đã đặt (cột phải): hiển thị danh sách sản phẩm thu gọn (Tên, số lượng, thành tiền từng món), Tổng cộng nổi bật màu xanh PhoneStore 20px, cho phép trang mở rộng tự nhiên.
+- CSS mới append cuối `site.css`, scope `.order-success-compact` (responsive 991px → 1 cột, 680px → chuyển nút xếp dọc, padding thu gọn).
+- Giữ nguyên: Controller (`CheckoutController.Success`), model `OrderReceipt`, date formatting UTC+7, read-only GET (F5 không tạo thêm đơn), không sửa DB/migration.
+- Kiểm tra: cần user kiểm tra trực tiếp trên Chrome tại `http://localhost:5015/checkout/success/{id}` (hoặc id 5).
+
+Cập nhật 2026-11-12 — S29.9K **READY FOR USER TEST, Compact Checkout UI/UX**:
+- Viết lại markup `Views/Checkout/Index.cshtml`: bỏ banner/eyebrow "HOÀN TẤT LỰA CHỌN"; header gọn (breadcrumb 1 hàng `Trang chủ / Giỏ hàng / Thanh toán`, H1 "Thông tin đặt hàng", link "← Quay lại giỏ hàng"); grid 65/35, card trắng bo 14px; Họ tên + SĐT cùng hàng; textarea địa chỉ 66px, ghi chú 60px; input 41px; nút "Xác nhận đặt hàng →" 43px cuối form; tóm tắt đơn hàng inline (tên, SL, thành tiền, tổng xanh 20px), sticky trên desktop.
+- CSS mới append cuối `site.css`, scope `.checkout-compact` (responsive 991px → 1 cột, 680px → field xếp dọc). `_OrderSummary.cshtml` không còn được Checkout dùng nhưng giữ nguyên file.
+- Giữ nguyên: form POST, antiforgery (form tag helper), `SubmissionToken`, `data-ui-submit`/`data-checkout-form` (chống gửi trùng, error summary), validation `asp-validation-*`, dữ liệu autofill từ hồ sơ, `TotalAmount`/`LineTotal` backend. Không đổi Controller/ViewModel/DB.
+- Kiểm tra: chưa build/test (dotnet watch của user đang chạy; `dotnet build` trong sandbox trước đó trả FAILED 0 error do khóa file). Cần user kiểm tra Chrome zoom 100% tại `/checkout`.
+
 Cập nhật 2026-11-12 — S29.9J.1 **READY FOR USER TEST, Khắc phục triệt để lỗi Add to Cart Redirect trên trang Danh sách sản phẩm (Catalog)**:
 - **Nguyên nhân gốc rễ (Root Cause Analysis)**:
   - Trong `src/PhoneStore.Web/Views/Products/Index.cshtml`, thẻ `<form action="/products" method="get" class="catalog-layout" id="catalogFilterForm">` bọc ngoài toàn bộ layout bao gồm cả `<aside class="catalog-sidebar">` lẫn `<section class="catalog-results">`.

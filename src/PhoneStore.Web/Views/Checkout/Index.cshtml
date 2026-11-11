@@ -1,19 +1,90 @@
 @model CheckoutViewModel
-@{ ViewData["Title"] = "Đặt hàng"; }
-<div class="container purchasing-page checkout-page">
-    <nav class="breadcrumbs" aria-label="Đường dẫn"><a href="/">Trang chủ</a><span aria-hidden="true">/</span><a href="/cart">Giỏ hàng</a><span aria-hidden="true">/</span><span aria-current="page">Đặt hàng</span></nav>
-    <div class="catalog-heading"><span class="eyebrow">HOÀN TẤT LỰA CHỌN</span><h1>Thông tin đặt hàng</h1><p>Kiểm tra thông tin người nhận và đơn hàng của bạn.</p></div>
-    <div class="purchase-layout"><section class="shipping-panel" aria-labelledby="shipping-title">
-        <h2 id="shipping-title">Thông tin giao hàng</h2>
-        <p class="shipping-intro">Điền thông tin người nhận. Các trường có dấu * là bắt buộc.</p>
-        <form asp-controller="Checkout" asp-action="Index" method="post" class="auth-form" data-ui-submit data-checkout-form data-pending-label="Đang gửi đơn hàng…">
-            <input asp-for="SubmissionToken" type="hidden" /><div asp-validation-summary="All" class="auth-errors" role="alert" tabindex="-1" data-error-summary aria-label="Thông tin cần kiểm tra"></div>
-            <div class="field"><label asp-for="ReceiverName">Họ tên người nhận <span aria-hidden="true">*</span></label><input asp-for="ReceiverName" autocomplete="shipping name" required aria-describedby="receiver-name-error" /><span asp-validation-for="ReceiverName" class="field-error" id="receiver-name-error"></span></div>
-            <div class="field"><label asp-for="ReceiverPhone">Số điện thoại <span aria-hidden="true">*</span></label><input asp-for="ReceiverPhone" type="tel" autocomplete="shipping tel" required aria-describedby="receiver-phone-error" /><span asp-validation-for="ReceiverPhone" class="field-error" id="receiver-phone-error"></span></div>
-            <div class="field"><label asp-for="ShippingAddress">Địa chỉ giao hàng <span aria-hidden="true">*</span></label><textarea asp-for="ShippingAddress" rows="3" autocomplete="shipping street-address" required aria-describedby="address-error"></textarea><span asp-validation-for="ShippingAddress" class="field-error" id="address-error"></span></div>
-            <div class="field"><label asp-for="Note"></label><textarea asp-for="Note" rows="3" placeholder="Ghi chú cho đơn hàng (không bắt buộc)" aria-describedby="note-error"></textarea><span asp-validation-for="Note" class="field-error" id="note-error"></span></div>
-            <button class="button button-primary purchase-submit" type="submit">Xác nhận đặt hàng <span aria-hidden="true">→</span></button>
-            <a href="/cart" class="auth-back">← Quay lại giỏ hàng</a>
-        </form>
-    </section><div class="purchase-sidebar"><partial name="_OrderSummary" model="Model.Cart" /></div></div>
+@using System.Globalization
+@{
+    ViewData["Title"] = "Đặt hàng";
+    var vi = CultureInfo.GetCultureInfo("vi-VN");
+}
+<div class="checkout-compact checkout-page">
+    <div class="checkout-header-bar">
+        <div class="checkout-header-main">
+            <nav class="checkout-breadcrumbs" aria-label="Đường dẫn">
+                <a href="/">Trang chủ</a>
+                <span aria-hidden="true">/</span>
+                <a href="/cart">Giỏ hàng</a>
+                <span aria-hidden="true">/</span>
+                <span aria-current="page">Thanh toán</span>
+            </nav>
+            <h1 class="checkout-title">Thông tin đặt hàng</h1>
+        </div>
+        <a class="checkout-back-link" href="/cart">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Quay lại giỏ hàng</span>
+        </a>
+    </div>
+
+    <div class="checkout-layout-grid">
+        <section class="checkout-card checkout-shipping" aria-labelledby="shipping-title">
+            <div class="checkout-card-head">
+                <h2 id="shipping-title">Thông tin giao hàng</h2>
+                <span class="checkout-required-note">Trường có dấu <b>*</b> là bắt buộc</span>
+            </div>
+            <form asp-controller="Checkout" asp-action="Index" method="post" class="checkout-form" data-ui-submit data-checkout-form data-pending-label="Đang gửi đơn hàng…">
+                <input asp-for="SubmissionToken" type="hidden" />
+                <div asp-validation-summary="All" class="auth-errors" role="alert" tabindex="-1" data-error-summary aria-label="Thông tin cần kiểm tra"></div>
+
+                <div class="checkout-field-row">
+                    <div class="field">
+                        <label asp-for="ReceiverName">Họ tên người nhận <span aria-hidden="true">*</span></label>
+                        <input asp-for="ReceiverName" autocomplete="shipping name" required aria-describedby="receiver-name-error" />
+                        <span asp-validation-for="ReceiverName" class="field-error" id="receiver-name-error"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="ReceiverPhone">Số điện thoại <span aria-hidden="true">*</span></label>
+                        <input asp-for="ReceiverPhone" type="tel" autocomplete="shipping tel" required aria-describedby="receiver-phone-error" />
+                        <span asp-validation-for="ReceiverPhone" class="field-error" id="receiver-phone-error"></span>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label asp-for="ShippingAddress">Địa chỉ giao hàng <span aria-hidden="true">*</span></label>
+                    <textarea asp-for="ShippingAddress" rows="2" class="checkout-address" autocomplete="shipping street-address" required aria-describedby="address-error"></textarea>
+                    <span asp-validation-for="ShippingAddress" class="field-error" id="address-error"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Note"></label>
+                    <textarea asp-for="Note" rows="2" class="checkout-note" placeholder="Ghi chú cho đơn hàng (không bắt buộc)" aria-describedby="note-error"></textarea>
+                    <span asp-validation-for="Note" class="field-error" id="note-error"></span>
+                </div>
+
+                <div class="checkout-actions">
+                    <button class="button button-primary purchase-submit checkout-submit" type="submit">Xác nhận đặt hàng <span aria-hidden="true">→</span></button>
+                    <p class="checkout-hint">Giá và tồn kho được kiểm tra lại khi xác nhận đặt hàng.</p>
+                </div>
+            </form>
+        </section>
+
+        <aside class="checkout-card checkout-summary" aria-labelledby="summary-title">
+            <div class="checkout-card-head">
+                <h2 id="summary-title">Tóm tắt đơn hàng</h2>
+                <span class="checkout-summary-count">@Model.Cart.TotalQuantity sản phẩm</span>
+            </div>
+            <ul class="checkout-summary-items">
+                @foreach (var line in Model.Cart.Items)
+                {
+                    <li>
+                        <div class="checkout-summary-info">
+                            <strong>@(line.Product?.ProductName ?? "Sản phẩm không còn khả dụng")</strong>
+                            <span>Số lượng: @line.Item.Quantity</span>
+                        </div>
+                        <b>@line.LineTotal.ToString("N0", vi) ₫</b>
+                    </li>
+                }
+            </ul>
+            <div class="checkout-summary-total">
+                <span>Tổng cộng</span>
+                <strong>@Model.Cart.TotalAmount.ToString("N0", vi) ₫</strong>
+            </div>
+        </aside>
+    </div>
 </div>

@@ -2,15 +2,118 @@
 @using System.Globalization
 @{
     ViewData["Title"] = "Đặt hàng thành công";
+    var vi = CultureInfo.GetCultureInfo("vi-VN");
     var orderDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(Model.OrderDate, DateTimeKind.Utc),
         TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
 }
-<div class="container purchasing-page order-success-page">
-    <section class="order-success-heading"><span class="success-symbol" aria-hidden="true">✓</span><span class="eyebrow">ĐẶT HÀNG THÀNH CÔNG</span><h1>Cảm ơn bạn đã đặt hàng.</h1><p>Đơn hàng <strong>@Model.OrderCode</strong> đã được ghi nhận.</p></section>
-    <div class="purchase-layout"><section class="shipping-panel"><h2>Thông tin đơn hàng</h2>
-        <dl class="receipt-info"><div><dt>Mã đơn hàng</dt><dd>@Model.OrderCode</dd></div><div><dt>Ngày đặt</dt><dd>@orderDate.ToString("dd/MM/yyyy HH:mm")</dd></div><div><dt>Người nhận</dt><dd>@Model.ReceiverName</dd></div><div><dt>Số điện thoại</dt><dd>@Model.ReceiverPhone</dd></div><div><dt>Địa chỉ giao hàng</dt><dd>@Model.ShippingAddress</dd></div></dl>
-        <a class="button button-primary" href="/products">Tiếp tục mua sắm <span aria-hidden="true">→</span></a>
-    </section><aside class="order-summary"><h2>Sản phẩm đã đặt</h2><ul class="summary-items">
-        @foreach (var item in Model.Items) { <li><div><strong>@item.ProductName</strong><span>Số lượng: @item.Quantity</span></div><b>@((item.Quantity * item.UnitPrice).ToString("N0", CultureInfo.GetCultureInfo("vi-VN"))) ₫</b></li> }
-    </ul><div class="summary-total"><span>Tổng cộng</span><strong>@Model.TotalAmount.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫</strong></div></aside></div>
+
+<div class="order-success-compact">
+    <div class="success-header-bar">
+        <nav class="success-breadcrumbs" aria-label="Đường dẫn">
+            <a href="/">Trang chủ</a>
+            <span aria-hidden="true">/</span>
+            <a href="/orders">Đơn hàng</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">Đặt hàng thành công</span>
+        </nav>
+    </div>
+
+    <!-- Khối thông báo thành công thu gọn -->
+    <div class="success-notice-card" role="status">
+        <div class="success-notice-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+        </div>
+        <div class="success-notice-text">
+            <h1 class="success-notice-title">Đặt hàng thành công!</h1>
+            <p class="success-notice-desc">Đơn hàng <strong class="order-code-highlight">@Model.OrderCode</strong> đã được ghi nhận.</p>
+        </div>
+    </div>
+
+    <!-- Bố cục 2 cột (65% / 35%) -->
+    <div class="success-layout-grid">
+        <!-- Cột trái: Thông tin đơn hàng (65%) -->
+        <section class="success-card success-info-card" aria-labelledby="order-info-heading">
+            <div class="success-card-head">
+                <h2 id="order-info-heading">Thông tin đơn hàng</h2>
+                <span class="success-badge-confirmed">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    Đã xác nhận
+                </span>
+            </div>
+
+            <dl class="success-info-list">
+                <div class="success-info-row">
+                    <dt>Mã đơn hàng</dt>
+                    <dd><span class="order-code-badge">@Model.OrderCode</span></dd>
+                </div>
+                <div class="success-info-row">
+                    <dt>Ngày đặt</dt>
+                    <dd>@orderDate.ToString("dd/MM/yyyy HH:mm")</dd>
+                </div>
+                <div class="success-info-row">
+                    <dt>Người nhận</dt>
+                    <dd>@Model.ReceiverName</dd>
+                </div>
+                <div class="success-info-row">
+                    <dt>Số điện thoại</dt>
+                    <dd><a href="tel:@Model.ReceiverPhone" class="success-phone-link">@Model.ReceiverPhone</a></dd>
+                </div>
+                <div class="success-info-row">
+                    <dt>Địa chỉ giao hàng</dt>
+                    <dd>@Model.ShippingAddress</dd>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.Note))
+                {
+                    <div class="success-info-row">
+                        <dt>Ghi chú</dt>
+                        <dd>@Model.Note</dd>
+                    </div>
+                }
+            </dl>
+
+            <!-- Nút điều hướng -->
+            <div class="success-actions">
+                <a asp-controller="Orders" asp-action="Index" class="button button-outline success-btn-orders">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+                        <rect x="9" y="3" width="6" height="4" rx="2"/>
+                        <path d="M9 14l2 2 4-4"/>
+                    </svg>
+                    <span>Xem đơn hàng của tôi</span>
+                </a>
+                <a asp-controller="Products" asp-action="Index" class="button button-primary success-btn-products">
+                    <span>Tiếp tục mua sắm</span>
+                    <span aria-hidden="true">→</span>
+                </a>
+            </div>
+        </section>
+
+        <!-- Cột phải: Sản phẩm đã đặt (35%) -->
+        <aside class="success-card success-summary-card" aria-labelledby="order-summary-heading">
+            <div class="success-card-head">
+                <h2 id="order-summary-heading">Sản phẩm đã đặt</h2>
+                <span class="success-summary-count">@Model.Items.Sum(i => i.Quantity) sản phẩm</span>
+            </div>
+
+            <ul class="success-summary-items">
+                @foreach (var item in Model.Items)
+                {
+                    <li>
+                        <div class="success-summary-info">
+                            <strong>@item.ProductName</strong>
+                            <span>Số lượng: @item.Quantity</span>
+                        </div>
+                        <b>@((item.Quantity * item.UnitPrice).ToString("N0", vi)) ₫</b>
+                    </li>
+                }
+            </ul>
+
+            <div class="success-summary-total">
+                <span>Tổng cộng</span>
+                <strong>@Model.TotalAmount.ToString("N0", vi) ₫</strong>
+            </div>
+        </aside>
+    </div>
 </div>

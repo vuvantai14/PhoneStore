@@ -1,30 +1,273 @@
-@model IReadOnlyList<PhoneStore.Models.Purchasing.CustomerOrderRow>
+@model PhoneStore.Web.Models.CustomerOrdersViewModel
+@using PhoneStore.Models.Enums
 @using PhoneStore.Models.Management
 @using System.Globalization
 @{
     ViewData["Title"] = "Đơn hàng của tôi";
     var culture = CultureInfo.GetCultureInfo("vi-VN");
     var zone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+    var now = DateTime.Now;
+    var currentYear = now.Year;
+    var currentMonth = now.Month;
 }
-<div class="container purchasing-page orders-page">
-    <nav class="breadcrumbs" aria-label="Đường dẫn"><a href="/">Trang chủ</a><span aria-hidden="true">/</span><span aria-current="page">Đơn hàng của tôi</span></nav>
-    <section class="catalog-heading"><span class="eyebrow">TÀI KHOẢN</span><h1>Đơn hàng của tôi</h1><p>Theo dõi trạng thái và xem lại thông tin đơn hàng của bạn.</p></section>
-    @if (Model.Count == 0)
+
+<div class="orders-compact orders-page">
+    <!-- Đầu trang thu gọn -->
+    <div class="orders-header-bar">
+        <nav class="orders-breadcrumbs" aria-label="Đường dẫn">
+            <a href="/">Trang chủ</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">Đơn hàng của tôi</span>
+        </nav>
+        <div class="orders-header-text">
+            <h1 class="orders-title">Đơn hàng của tôi</h1>
+            <p class="orders-subtitle">Theo dõi trạng thái và xem lại thông tin đơn hàng của bạn.</p>
+        </div>
+    </div>
+
+    <!-- Thông báo lỗi kiểm tra dữ liệu bộ lọc nếu có -->
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
     {
-        <section class="empty-state"><h2>Bạn chưa có đơn hàng.</h2><p>Đơn hàng được ghi nhận sau khi đặt hàng sẽ xuất hiện tại đây.</p><a class="button button-primary" href="/products">Khám phá sản phẩm <span aria-hidden="true">→</span></a></section>
+        <div class="orders-validation-alert" role="alert" id="ordersServerAlert">
+            <svg class="alert-icon" viewBox="0 0 24 24" aria-hidden="true" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>@Model.ErrorMessage</span>
+        </div>
+    }
+
+    <!-- Thanh bộ lọc đơn hàng -->
+    <section class="orders-filter-section" aria-label="Bộ lọc đơn hàng">
+        <form method="get" action="/orders" class="orders-filter-form" id="ordersFilterForm">
+            <!-- Lọc trạng thái -->
+            <div class="filter-field-wrap">
+                <label for="statusFilter" class="filter-label">Trạng thái:</label>
+                <select name="status" id="statusFilter" class="filter-select">
+                    <option value="" selected="@(!Model.Filter.Status.HasValue)">Tất cả trạng thái</option>
+                    <option value="Pending" selected="@(Model.Filter.Status == OrderStatus.Pending)">Chờ xác nhận</option>
+                    <option value="Confirmed" selected="@(Model.Filter.Status == OrderStatus.Confirmed)">Đã xác nhận</option>
+                    <option value="Shipping" selected="@(Model.Filter.Status == OrderStatus.Shipping)">Đang giao</option>
+                    <option value="Completed" selected="@(Model.Filter.Status == OrderStatus.Completed)">Hoàn thành</option>
+                    <option value="Cancelled" selected="@(Model.Filter.Status == OrderStatus.Cancelled)">Đã hủy</option>
+                </select>
+            </div>
+
+            <!-- Lọc thời gian đặt -->
+            <div class="filter-field-wrap">
+                <label for="dateFilterType" class="filter-label">Thời gian đặt:</label>
+                <select name="dateFilterType" id="dateFilterType" class="filter-select">
+                    <option value="all" selected="@(Model.Filter.DateFilterType is "all" or null or "")">Tất cả thời gian</option>
+                    <option value="day" selected="@(Model.Filter.DateFilterType == "day")">Theo ngày</option>
+                    <option value="month" selected="@(Model.Filter.DateFilterType == "month")">Theo tháng</option>
+                    <option value="year" selected="@(Model.Filter.DateFilterType == "year")">Theo năm</option>
+                    <option value="range" selected="@(Model.Filter.DateFilterType == "range")">Khoảng thời gian tùy chọn</option>
+                </select>
+            </div>
+
+            <!-- Các trường thời gian động -->
+            <div class="filter-dynamic-inputs" id="filterDynamicInputs">
+                <!-- Chế độ Theo ngày -->
+                <div class="filter-dynamic-group" data-mode="day">
+                    <input type="date" name="day" id="filterDay" value="@Model.Filter.Day" class="filter-input-date" aria-label="Chọn ngày đặt hàng" />
+                </div>
+
+                <!-- Chế độ Theo tháng -->
+                <div class="filter-dynamic-group" data-mode="month">
+                    <select name="month" id="filterMonth" class="filter-select filter-select-month" aria-label="Chọn tháng">
+                        @for (int m = 1; m <= 12; m++)
+                        {
+                            var isSel = (Model.Filter.Month ?? currentMonth) == m;
+                            <option value="@m" selected="@(isSel ? "selected" : null)">Tháng @m</option>
+                        }
+                    </select>
+                    <select name="monthYear" id="filterMonthYear" class="filter-select filter-select-year" aria-label="Chọn năm">
+                        @for (int y = currentYear + 1; y >= currentYear - 3; y--)
+                        {
+                            var isSel = (Model.Filter.MonthYear ?? currentYear) == y;
+                            <option value="@y" selected="@(isSel ? "selected" : null)">@y</option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Chế độ Theo năm -->
+                <div class="filter-dynamic-group" data-mode="year">
+                    <select name="year" id="filterYear" class="filter-select filter-select-year" aria-label="Chọn năm">
+                        @for (int y = currentYear + 1; y >= currentYear - 3; y--)
+                        {
+                            var isSel = (Model.Filter.Year ?? currentYear) == y;
+                            <option value="@y" selected="@(isSel ? "selected" : null)">Năm @y</option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Chế độ Khoảng thời gian tùy chọn -->
+                <div class="filter-dynamic-group filter-range-group" data-mode="range">
+                    <input type="date" name="fromDate" id="filterFromDate" value="@Model.Filter.FromDate" class="filter-input-date" placeholder="Từ ngày" aria-label="Từ ngày" />
+                    <span class="filter-range-sep" aria-hidden="true">→</span>
+                    <input type="date" name="toDate" id="filterToDate" value="@Model.Filter.ToDate" class="filter-input-date" placeholder="Đến ngày" aria-label="Đến ngày" />
+                </div>
+            </div>
+
+            <!-- Nút thao tác -->
+            <div class="filter-actions-wrap">
+                <button type="submit" class="button button-primary filter-btn-submit">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    <span>Lọc</span>
+                </button>
+                <a href="/orders" class="button button-outline filter-btn-reset">Đặt lại</a>
+            </div>
+        </form>
+    </section>
+
+    <!-- Danh sách đơn hàng / Trạng thái trống -->
+    @if (Model.Orders.Count == 0)
+    {
+        @if (Model.Filter.HasFilters || !string.IsNullOrWhiteSpace(Model.ErrorMessage))
+        {
+            <div class="orders-empty-state orders-no-result" role="status">
+                <div class="empty-icon-wrap" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                </div>
+                <h2>Không tìm thấy đơn hàng phù hợp</h2>
+                <p>Không có đơn hàng nào khớp với điều kiện lọc đã chọn. Vui lòng thử chọn trạng thái hoặc mốc thời gian khác.</p>
+                <a class="button button-primary" href="/orders">Đặt lại bộ lọc</a>
+            </div>
+        }
+        else
+        {
+            <div class="orders-empty-state" role="status">
+                <div class="empty-icon-wrap" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                </div>
+                <h2>Bạn chưa có đơn hàng nào.</h2>
+                <p>Các đơn hàng sau khi đặt thành công sẽ xuất hiện tại đây.</p>
+                <a class="button button-primary" href="/products">Khám phá sản phẩm <span aria-hidden="true">→</span></a>
+            </div>
+        }
     }
     else
     {
-        <section class="order-list" aria-label="Danh sách đơn hàng">
-        @foreach (var order in Model)
-        {
-            var localDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(order.OrderDate, DateTimeKind.Utc), zone);
-            <article class="order-card">
-                <div class="order-card-heading"><h2><a href="/orders/@order.OrderId">@order.OrderCode</a></h2><span class="order-status status-@order.Status.ToString().ToLowerInvariant()">@OrderStatusLabels.Display(order.Status)</span></div>
-                <dl class="order-card-facts"><div><dt>Ngày đặt hàng</dt><dd>@localDate.ToString("dd/MM/yyyy HH:mm")</dd></div><div><dt>Tổng tiền</dt><dd class="order-card-price">@order.TotalAmount.ToString("N0", culture) ₫</dd></div></dl>
-                <a class="button order-detail-link" href="/orders/@order.OrderId" aria-label="Xem chi tiết đơn @order.OrderCode">Xem chi tiết <span aria-hidden="true">→</span></a>
-            </article>
-        }
-        </section>
+        <div class="orders-compact-list" aria-label="Danh sách đơn hàng">
+            @foreach (var order in Model.Orders)
+            {
+                var localDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(order.OrderDate, DateTimeKind.Utc), zone);
+                <article class="order-compact-row">
+                    <!-- Icon đơn hàng 48x48px -->
+                    <div class="order-compact-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/>
+                            <path d="M3 6h18"/>
+                            <path d="M16 10a4 4 0 0 1-8 0"/>
+                        </svg>
+                    </div>
+
+                    <!-- Mã đơn + Ngày đặt -->
+                    <div class="order-compact-meta">
+                        <h2 class="order-compact-code">
+                            <a href="/orders/@order.OrderId" title="Xem chi tiết đơn @order.OrderCode">@order.OrderCode</a>
+                        </h2>
+                        <span class="order-compact-date">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            @localDate.ToString("dd/MM/yyyy HH:mm")
+                        </span>
+                    </div>
+
+                    <!-- Tổng tiền -->
+                    <div class="order-compact-price">
+                        <span class="order-price-label">Tổng tiền</span>
+                        <strong class="order-price-value">@order.TotalAmount.ToString("N0", culture) ₫</strong>
+                    </div>
+
+                    <!-- Trạng thái -->
+                    <div class="order-compact-status">
+                        <span class="order-status status-@order.Status.ToString().ToLowerInvariant()">@OrderStatusLabels.Display(order.Status)</span>
+                    </div>
+
+                    <!-- Xem chi tiết -->
+                    <div class="order-compact-action">
+                        <a class="order-detail-btn" href="/orders/@order.OrderId" aria-label="Xem chi tiết đơn @order.OrderCode">
+                            <span>Xem chi tiết</span>
+                            <span aria-hidden="true">→</span>
+                        </a>
+                    </div>
+                </article>
+            }
+        </div>
     }
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var filterForm = document.getElementById('ordersFilterForm');
+            var dateTypeSelect = document.getElementById('dateFilterType');
+            var dynamicGroups = document.querySelectorAll('.filter-dynamic-group');
+            if (!filterForm || !dateTypeSelect || !dynamicGroups.length) return;
+
+            function updateDateInputs() {
+                var mode = dateTypeSelect.value || 'all';
+                dynamicGroups.forEach(function (group) {
+                    var groupMode = group.getAttribute('data-mode');
+                    var isActive = (groupMode === mode);
+                    group.style.display = isActive ? (groupMode === 'range' ? 'flex' : 'inline-flex') : 'none';
+                    // Vô hiệu hóa inputs không thuộc mode đã chọn để trình duyệt không gửi lên query string
+                    var controls = group.querySelectorAll('input, select');
+                    controls.forEach(function (control) {
+                        control.disabled = !isActive;
+                    });
+                });
+            }
+
+            dateTypeSelect.addEventListener('change', updateDateInputs);
+            updateDateInputs();
+
+            // Client-side validation
+            filterForm.addEventListener('submit', function (e) {
+                var mode = dateTypeSelect.value || 'all';
+                var alertEl = document.getElementById('ordersClientAlert');
+                var serverAlertEl = document.getElementById('ordersServerAlert');
+                if (alertEl) {
+                    alertEl.style.display = 'none';
+                    alertEl.innerHTML = '';
+                }
+                if (serverAlertEl) {
+                    serverAlertEl.style.display = 'none';
+                }
+
+                function triggerError(msg, focusTarget) {
+                    e.preventDefault();
+                    if (!alertEl) {
+                        alertEl = document.createElement('div');
+                        alertEl.id = 'ordersClientAlert';
+                        alertEl.className = 'orders-validation-alert';
+                        alertEl.setAttribute('role', 'alert');
+                        filterForm.parentNode.insertBefore(alertEl, filterForm);
+                    }
+                    alertEl.innerHTML = '<svg class="alert-icon" viewBox="0 0 24 24" aria-hidden="true" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>' + msg + '</span>';
+                    alertEl.style.display = 'flex';
+                    if (focusTarget) focusTarget.focus();
+                }
+
+                if (mode === 'range') {
+                    var fromEl = document.getElementById('filterFromDate');
+                    var toEl = document.getElementById('filterToDate');
+                    var fromVal = fromEl ? fromEl.value.trim() : '';
+                    var toVal = toEl ? toEl.value.trim() : '';
+                    if (!fromVal || !toVal) {
+                        triggerError('Vui lòng nhập đầy đủ Từ ngày và Đến ngày.', !fromVal ? fromEl : toEl);
+                        return;
+                    }
+                    if (fromVal > toVal) {
+                        triggerError('Từ ngày không được lớn hơn Đến ngày.', fromEl);
+                        return;
+                    }
+                } else if (mode === 'day') {
+                    var dayEl = document.getElementById('filterDay');
+                    var dayVal = dayEl ? dayEl.value.trim() : '';
+                    if (!dayVal) {
+                        triggerError('Vui lòng chọn ngày cần lọc.', dayEl);
+                        return;
+                    }
+                }
+            });
+        })();
+    </script>
+}

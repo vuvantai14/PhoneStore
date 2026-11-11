@@ -4,23 +4,113 @@
 @{
     ViewData["Title"] = "Chi tiết đơn hàng";
     var culture = CultureInfo.GetCultureInfo("vi-VN");
-    var orderDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(Model.OrderDate, DateTimeKind.Utc), TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
+    var orderDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(Model.OrderDate, DateTimeKind.Utc),
+        TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
 }
-<div class="container purchasing-page order-detail-page">
-    <nav class="breadcrumbs" aria-label="Đường dẫn"><a href="/orders">Đơn hàng của tôi</a><span aria-hidden="true">/</span><span aria-current="page">Chi tiết đơn hàng</span></nav>
-    @if (TempData["OrderMessage"] is string message) { <p class="purchase-message" role="status">@message</p> }
-    <section class="catalog-heading"><span class="order-status status-@Model.Status.ToString().ToLowerInvariant()">@OrderStatusLabels.Display(Model.Status)</span><h1>Chi tiết đơn hàng</h1><p class="order-code">@Model.OrderCode</p><p>Ngày đặt @orderDate.ToString("dd/MM/yyyy HH:mm")</p></section>
-    <div class="purchase-layout"><section class="shipping-panel"><h2>Thông tin giao hàng</h2>
-        <dl class="receipt-info"><div><dt>Người nhận</dt><dd>@Model.ReceiverName</dd></div><div><dt>Số điện thoại</dt><dd>@Model.ReceiverPhone</dd></div><div><dt>Địa chỉ</dt><dd>@Model.ShippingAddress</dd></div>@if (!string.IsNullOrWhiteSpace(Model.Note)) { <div><dt>Ghi chú</dt><dd>@Model.Note</dd></div> }</dl>
-        @if (Model.Status is PhoneStore.Models.Enums.OrderStatus.Pending or PhoneStore.Models.Enums.OrderStatus.Confirmed)
-        {
-            <div class="cancel-order-notice"><h3>Bạn muốn hủy đơn hàng?</h3><p>Kiểm tra lại đơn hàng trước khi xác nhận hủy. Thao tác này sẽ kết thúc đơn hàng hiện tại.</p></div>
-            <form asp-controller="Orders" asp-action="Cancel" asp-route-id="@Model.OrderId" method="post" class="cancel-order-form" data-ui-submit data-pending-label="Đang gửi yêu cầu…" data-confirm-cancel="Bạn có chắc muốn hủy đơn @Model.OrderCode?">
-                <button type="submit" class="button button-danger">Hủy đơn hàng</button>
-            </form>
-        }
-        <a class="button" href="/orders">← Tất cả đơn hàng</a>
-    </section><aside class="order-summary"><h2>Sản phẩm đã đặt</h2><ul class="summary-items">
-        @foreach (var item in Model.Items) { <li><div><strong>@item.ProductName</strong><span>Số lượng: @item.Quantity · Đơn giá: @item.UnitPrice.ToString("N0", culture) ₫</span></div><b>@((item.Quantity * item.UnitPrice).ToString("N0", culture)) ₫</b></li> }
-    </ul><div class="summary-total"><span>Tổng cộng</span><strong>@Model.TotalAmount.ToString("N0", culture) ₫</strong></div></aside></div>
+
+<div class="order-detail-compact">
+    <div class="order-detail-header-bar">
+        <div class="order-detail-header-main">
+            <nav class="order-detail-breadcrumbs" aria-label="Đường dẫn">
+                <a href="/orders">Đơn hàng của tôi</a>
+                <span aria-hidden="true">/</span>
+                <span aria-current="page">Chi tiết đơn hàng</span>
+            </nav>
+            <div class="order-detail-title-row">
+                <h1 class="order-detail-title">Chi tiết đơn hàng</h1>
+                <span class="order-status status-@Model.Status.ToString().ToLowerInvariant()">@OrderStatusLabels.Display(Model.Status)</span>
+            </div>
+            <div class="order-detail-meta">
+                <span class="order-detail-meta-code">Mã đơn: <strong class="order-code-text">@Model.OrderCode</strong></span>
+                <span class="order-detail-meta-sep" aria-hidden="true">•</span>
+                <span class="order-detail-meta-date">Ngày đặt: @orderDate.ToString("dd/MM/yyyy HH:mm")</span>
+            </div>
+        </div>
+        <a class="order-detail-back-link" href="/orders">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Tất cả đơn hàng</span>
+        </a>
+    </div>
+
+    @if (TempData["OrderMessage"] is string message)
+    {
+        <div class="order-detail-alert" role="status">
+            <svg class="order-alert-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            <span>@message</span>
+        </div>
+    }
+
+    <!-- Bố cục 2 cột (65% / 35%) -->
+    <div class="order-detail-layout-grid">
+        <!-- Cột trái: Thông tin giao hàng (65%) -->
+        <section class="order-detail-card order-detail-shipping-card" aria-labelledby="shipping-info-title">
+            <div class="order-detail-card-head">
+                <h2 id="shipping-info-title">Thông tin giao hàng</h2>
+            </div>
+
+            <dl class="order-detail-info-list">
+                <div class="order-detail-info-row">
+                    <dt>Người nhận</dt>
+                    <dd>@Model.ReceiverName</dd>
+                </div>
+                <div class="order-detail-info-row">
+                    <dt>Số điện thoại</dt>
+                    <dd><a href="tel:@Model.ReceiverPhone" class="order-detail-phone-link">@Model.ReceiverPhone</a></dd>
+                </div>
+                <div class="order-detail-info-row">
+                    <dt>Địa chỉ giao hàng</dt>
+                    <dd>@Model.ShippingAddress</dd>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.Note))
+                {
+                    <div class="order-detail-info-row">
+                        <dt>Ghi chú</dt>
+                        <dd>@Model.Note</dd>
+                    </div>
+                }
+            </dl>
+
+            @if (Model.Status is PhoneStore.Models.Enums.OrderStatus.Pending or PhoneStore.Models.Enums.OrderStatus.Confirmed)
+            {
+                <div class="order-detail-cancel-box">
+                    <div class="order-detail-cancel-info">
+                        <svg class="cancel-notice-icon" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span>Bạn có thể hủy đơn hàng khi đơn chưa được xử lý.</span>
+                    </div>
+                    <form asp-controller="Orders" asp-action="Cancel" asp-route-id="@Model.OrderId" method="post" class="order-detail-cancel-form" data-ui-submit data-pending-label="Đang gửi yêu cầu…" data-confirm-cancel="Bạn có chắc muốn hủy đơn @Model.OrderCode?" onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn hàng @Model.OrderCode? Thao tác này không thể hoàn tác.');">
+                        <button type="submit" class="button-cancel-outline">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                            <span>Hủy đơn hàng</span>
+                        </button>
+                    </form>
+                </div>
+            }
+        </section>
+
+        <!-- Cột phải: Sản phẩm đã đặt (35%) -->
+        <aside class="order-detail-card order-detail-summary-card" aria-labelledby="detail-summary-title">
+            <div class="order-detail-card-head">
+                <h2 id="detail-summary-title">Sản phẩm đã đặt</h2>
+                <span class="order-detail-summary-count">@Model.Items.Sum(i => i.Quantity) sản phẩm</span>
+            </div>
+
+            <ul class="order-detail-summary-items">
+                @foreach (var item in Model.Items)
+                {
+                    <li>
+                        <div class="order-detail-summary-info">
+                            <strong>@item.ProductName</strong>
+                            <span class="order-detail-unit-calc">Số lượng: @item.Quantity · Đơn giá: @item.UnitPrice.ToString("N0", culture) ₫</span>
+                        </div>
+                        <b>@((item.Quantity * item.UnitPrice).ToString("N0", culture)) ₫</b>
+                    </li>
+                }
+            </ul>
+
+            <div class="order-detail-summary-total">
+                <span>Tổng cộng</span>
+                <strong>@Model.TotalAmount.ToString("N0", culture) ₫</strong>
+            </div>
+        </aside>
+    </div>
 </div>

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using PhoneStore.Models.Enums;
 using PhoneStore.Models.Purchasing;
 
 namespace PhoneStore.Web.Models;
@@ -36,5 +37,33 @@ public sealed class CheckoutViewModel
     public string? Note { get; set; }
     public string? SubmissionToken { get; set; }
     [BindNever] public CartViewModel Cart { get; set; } = new();
+}
+
+public sealed class OrderFilterViewModel
+{
+    public OrderStatus? Status { get; set; }
+    public string DateFilterType { get; set; } = "all";
+    public string? Day { get; set; }
+    public int? Month { get; set; }
+    public int? MonthYear { get; set; }
+    public int? Year { get; set; }
+    public string? FromDate { get; set; }
+    public string? ToDate { get; set; }
+
+    public bool HasFilters =>
+        Status.HasValue ||
+        (!string.IsNullOrWhiteSpace(DateFilterType) && DateFilterType != "all" &&
+         (DateFilterType == "day" && !string.IsNullOrWhiteSpace(Day)
+          || DateFilterType == "month" && Month.HasValue && MonthYear.HasValue
+          || DateFilterType == "year" && Year.HasValue
+          || DateFilterType == "range" && (!string.IsNullOrWhiteSpace(FromDate) || !string.IsNullOrWhiteSpace(ToDate))));
+}
+
+public sealed class CustomerOrdersViewModel
+{
+    public IReadOnlyList<CustomerOrderRow> Orders { get; init; } = [];
+    public OrderFilterViewModel Filter { get; init; } = new();
+    public string? ErrorMessage { get; init; }
+    public int TotalCount => Orders.Count;
 }
 

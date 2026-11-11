@@ -1,3 +1,4 @@
+using PhoneStore.Models.Enums;
 using PhoneStore.Models.Purchasing;
 
 namespace PhoneStore.Business.Purchasing;
@@ -11,5 +12,6 @@ public interface IOrderService
     Task<int?> GetCheckoutOrderIdAsync(int userId, string? submissionToken, CancellationToken ct = default);
     Task<OrderReceipt?> GetReceiptAsync(int orderId, int userId, CancellationToken ct = default);
     Task<IReadOnlyList<CustomerOrderRow>> GetCustomerOrdersAsync(int userId, CancellationToken ct = default);
+    Task<IReadOnlyList<CustomerOrderRow>> GetCustomerOrdersAsync(int userId, OrderStatus? status, DateTime? fromUtc, DateTime? toExclusiveUtc, CancellationToken ct = default);
 }
 
