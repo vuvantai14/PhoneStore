@@ -1,5 +1,71 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-12 — S29.9I.2 **READY FOR USER TEST, gộp Thông số kỹ thuật & Mô tả sản phẩm thành bố cục 2 cột (60/40)**:
+- **Mục tiêu**: Tái cấu trúc giao diện trang Chi tiết sản phẩm (`/products/{id}`), đưa 2 khối Thông số kỹ thuật và Mô tả sản phẩm lên cùng một hàng theo tỷ lệ 60% / 40% (CSS Grid `3fr 2fr`), chiều cao 2 khung bằng nhau, khối Sản phẩm liên quan nằm bên dưới toàn chiều rộng.
+- **Thực hiện chi tiết**:
+  - **Bố cục 2 cột (`Detail.cshtml` & `site.css`)**:
+    - Gộp 2 khối vào `.product-details-grid` với tỷ lệ `minmax(0, 3fr) minmax(0, 2fr)` (khoảng 60% / 40%), khoảng cách `gap: 26px`, viền phân cách trên mảnh `#eaedf2`.
+    - Thiết kế thẻ đồng bộ `.detail-card`: nền trắng `#ffffff`, bo góc 16px, viền xám xanh mảnh `#d9e2ee`, bóng đổ nhẹ `var(--shadow-sm)`, chiều cao tự động cân bằng kéo giãn (`align-items: stretch`).
+  - **Khung Thông số kỹ thuật (bên trái — 60%)**:
+    - Header bên trong khung: nền gradient xanh dương nhạt (`#f0f6fd` -> `#f7fafd`), icon kỹ thuật SVG sắc nét trong khung tròn bo góc, tiêu đề "HIỂU RÕ LỰA CHỌN" / "Thông số kỹ thuật" (`h2`).
+    - Bảng thông số: giữ trọn vẹn dữ liệu động (RAM, bộ nhớ, chip, màn hình, camera, pin, OS,...), nhãn `dt` bên trái (140px), giá trị `dd` bên phải, hàng xen kẽ trắng và xanh xám nhạt (`#f8fafc`), padding gọn gàng 11×18px.
+  - **Khung Mô tả sản phẩm (bên phải — 40%)**:
+    - Header bên trong khung: phong cách đồng bộ khung thông số, icon tài liệu SVG, tiêu đề "THÔNG TIN SẢN PHẨM" / "Mô tả sản phẩm" (`h2`).
+    - Nội dung mô tả: hiển thị dữ liệu thực tế từ database (`@product.Description`), căn trái, `line-height: 1.85`, tự động giãn theo chiều cao khung thông số mà không bị cắt chữ hay tạo scrollbar khó chịu.
+  - **Responsive**:
+    - Desktop (>= 1024px): 2 cột 60/40 song song cân đối.
+    - Tablet (< 1024px) & Mobile (< 768px): Tự động chuyển thành 1 cột dọc (Thông số kỹ thuật phía trên, Mô tả sản phẩm phía dưới), chiều cao tự nhiên.
+    - Mobile nhỏ (< 480px, 340px): Thu gọn padding header và bảng thông số linh hoạt, không vỡ layout.
+  - **Bảo toàn**: Khối Sản phẩm liên quan (`.detail-related-section`) nằm bên dưới chiếm toàn bộ 100% chiều rộng; bảo toàn 100% chức năng Thêm vào giỏ hàng không chuyển trang từ S29.9I.1.
+- **Files đã sửa**:
+  - `src/PhoneStore.Web/Views/Products/Detail.cshtml`
+  - `src/PhoneStore.Web/wwwroot/css/site.css`
+  - `docs/PROGRESS.md`
+- **Tuân thủ nghiêm ngặt**: Không đụng DB/migration/controller, không sửa Admin/Checkout/Cart, không chạy build/server/test, không stage/commit/push. Chờ user kiểm tra trực tiếp trên Chrome zoom 100% tại `http://localhost:5015/products/29`.
+
+Cập nhật 2026-11-12 — S29.9I.1 **READY FOR USER TEST, hoàn tất thêm vào giỏ hàng không chuyển trang (Add to Cart Without Redirect)**:
+- **Mục tiêu**: Khi khách nhấn "Thêm vào giỏ hàng", hệ thống thêm sản phẩm thành công và ở lại trang hiện tại (không reload, không chuyển hướng sang `/cart`, giữ nguyên vị trí cuộn), hiển thị thông báo toast nổi tự ẩn sau 3s và cập nhật ngay số lượng giỏ hàng trên Header bằng dữ liệu thực từ backend.
+- **Thực hiện chi tiết**:
+  - **Backend (`CartController.cs`)**:
+    - Bổ sung nhận diện request AJAX (`IsAjaxRequest()`) thông qua header `X-Requested-With` hoặc `Accept: application/json`.
+    - Phản hồi JSON `{ success, message, cartCount }` khi là AJAX; giữ nguyên `RedirectToAction` và `TempData["CartMessage"]` cho form POST truyền thống và các unit test.
+    - Thêm endpoint `GET /cart/count` trả về `{ count }` từ `SessionCart`.
+    - Xử lý đầy đủ: hết hàng, số lượng không hợp lệ, vượt tồn kho (kèm thông tin số lượng đã có trong giỏ), sản phẩm ngừng kinh doanh, lỗi DB.
+    - Tái sử dụng 100% `SessionCart` và `OrderService` hiện có, giữ nguyên `[ValidateAntiForgeryToken]`.
+  - **Frontend JavaScript (`site.js`)**:
+    - Bắt sự kiện `submit` form giỏ hàng qua event delegation thống nhất cho toàn bộ website (`data-cart-form` hoặc `action="/cart/add"`).
+    - Khóa nút gửi tạm thời (`button.disabled = true`, hiển thị "Đang thêm…") để chặn click đúp / duplicate submission.
+    - Gửi form bất đồng bộ qua `fetch` kèm antiforgery token và header AJAX.
+    - Xử lý phản hồi: hiển thị toast tương ứng (thành công/lỗi), cập nhật số lượng trên Header (`.cart-entry b` và `aria-label`) kèm hiệu ứng bump animation nhẹ thu hút sự chú ý.
+    - Nếu server chuyển hướng (chẳng hạn yêu cầu đăng nhập), tự động chuyển hướng theo đúng luồng bảo mật.
+  - **Toast UI & Styling (`site.css`)**:
+    - Toast thiết kế nổi tinh tế ở góc trên bên phải (mobile full-width trên cùng), đổ bóng mềm, bo góc 14px, icon SVG tròn (xanh lá thành công, đỏ lỗi), link "Xem giỏ hàng →" và nút đóng `×`.
+    - Tự động mờ dần và biến mất sau 3 giây, hỗ trợ đóng nhanh thủ công và tôn trọng `prefers-reduced-motion`.
+  - **Đồng bộ toàn diện**: Áp dụng nhất quán trên Trang chủ (`_HomeProductCard.cshtml`), Danh mục & Sản phẩm liên quan (`_ProductCard.cshtml`), và Trang Chi tiết sản phẩm (`Detail.cshtml`).
+- **Files đã sửa**:
+  - `src/PhoneStore.Web/Controllers/CartController.cs`
+  - `src/PhoneStore.Web/Views/Home/_HomeProductCard.cshtml`
+  - `src/PhoneStore.Web/Views/Shared/_ProductCard.cshtml`
+  - `src/PhoneStore.Web/Views/Products/Detail.cshtml`
+  - `src/PhoneStore.Web/wwwroot/css/site.css`
+  - `src/PhoneStore.Web/wwwroot/js/site.js`
+  - `docs/PROGRESS.md`
+- **Tuân thủ nghiêm ngặt**: Không đụng DB/migration, không sửa Admin/Checkout, không chạy build/server/test, không stage/commit/push. Chờ user nghiệm thu trực tiếp qua Hot Reload trên `http://localhost:5015`.
+
+Cập nhật 2026-11-12 — S29.9I **READY FOR USER TEST, tối ưu UI/UX trang Chi tiết sản phẩm (/products/{id}) ở Zoom 100%**:
+- **Mục tiêu**: Tối ưu trực tiếp giao diện Chi tiết sản phẩm (`/products/{id}`, tham chiếu vivo V30 Pro id=29) trên Chrome laptop zoom 100%, gọn gàng, hiện đại, cân đối, giảm kích thước các thành phần cồng kềnh, hạn chế cuộn trang không cần thiết.
+- **Thực hiện chi tiết**:
+  - **Khung ảnh Gallery**: Khắc phục chiều cao 560px chiếm hết màn hình; giới hạn `max-height: 440px`, padding 24px (giảm từ 42px), ảnh `object-fit: contain` căn giữa; thumbnails thu gọn kích thước 64×64px (trước 84×84px), viền active xanh nổi bật.
+  - **Thông tin sản phẩm**: Tiêu đề h1 gọn gàng `clamp(24px, 2.3vw, 32px)` (trước `clamp(32px, 3.2vw, 46px)`), giá nổi bật `clamp(26px, 2.5vw, 32px)` (trước 36px), khu vực giá có nền nhạt `#f8fafd` bo góc 12px tích hợp trạng thái còn/hết hàng; 4 ô thông số nhanh gọn gàng padding 9×12px, font 11/13px.
+  - **Khu vực mua hàng**: Ô số lượng cao 42px căn giữa, nút "Thêm vào giỏ hàng" cao 42px bo góc 8px phẳng, giữ nguyên toàn bộ logic cart/form POST; link điều hướng phụ 12px.
+  - **Thông số kỹ thuật & Mô tả**: Layout 2 cột (cột tiêu đề 220px, nội dung mở rộng); bảng thông số bo góc 14px, padding 11×18px mỗi dòng xen kẽ màu nền; mô tả sản phẩm đóng khung thẻ trắng padding 20×24px, line-height 1.75 thoáng đãng, dễ đọc.
+  - **Sản phẩm liên quan**: Lưới 4 cột đồng bộ card PhoneStore (`.detail-related-grid`), ảnh 180px cân đối.
+  - **Responsive hoàn chỉnh**: Breakpoints 1100px (3 cột liên quan, ảnh 380px), 768px (1 cột tổng quan, 2 cột liên quan), 480px (1 cột, ảnh 280px), 340px (1 cột nhỏ gọn).
+- **Files đã sửa**:
+  - `src/PhoneStore.Web/Views/Products/Detail.cshtml` (bổ sung class `detail-related-section`, `detail-related-grid`).
+  - `src/PhoneStore.Web/wwwroot/css/site.css` (xóa CSS trùng lặp cũ, tối ưu toàn diện CSS Product Detail).
+- **Tuân thủ nghiêm ngặt**: Không sửa backend/database, không chạy build/test/server, không stage/commit/push. Chờ user kiểm tra trực tiếp trên `dotnet watch` tại `http://localhost:5015/products/29` (zoom 100%).
+
 Cập nhật 2026-11-11 — S29.10A.1 **READY FOR USER RUN, tinh chỉnh Docker Compose theo chuẩn v2**:
 - Đã xóa bỏ thuộc tính `version: '3.8'` đã lỗi thời trong Compose specification v2.x.
 - Chuẩn hóa healthcheck SQL Server: Sử dụng biến môi trường `${MSSQL_SA_PASSWORD:-PhoneStore@2026!}` đồng bộ từ `.env`, bọc trong dấu nháy đơn trong shell command tránh lỗi ký tự đặc biệt, hỗ trợ đường dẫn `tools18` kèm cờ `-C` (TrustServerCertificate) và fallback `tools`.

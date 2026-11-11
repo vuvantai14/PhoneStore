@@ -128,3 +128,154 @@ document.querySelectorAll('form[data-ui-submit]').forEach(form => {
         });
     });
 });
+
+// S29.9I.1 — Add to cart without redirect (AJAX + Toast + Header badge sync)
+(function () {
+    let toastTimer = null;
+
+    function showCartToast(message, type) {
+        type = type || 'success';
+        let container = document.getElementById('cart-toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'cart-toast-container';
+            container.className = 'cart-toast-container';
+            container.setAttribute('role', 'region');
+            container.setAttribute('aria-label', 'Thông báo giỏ hàng');
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'cart-toast cart-toast-' + type;
+        toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+        toast.setAttribute('aria-live', 'polite');
+
+        const iconHtml = type === 'success'
+            ? '<svg class="cart-toast-icon-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#eaf7ee" stroke="#246546" stroke-width="1.8"/><path d="m8.5 12.5 2.5 2.5 5-5" stroke="#246546" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+            : '<svg class="cart-toast-icon-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#fdf0f0" stroke="#a52f3a" stroke-width="1.8"/><path d="M12 8v5M12 16h.01" stroke="#a52f3a" stroke-width="2" stroke-linecap="round"/></svg>';
+
+        const actionHtml = type === 'success'
+            ? '<a href="/cart" class="cart-toast-link">Xem giỏ hàng <span aria-hidden="true">→</span></a>'
+            : '';
+
+        toast.innerHTML =
+            '<div class="cart-toast-content">' +
+                iconHtml +
+                '<span class="cart-toast-text">' + message + '</span>' +
+                actionHtml +
+            '</div>' +
+            '<button type="button" class="cart-toast-close" aria-label="Đóng thông báo">' +
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' +
+            '</button>';
+
+        container.innerHTML = '';
+        container.appendChild(toast);
+
+        requestAnimationFrame(function () {
+            toast.classList.add('cart-toast-visible');
+        });
+
+        const dismiss = function () {
+            toast.classList.remove('cart-toast-visible');
+            const removeEl = function () {
+                if (toast.parentElement) toast.remove();
+            };
+            toast.addEventListener('transitionend', removeEl, { once: true });
+            setTimeout(removeEl, 350);
+        };
+
+        const closeBtn = toast.querySelector('.cart-toast-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', dismiss);
+        }
+
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(dismiss, 3000);
+    }
+
+    function updateCartCount(count) {
+        const badge = document.querySelector('.cart-entry b');
+        if (badge) {
+            badge.textContent = count;
+            badge.classList.remove('cart-count-bump');
+            void badge.offsetWidth;
+            badge.classList.add('cart-count-bump');
+        }
+        const cartLink = document.querySelector('.cart-entry');
+        if (cartLink) {
+            cartLink.setAttribute('aria-label', 'Giỏ hàng, ' + count + ' sản phẩm');
+        }
+    }
+
+    document.addEventListener('submit', async function (event) {
+        const form = event.target.closest('form[data-cart-form], form[action="/cart/add"], form[action^="/cart/add"]');
+        if (!form) return;
+
+        // Prevent default browser navigation/redirect
+        event.preventDefault();
+
+        // Prevent double submit
+        if (form.dataset.submitting === 'true') return;
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+        const isDetailPurchase = form.classList.contains('purchase-form');
+
+        try {
+            form.dataset.submitting = 'true';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                if (isDetailPurchase) {
+                    submitBtn.innerHTML = 'Đang thêm… <span aria-hidden="true">→</span>';
+                } else {
+                    submitBtn.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 3h2l3 12h11l2-8H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg> Đang thêm…';
+                }
+            }
+
+            const formData = new FormData(form);
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            // If backend redirected to login or another HTML page
+            if (response.redirected) {
+                window.location.href = response.url;
+                return;
+            }
+
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('text/html')) {
+                window.location.href = response.url || '/cart';
+                return;
+            }
+
+            const result = await response.json();
+
+            if (result && result.success) {
+                showCartToast(result.message || 'Đã thêm vào giỏ hàng.', 'success');
+                if (typeof result.cartCount === 'number') {
+                    updateCartCount(result.cartCount);
+                }
+            } else {
+                const errorMsg = (result && result.message) ? result.message : 'Không thể thêm vào giỏ hàng.';
+                showCartToast(errorMsg, 'error');
+                if (typeof result?.cartCount === 'number') {
+                    updateCartCount(result.cartCount);
+                }
+            }
+        } catch (err) {
+            showCartToast('Lỗi kết nối máy chủ. Vui lòng thử lại sau.', 'error');
+        } finally {
+            delete form.dataset.submitting;
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+            }
+        }
+    });
+})();

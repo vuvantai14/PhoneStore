@@ -30,7 +30,7 @@
             <i aria-hidden="true"></i>@(Model.StockQuantity > 0 ? $"Còn {Model.StockQuantity} sản phẩm" : "Hết hàng")
         </span>
         <div class="product-actions">
-            <form asp-controller="Cart" asp-action="Add" method="post">
+            <form asp-controller="Cart" asp-action="Add" method="post" data-cart-form>
                 <input type="hidden" name="productId" value="@Model.ProductId" />
                 <input type="hidden" name="quantity" value="1" />
                 <button class="add-cart-button" type="submit" disabled="@(Model.StockQuantity <= 0)">
