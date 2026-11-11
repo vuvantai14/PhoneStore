@@ -34,18 +34,7 @@ public sealed class ProductCatalogReader(PhoneStoreDbContext db)
     public async Task<IReadOnlyList<ProductCard>> GetProductsAsync(
         CatalogQuery filter, CancellationToken cancellationToken = default)
     {
-        var query = db.Products.AsNoTracking().Where(p => p.IsActive);
-        var search = filter.Search?.Trim();
-        if (!string.IsNullOrEmpty(search))
-            query = query.Where(p => p.ProductName.Contains(search) || p.Brand.BrandName.Contains(search));
-        if (filter.BrandId.HasValue)
-            query = query.Where(p => p.BrandId == filter.BrandId.Value);
-        if (filter.CategoryId.HasValue)
-            query = query.Where(p => p.CategoryId == filter.CategoryId.Value);
-        if (filter.MinPrice.HasValue)
-            query = query.Where(p => p.Price >= filter.MinPrice.Value);
-        if (filter.MaxPrice.HasValue)
-            query = query.Where(p => p.Price <= filter.MaxPrice.Value);
+        var query = ApplyFilters(db.Products.AsNoTracking().Where(p => p.IsActive), filter);
 
         query = filter.Sort switch
         {
@@ -55,6 +44,94 @@ public sealed class ProductCatalogReader(PhoneStoreDbContext db)
             _ => query.OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.ProductId)
         };
         return await Cards(query).ToListAsync(cancellationToken);
+    }
+
+    public async Task<PagedCatalogResult> GetPagedProductsAsync(
+        CatalogQuery filter, CancellationToken cancellationToken = default)
+    {
+        var query = ApplyFilters(db.Products.AsNoTracking().Where(p => p.IsActive), filter);
+
+        var totalItems = await query.CountAsync(cancellationToken);
+
+        query = filter.Sort switch
+        {
+            "price-asc" => query.OrderBy(p => p.Price).ThenBy(p => p.ProductId),
+            "price-desc" => query.OrderByDescending(p => p.Price).ThenBy(p => p.ProductId),
+            "name-asc" => query.OrderBy(p => p.ProductName).ThenBy(p => p.ProductId),
+            _ => query.OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.ProductId)
+        };
+
+        var pageSize = filter.PageSize <= 0 ? 10 : filter.PageSize;
+        var totalPages = totalItems > 0 ? (int)Math.Ceiling((double)totalItems / pageSize) : 1;
+        var page = filter.Page < 1 ? 1 : filter.Page;
+        if (totalItems > 0 && page > totalPages)
+        {
+            page = totalPages;
+        }
+        var items = await Cards(query.Skip((page - 1) * pageSize).Take(pageSize)).ToListAsync(cancellationToken);
+
+        return new PagedCatalogResult(items, totalItems, page, pageSize);
+    }
+
+    private static IQueryable<Product> ApplyFilters(IQueryable<Product> query, CatalogQuery filter)
+    {
+        var search = filter.Search?.Trim();
+        if (!string.IsNullOrEmpty(search))
+            query = query.Where(p => p.ProductName.Contains(search) || p.Brand.BrandName.Contains(search));
+
+        if (filter.BrandIds is { Count: > 0 })
+            query = query.Where(p => filter.BrandIds.Contains(p.BrandId));
+        else if (filter.BrandId.HasValue)
+            query = query.Where(p => p.BrandId == filter.BrandId.Value);
+
+        if (filter.CategoryId.HasValue)
+            query = query.Where(p => p.CategoryId == filter.CategoryId.Value);
+
+        if (filter.MinPrice.HasValue)
+            query = query.Where(p => p.Price >= filter.MinPrice.Value);
+        if (filter.MaxPrice.HasValue)
+            query = query.Where(p => p.Price <= filter.MaxPrice.Value);
+
+        if (filter.InStockOnly)
+            query = query.Where(p => p.StockQuantity > 0);
+
+        if (filter.Rams is { Count: > 0 })
+        {
+            var ramVariants = ExpandCapacityVariants(filter.Rams);
+            query = query.Where(p => p.RAM != null && ramVariants.Contains(p.RAM));
+        }
+
+        if (filter.Storages is { Count: > 0 })
+        {
+            var storageVariants = ExpandCapacityVariants(filter.Storages);
+            query = query.Where(p => p.Storage != null && storageVariants.Contains(p.Storage));
+        }
+
+        return query;
+    }
+
+    private static List<string> ExpandCapacityVariants(IEnumerable<string> values)
+    {
+        var list = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var v in values)
+        {
+            if (string.IsNullOrWhiteSpace(v)) continue;
+            var clean = v.Trim();
+            list.Add(clean);
+            if (clean.EndsWith("GB", StringComparison.OrdinalIgnoreCase))
+            {
+                var num = clean[..^2].Trim();
+                list.Add($"{num} GB");
+                list.Add($"{num}GB");
+            }
+            else if (clean.EndsWith("TB", StringComparison.OrdinalIgnoreCase))
+            {
+                var num = clean[..^2].Trim();
+                list.Add($"{num} TB");
+                list.Add($"{num}TB");
+            }
+        }
+        return list.ToList();
     }
 
     public async Task<IReadOnlyList<ProductCard>> GetNewestAsync(

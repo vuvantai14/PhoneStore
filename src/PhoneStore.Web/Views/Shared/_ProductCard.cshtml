@@ -2,18 +2,43 @@
 @using System.Globalization
 @{
     var imageUrl = ProductImageUrl.LocalOrPlaceholder(Model.ImageUrl);
-    var specs = string.Join(" · ", new[] { Model.RAM, Model.Storage }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    var hasSpecifications = !string.IsNullOrWhiteSpace(Model.RAM) || !string.IsNullOrWhiteSpace(Model.Storage);
 }
-<article class="product-card">
-    <a class="product-image" href="/products/@Model.ProductId" aria-label="Xem @Model.ProductName"><img src="@imageUrl" alt="@Model.ProductName" loading="lazy" width="280" height="240" data-product-image /></a>
+<article class="product-card catalog-product-card-v1">
+    <a class="product-image" href="/products/@Model.ProductId" aria-label="Xem @Model.ProductName">
+        <img src="@imageUrl" alt="@Model.ProductName" loading="lazy" width="280" height="240" data-product-image />
+    </a>
     <div class="product-info">
-        <span class="product-brand">@Model.BrandName</span><h3><a href="/products/@Model.ProductId">@Model.ProductName</a></h3>
-        <p class="product-specs">@(string.IsNullOrEmpty(specs) ? "Cấu hình đang cập nhật" : specs)</p>
+        <span class="product-brand">@Model.BrandName</span>
+        <h3><a href="/products/@Model.ProductId">@Model.ProductName</a></h3>
+        <div class="product-specs" aria-label="Cấu hình sản phẩm">
+            @if (!string.IsNullOrWhiteSpace(Model.RAM))
+            {
+                <span class="product-spec-tag" title="RAM @Model.RAM">RAM @Model.RAM</span>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.Storage))
+            {
+                <span class="product-spec-tag" title="Bộ nhớ @Model.Storage">@Model.Storage</span>
+            }
+            @if (!hasSpecifications)
+            {
+                <span class="product-spec-placeholder">Cấu hình đang cập nhật</span>
+            }
+        </div>
         <p class="product-price">@Model.Price.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) <span>₫</span></p>
-        <span class="stock-state @(Model.StockQuantity > 0 ? "" : "out-of-stock")"><i></i>@(Model.StockQuantity > 0 ? $"Còn {Model.StockQuantity} sản phẩm" : "Hết hàng")</span>
+        <span class="stock-state @(Model.StockQuantity > 0 ? "" : "out-of-stock")">
+            <i aria-hidden="true"></i>@(Model.StockQuantity > 0 ? $"Còn {Model.StockQuantity} sản phẩm" : "Hết hàng")
+        </span>
         <div class="product-actions">
-            <form asp-controller="Cart" asp-action="Add" method="post"><input type="hidden" name="productId" value="@Model.ProductId" /><input type="hidden" name="quantity" value="1" /><button class="add-cart-button" type="submit" disabled="@(Model.StockQuantity <= 0)"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 3h2l3 12h11l2-8H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>@(Model.StockQuantity > 0 ? "Thêm vào giỏ" : "Hết hàng")</button></form>
-            <a class="detail-link" href="/products/@Model.ProductId" aria-label="Chi tiết @Model.ProductName">Chi tiết <span aria-hidden="true">→</span></a>
+            <form asp-controller="Cart" asp-action="Add" method="post">
+                <input type="hidden" name="productId" value="@Model.ProductId" />
+                <input type="hidden" name="quantity" value="1" />
+                <button class="add-cart-button" type="submit" disabled="@(Model.StockQuantity <= 0)">
+                    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 3h2l3 12h11l2-8H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
+                    @(Model.StockQuantity > 0 ? "Thêm vào giỏ" : "Hết hàng")
+                </button>
+            </form>
+            <a class="detail-link" href="/products/@Model.ProductId" aria-label="Chi tiết @Model.ProductName">Chi tiết</a>
         </div>
     </div>
 </article>

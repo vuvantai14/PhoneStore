@@ -1,6 +1,50 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
-Cập nhật 2026-11-09 — S29.9G.6 **PASS, chờ user duyệt Hero Banner Mẫu 1 trên 5015**: thay hình Polaroid cũ bằng banner 3D `bannerhome.jpg` (ba điện thoại Samsung, iPhone, Xiaomi trên bệ tròn phát sáng neon xanh). Sử dụng trực tiếp ảnh `src/PhoneStore.Web/wwwroot/images/banner/bannerhome.jpg` hiện có (không tạo ảnh mới, không AI tool); `Index.cshtml` trỏ trực tiếp ảnh banner; `site.css` dùng `object-fit:cover; object-position:100% center;` để hiển thị phần ba điện thoại nổi 3D, loại bỏ hoàn toàn nguy cơ trùng lặp chữ nướng sẵn bên trái ảnh; nền xanh navy đồng bộ `#021738` -> `#031c42`; giữ nguyên HTML copy, font Be Vietnam Pro, nút "Khám phá ngay" và responsive 375/768/1024/1440. Build Web 0 warning/error. Không DB, không stage/commit/push. DỪNG ở Home.
+Cập nhật 2026-11-11 — S29.9H.6 **READY FOR USER TEST, sửa dứt điểm trạng thái phân trang và bộ lọc**:
+- **Nguyên nhân lỗi**:
+  - `ProductsController.cs` tự động ép `filter.BrandIds` chứa Apple & Samsung và `filter.InStockOnly = true` khi query string thiếu tham số (do tàn dư quy tắc cũ S29.9H.4).
+  - Khi user chuyển trang (`/products?page=2`), hàm `BuildFilterUrl` tự động gắn `brandIds=1&brandIds=2&inStockOnly=true` vào URL phân trang và hiển thị các chip bộ lọc ngoài ý muốn.
+- **Sửa chữa nghiệp vụ**:
+  - `/products` mặc định hiển thị toàn bộ 40 sản phẩm (4 trang, 10 sp/trang). Không tự ý chọn trước bất kỳ thương hiệu nào, không tự ý lọc chỉ còn hàng.
+  - `/products?page=2` chỉ chuyển sang trang 2 của toàn bộ sản phẩm, URL sạch sẽ `/products?page=2`, không tự sinh query lọc, không hiển thị chip khi chưa chọn lọc.
+  - Chỉ áp dụng bộ lọc khi user chủ động tick/chọn và submit form.
+  - Khi chuyển trang, giữ nguyên đúng các điều kiện lọc người dùng đã chủ động chọn.
+  - Khi thay đổi bộ lọc hoặc đổi sắp xếp, form submit quay về trang 1.
+  - Khi click "Đặt lại" / "Xóa bộ lọc" / "Xóa tất cả", URL trỏ thẳng về `/products`, xóa sạch toàn bộ điều kiện và về trang 1.
+  - Xử lý phòng thủ `page`: Bỏ qua lỗi định dạng nếu `page` không phải số (như `page=abc` -> về trang 1 không báo lỗi); nếu `page > totalPages` thì tự động đưa về trang cuối (`totalPages`).
+  - Đồng bộ `HasFilters` trong `CatalogViewModels.cs` để `InStockOnly` chỉ tính là có lọc khi bằng `true`.
+- **Files đã sửa**:
+  - `src/PhoneStore.Web/Controllers/ProductsController.cs`
+  - `src/PhoneStore.Web/Models/CatalogViewModels.cs`
+  - `src/PhoneStore.Data/Catalog/ProductCatalogReader.cs`
+  - `src/PhoneStore.Web/Views/Products/Index.cshtml`
+- **Tuân thủ nghiêm ngặt**: Không build/test, không chạy Web/chiếm cổng 5015, không đụng database/migration, không stage/commit/push.
+
+Cập nhật 2026-11-11 — S29.9H.5 **READY FOR USER TEST, hoàn tất sửa giao diện bộ lọc & card sản phẩm**:
+- **Sidebar bộ lọc**:
+  - Đã xử lý triệt để lỗi tiêu đề nhóm bộ lọc bị biến thành thanh màu xanh navy đậm (`var(--secondary)` ở CSS cũ dòng 120); thiết kế lại theo phong cách tối giản (nền trắng nhạt `#fbfdff`, chữ xanh navy `#071d3d`, viền ngăn cách mảnh `#eaf1fa`, icon chevron xoay 180° mượt mà khi mở/đóng).
+  - Thu gọn khoảng cách và padding thừa của sidebar (`.filter-body` 10px 14px 16px, `.filter-group` 8px 0, ô tìm kiếm cao 36px, nút Áp dụng 40px/Đặt lại 34px), bố cục thanh thoát, dễ thao tác.
+  - Trạng thái trực quan: Chip RAM/Storage và radio khoảng giá khi được chọn nổi bật với nền xanh `var(--primary)` `#1559d6` và chữ trắng; checkbox thương hiệu/tồn kho có ô tickbox xanh sắc nét.
+- **Card sản phẩm & Lưới 5 cột**:
+  - Sửa lỗi nút "Chi tiết" bị rớt dòng thành 2 dòng khi hiển thị ở lưới 5 cột desktop: chuyển `.product-actions` sang `grid-template-columns: minmax(0, 1fr) auto`, thêm `white-space: nowrap !important;` và `padding: 6px 11px; flex-shrink: 0;` cho `.detail-link`.
+  - Nút "Thêm vào giỏ" (`.add-cart-button`) chiếm toàn bộ không gian còn lại với `min-width: 0; display: flex; width: 100%`, icon giỏ hàng 14px cố định.
+- **Phân trang & Bố cục**: Giữ nguyên 5 sản phẩm/hàng, 10 sản phẩm/trang, thanh phân trang Trước/1/2/3/4/Tiếp giữ nguyên toàn bộ query params.
+- **File đã sửa**: `src/PhoneStore.Web/wwwroot/css/site.css`.
+- **Tuân thủ nghiêm ngặt**: Không build/test, không chạy Web/chiếm cổng 5015, không đụng database/migration, không stage/commit/push. Chờ user nghiệm thu trực tiếp trên trình duyệt.
+
+Cập nhật 2026-11-11 — S29.9H.4 **READY FOR USER TEST, hoàn tất nâng cấp bộ lọc sản phẩm**:
+- **Sidebar bộ lọc mới**:
+  - Tiêu đề "Bộ lọc sản phẩm" kèm nút "Đặt lại" góc trên; từng nhóm thu gọn/mở rộng (`details[open]`).
+  - Ô tìm kiếm có icon kính lúp.
+  - Checkbox 8 thương hiệu thực tế: Mặc định Apple & Samsung được chọn khi chưa có tham số thương hiệu; cho phép chọn nhiều thương hiệu (`WHERE BrandId IN (...)`).
+  - Khoảng giá: Nút chọn nhanh (Tất cả, Dưới 5 tr, 5-10 tr, 10-20 tr, Trên 20 tr) + 2 ô nhập tùy chỉnh (ưu tiên giá nhập tùy chỉnh).
+  - Chip RAM (`4GB`, `6GB`, `8GB`, `12GB`, `16GB`) & Chip Bộ nhớ (`64GB`, `128GB`, `256GB`, `512GB`) chuẩn hóa đa định dạng chuỗi ("4 GB", "4GB").
+  - Checkbox "Chỉ hiển thị sản phẩm còn hàng": Mặc định bật (`StockQuantity > 0`); khi tắt hiển thị cả hết hàng.
+  - Nút chính "Áp dụng bộ lọc" & Nút phụ "Xóa bộ lọc" (reset toàn bộ điều kiện về không giới hạn).
+- **Bộ lọc đang áp dụng**: Thanh chip phía trên danh sách hiển thị các điều kiện đang chọn (`Apple ×`, `Samsung ×`, `Còn hàng ×`,...), click `×` để gỡ từng điều kiện.
+- **Phân trang**: Giữ nguyên 10 sản phẩm/trang, 5 cột × 2 hàng, thanh phân trang Trước/1/2/3/4/Tiếp giữ nguyên toàn bộ query params.
+- **Responsive**: Desktop sidebar cố định bên trái; Mobile có nút "Bộ lọc" trên toolbar mở modal drawer có nút đóng `&times;`.
+- Tuân thủ nghiêm ngặt: Không build/test, không chạy Web, không chiếm cổng 5015, không đụng database/migration, không commit/push. Chờ user tự build và nghiệm thu.
 
 Cập nhật 2026-11-09 — S29.9G.5.2 **PASS, chờ user duyệt 8 logo thương hiệu Home trên 5015**: bổ sung `realme.svg` (Wikimedia Commons `Realme_logo.svg`, public domain text logo/trademarked, lấy từ realme.com; giữ nguyên path wordmark, bỏ nền vàng, đơn sắc như Simple Icons); Simple Icons realme không tồn tại. Crop `viewBox` theo glyph cho oppo/vivo/samsung/realme (path giữ nguyên); nguồn/giấy phép ghi tại `wwwroot/images/brands/BRAND_LOGO_SOURCES.md`. `Index.cshtml` chỉ thêm mapping realme + khung `.brand-logo-box` 104×40 và class theo brand; `site.css` thêm khối G.5.2 cuối file: kích thước thị giác theo logo (Apple25×30, Google29, OnePlus/Xiaomi30, OPPO80×19, vivo76×20, realme84×19, Samsung100×16), `object-fit:contain`, tên `--secondary` 14px/600. Không đổi hero/card sản phẩm/header/link/controller/DB. Targeted `HomePresentationTests` 2/2 PASS (chạy ngoài sandbox vì vstest bị chặn socket nội bộ); build Web 0 warning/error. Dừng PID23476 đã xác minh (Stop-Process, không -Force), chạy lại Web 5015 (`bin/Debug/net8.0`, Production, content root Web). HTTP Home/Products/brand filter/realme.svg 200. CDP 375/768/1024/1440: 8 logo, cao card đồng đều, tên thẳng hàng, logo căn giữa, không cắt/tràn. Không DB/stage/commit/push. DỪNG ở Home.
 

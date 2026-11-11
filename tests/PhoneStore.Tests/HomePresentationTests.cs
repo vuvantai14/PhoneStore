@@ -86,6 +86,7 @@ public sealed class HomePresentationTests
         public Task<ProductDetail?> GetProductDetailAsync(int id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<ProductCard>> GetRelatedAsync(ProductDetail product, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<ProductCard>> GetProductsAsync(CatalogQuery query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<PagedCatalogResult> GetPagedProductsAsync(CatalogQuery query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<ProductCard>> GetNewestAsync(int count, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 }

@@ -1,31 +1,322 @@
+@using PhoneStore.Web.Controllers
 @model ProductListViewModel
-@{ ViewData["Title"] = "Sản phẩm"; }
-<div class="container catalog-page">
-<nav class="breadcrumbs" aria-label="Đường dẫn"><a href="/">Trang chủ</a><span aria-hidden="true">/</span><span aria-current="page">Sản phẩm</span></nav>
-<div class="catalog-heading"><span class="eyebrow">DANH MỤC PHONESTORE</span><h1>Tìm điện thoại của bạn</h1><p>Lựa chọn theo thương hiệu, nhu cầu và mức giá phù hợp.</p></div>
-<form action="/products" method="get" class="catalog-layout">
-<details class="filter-panel" open><summary>Bộ lọc sản phẩm <span aria-hidden="true">⌄</span></summary><div class="filter-body">
-<div class="field"><label for="catalog-search">Tìm kiếm</label><input id="catalog-search" name="search" value="@Model.Filter.Search" placeholder="Tên điện thoại, thương hiệu" /></div>
-<div class="field"><label for="brandId">Thương hiệu</label><select id="brandId" name="brandId"><option value="">Tất cả thương hiệu</option>
-@foreach (var brand in Model.Brands) { <option value="@brand.Id" selected="@(Model.Filter.BrandId == brand.Id)">@brand.Name</option> }
-</select></div>
-<div class="field"><label for="categoryId">Danh mục</label><select id="categoryId" name="categoryId"><option value="">Tất cả danh mục</option>
-@foreach (var category in Model.Categories) { <option value="@category.Id" selected="@(Model.Filter.CategoryId == category.Id)">@category.Name</option> }
-</select></div>
-<fieldset class="price-filter"><legend>Khoảng giá <span>(₫)</span></legend>
-<div class="field"><label for="minPrice">Giá từ</label><input type="text" inputmode="decimal" id="minPrice" name="minPrice" value="@Model.Filter.MinPrice" placeholder="Không giới hạn" /></div>
-<div class="field"><label for="maxPrice">Giá đến</label><input type="text" inputmode="decimal" id="maxPrice" name="maxPrice" value="@Model.Filter.MaxPrice" placeholder="Không giới hạn" /></div></fieldset>
-<button class="button button-primary filter-submit" type="submit">Áp dụng bộ lọc <span aria-hidden="true">→</span></button><a href="/products" class="reset-link">Xóa bộ lọc</a></div></details>
-<section class="catalog-results" aria-labelledby="results-heading">
-<div class="results-toolbar"><div><h2 id="results-heading">Danh sách sản phẩm</h2><span>@Model.Products.Count sản phẩm@(Model.Filter.HasFilters ? " phù hợp" : "")</span></div>
-<div class="sort-control"><label for="sort">Sắp xếp</label><select id="sort" name="sort">
-<option value="newest" selected="@(Model.Filter.Sort == "newest")">Mới nhất</option>
-<option value="price-asc" selected="@(Model.Filter.Sort == "price-asc")">Giá tăng dần</option>
-<option value="price-desc" selected="@(Model.Filter.Sort == "price-desc")">Giá giảm dần</option>
-<option value="name-asc" selected="@(Model.Filter.Sort == "name-asc")">Tên A–Z</option>
-</select><button class="sort-submit" type="submit">Áp dụng</button></div></div>
-@if (!ViewData.ModelState.IsValid) { <div class="validation-errors" role="alert"><strong>Vui lòng kiểm tra bộ lọc.</strong><div asp-validation-summary="All"></div></div> }
-else if (Model.Products.Count == 0) { <partial name="_EmptyCatalog" model='@(Model.Filter.HasFilters ? "Không tìm thấy sản phẩm phù hợp." : "Chưa có sản phẩm.")' /> }
-else { <div class="product-grid">@foreach (var product in Model.Products) { <partial name="_ProductCard" model="product" /> }</div> }
-</section></form></div>
+@{
+    ViewData["Title"] = "Danh sách sản phẩm";
+}
 
+<div class="container catalog-page">
+    <nav class="breadcrumbs" aria-label="Đường dẫn">
+        <a href="/">Trang chủ</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">Sản phẩm</span>
+    </nav>
+
+    <div class="catalog-heading">
+        <span class="eyebrow">DANH MỤC PHONESTORE</span>
+        <h1>Tìm điện thoại của bạn</h1>
+        <p>Lựa chọn theo thương hiệu, nhu cầu và mức giá phù hợp với cam kết chính hãng.</p>
+    </div>
+
+    <form action="/products" method="get" class="catalog-layout" id="catalogFilterForm">
+        <!-- Sidebar Bộ lọc sản phẩm -->
+        <aside class="catalog-sidebar" id="catalogSidebar">
+            <div class="filter-panel">
+                <div class="filter-panel-header">
+                    <div class="filter-panel-title">
+                        <svg class="filter-icon" viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 6h16M7 12h10M10 18h4"/>
+                        </svg>
+                        <span>Bộ lọc sản phẩm</span>
+                    </div>
+                    <a href="/products" class="filter-reset-top" title="Đặt lại toàn bộ điều kiện">Đặt lại</a>
+                    <button type="button" class="mobile-filter-close-btn" id="closeFilterBtn" aria-label="Đóng bộ lọc">&times;</button>
+                </div>
+
+                <div class="filter-body">
+                    <!-- Nhóm 1: Tìm kiếm -->
+                    <div class="filter-group filter-group-search">
+                        <label for="catalog-search" class="filter-group-title">Tìm kiếm</label>
+                        <div class="search-input-wrapper">
+                            <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="m21 21-4.3-4.3"/>
+                            </svg>
+                            <input id="catalog-search" name="search" value="@Model.Filter.Search" placeholder="Tên điện thoại, model..." autocomplete="off" />
+                        </div>
+                    </div>
+
+                    <!-- Nhóm 2: Thương hiệu -->
+                    <details class="filter-group" open>
+                        <summary class="filter-group-header">
+                            <span class="filter-group-title">Thương hiệu</span>
+                            <span class="filter-chevron" aria-hidden="true">⌄</span>
+                        </summary>
+                        <div class="filter-group-content brand-checkbox-list">
+                            @foreach (var brand in Model.Brands)
+                            {
+                                var isChecked = Model.Filter.BrandIds.Contains(brand.Id);
+                                <label class="custom-checkbox-label">
+                                    <input type="checkbox" name="brandIds" value="@brand.Id" checked="@(isChecked ? "checked" : null)" />
+                                    <span class="checkbox-box" aria-hidden="true"></span>
+                                    <span class="checkbox-text">@brand.Name</span>
+                                </label>
+                            }
+                        </div>
+                    </details>
+
+                    <!-- Nhóm 3: Khoảng giá -->
+                    <details class="filter-group" open>
+                        <summary class="filter-group-header">
+                            <span class="filter-group-title">Mức giá</span>
+                            <span class="filter-chevron" aria-hidden="true">⌄</span>
+                        </summary>
+                        <div class="filter-group-content">
+                            <!-- Nút chọn giá nhanh -->
+                            <div class="price-quick-options">
+                                <label class="price-radio-chip">
+                                    <input type="radio" name="priceRange" value="all" checked="@(string.IsNullOrEmpty(Model.Filter.PriceRange) || Model.Filter.PriceRange == "all" ? "checked" : null)" />
+                                    <span>Tất cả</span>
+                                </label>
+                                <label class="price-radio-chip">
+                                    <input type="radio" name="priceRange" value="under-5" checked="@(Model.Filter.PriceRange == "under-5" ? "checked" : null)" />
+                                    <span>Dưới 5 triệu</span>
+                                </label>
+                                <label class="price-radio-chip">
+                                    <input type="radio" name="priceRange" value="5-10" checked="@(Model.Filter.PriceRange == "5-10" ? "checked" : null)" />
+                                    <span>5 – 10 triệu</span>
+                                </label>
+                                <label class="price-radio-chip">
+                                    <input type="radio" name="priceRange" value="10-20" checked="@(Model.Filter.PriceRange == "10-20" ? "checked" : null)" />
+                                    <span>10 – 20 triệu</span>
+                                </label>
+                                <label class="price-radio-chip">
+                                    <input type="radio" name="priceRange" value="above-20" checked="@(Model.Filter.PriceRange == "above-20" ? "checked" : null)" />
+                                    <span>Trên 20 triệu</span>
+                                </label>
+                            </div>
+
+                            <!-- Nhập khoảng giá tùy chỉnh -->
+                            <div class="price-custom-inputs">
+                                <span class="custom-price-label">Hoặc nhập giá tùy chỉnh (₫):</span>
+                                <div class="price-inputs-grid">
+                                    <div class="field">
+                                        <label for="minPrice">Từ</label>
+                                        <input type="text" inputmode="decimal" id="minPrice" name="minPrice" value="@Model.Filter.MinPrice" placeholder="0" />
+                                    </div>
+                                    <div class="field">
+                                        <label for="maxPrice">Đến</label>
+                                        <input type="text" inputmode="decimal" id="maxPrice" name="maxPrice" value="@Model.Filter.MaxPrice" placeholder="Tối đa" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- Nhóm 4: RAM -->
+                    <details class="filter-group" open>
+                        <summary class="filter-group-header">
+                            <span class="filter-group-title">RAM</span>
+                            <span class="filter-chevron" aria-hidden="true">⌄</span>
+                        </summary>
+                        <div class="filter-group-content chip-group">
+                            @foreach (var ram in new[] { "4GB", "6GB", "8GB", "12GB", "16GB" })
+                            {
+                                var isChecked = Model.Filter.Rams.Contains(ram, StringComparer.OrdinalIgnoreCase);
+                                <label class="filter-chip-option">
+                                    <input type="checkbox" name="rams" value="@ram" checked="@(isChecked ? "checked" : null)" />
+                                    <span>@ram</span>
+                                </label>
+                            }
+                        </div>
+                    </details>
+
+                    <!-- Nhóm 5: Bộ nhớ trong -->
+                    <details class="filter-group" open>
+                        <summary class="filter-group-header">
+                            <span class="filter-group-title">Bộ nhớ trong</span>
+                            <span class="filter-chevron" aria-hidden="true">⌄</span>
+                        </summary>
+                        <div class="filter-group-content chip-group">
+                            @foreach (var storage in new[] { "64GB", "128GB", "256GB", "512GB" })
+                            {
+                                var isChecked = Model.Filter.Storages.Contains(storage, StringComparer.OrdinalIgnoreCase);
+                                <label class="filter-chip-option">
+                                    <input type="checkbox" name="storages" value="@storage" checked="@(isChecked ? "checked" : null)" />
+                                    <span>@storage</span>
+                                </label>
+                            }
+                        </div>
+                    </details>
+
+                    <!-- Nhóm 6: Tồn kho -->
+                    <div class="filter-group filter-group-stock">
+                        <label class="custom-checkbox-label stock-checkbox">
+                            <input type="checkbox" name="inStockOnly" value="true" checked="@(Model.Filter.InStockOnly == true ? "checked" : null)" />
+                            <span class="checkbox-box" aria-hidden="true"></span>
+                            <span class="checkbox-text"><strong>Chỉ hiển thị sản phẩm còn hàng</strong></span>
+                        </label>
+                    </div>
+
+                    <!-- Nút thao tác -->
+                    <div class="filter-actions-block">
+                        <button class="button button-primary filter-submit-btn" type="submit">
+                            Áp dụng bộ lọc
+                        </button>
+                        <a href="/products" class="button button-outline filter-reset-btn">
+                            Xóa bộ lọc
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Phần hiển thị sản phẩm -->
+        <section class="catalog-results" aria-labelledby="results-heading">
+            <!-- Toolbar -->
+            <div class="results-toolbar">
+                <div class="results-info">
+                    <button type="button" class="mobile-filter-open-btn" id="openFilterBtn">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 6h16M7 12h10M10 18h4"/>
+                        </svg>
+                        <span>Bộ lọc</span>
+                    </button>
+                    <h2 id="results-heading">Danh sách sản phẩm</h2>
+                    <span class="results-count-badge">@Model.TotalItems sản phẩm@(Model.Filter.HasFilters ? " phù hợp" : "")</span>
+                    @if (Model.TotalPages > 1)
+                    {
+                        <span class="results-page-indicator">Trang @Model.PageNumber / @Model.TotalPages</span>
+                    }
+                </div>
+                <div class="sort-control">
+                    <label for="sort">Sắp xếp:</label>
+                    <select id="sort" name="sort" onchange="this.form.submit()">
+                        <option value="newest" selected="@(Model.Filter.Sort == "newest")">Mới nhất</option>
+                        <option value="price-asc" selected="@(Model.Filter.Sort == "price-asc")">Giá tăng dần</option>
+                        <option value="price-desc" selected="@(Model.Filter.Sort == "price-desc")">Giá giảm dần</option>
+                        <option value="name-asc" selected="@(Model.Filter.Sort == "name-asc")">Tên A–Z</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Chips bộ lọc đang áp dụng -->
+            @if (Model.AppliedFilters.Count > 0)
+            {
+                <div class="applied-filters-container" aria-label="Bộ lọc đang áp dụng">
+                    <span class="applied-filters-label">Đang lọc:</span>
+                    <div class="applied-chips-list">
+                        @foreach (var chip in Model.AppliedFilters)
+                        {
+                            <a href="@chip.RemoveUrl" class="applied-chip" title="Bỏ lọc @chip.Label">
+                                <span>@chip.Label</span>
+                                <span class="chip-remove" aria-hidden="true">&times;</span>
+                            </a>
+                        }
+                        <a href="/products" class="applied-chip-clear">Xóa tất cả</a>
+                    </div>
+                </div>
+            }
+
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="validation-errors" role="alert">
+                    <strong>Vui lòng kiểm tra lại thông tin bộ lọc.</strong>
+                    <div asp-validation-summary="All"></div>
+                </div>
+            }
+            else if (Model.Products.Count == 0)
+            {
+                <partial name="_EmptyCatalog" model='@(Model.Filter.HasFilters ? "Không tìm thấy sản phẩm phù hợp với bộ lọc." : "Chưa có sản phẩm.")' />
+            }
+            else
+            {
+                <div class="catalog-grid">
+                    @foreach (var product in Model.Products)
+                    {
+                        <partial name="_ProductCard" model="product" />
+                    }
+                </div>
+
+                @if (Model.TotalPages > 1)
+                {
+                    <nav class="catalog-pagination" aria-label="Phân trang sản phẩm">
+                        @if (Model.HasPreviousPage)
+                        {
+                            <a class="pagination-btn pagination-prev" href="@ProductsController.BuildFilterUrl(Model.Filter, targetPage: Model.PageNumber - 1)" aria-label="Trang trước">
+                                <svg class="pagination-icon" viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M15 18l-6-6 6-6"/>
+                                </svg>
+                                <span>Trước</span>
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="pagination-btn pagination-prev disabled" aria-disabled="true" aria-label="Trang trước (không khả dụng)">
+                                <svg class="pagination-icon" viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M15 18l-6-6 6-6"/>
+                                </svg>
+                                <span>Trước</span>
+                            </span>
+                        }
+
+                        <div class="pagination-pages" role="list">
+                            @for (var p = 1; p <= Model.TotalPages; p++)
+                            {
+                                if (p == Model.PageNumber)
+                                {
+                                    <span class="pagination-page active" aria-current="page" role="listitem">@p</span>
+                                }
+                                else
+                                {
+                                    <a class="pagination-page" href="@ProductsController.BuildFilterUrl(Model.Filter, targetPage: p)" aria-label="Trang @p" role="listitem">@p</a>
+                                }
+                            }
+                        </div>
+
+                        @if (Model.HasNextPage)
+                        {
+                            <a class="pagination-btn pagination-next" href="@ProductsController.BuildFilterUrl(Model.Filter, targetPage: Model.PageNumber + 1)" aria-label="Trang tiếp">
+                                <span>Tiếp</span>
+                                <svg class="pagination-icon" viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M9 18l6-6-6-6"/>
+                                </svg>
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="pagination-btn pagination-next disabled" aria-disabled="true" aria-label="Trang tiếp (không khả dụng)">
+                                <span>Tiếp</span>
+                                <svg class="pagination-icon" viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M9 18l6-6-6-6"/>
+                                </svg>
+                            </span>
+                        }
+                    </nav>
+                }
+            }
+        </section>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        (function() {
+            var openBtn = document.getElementById('openFilterBtn');
+            var closeBtn = document.getElementById('closeFilterBtn');
+            var sidebar = document.getElementById('catalogSidebar');
+
+            if (openBtn && sidebar) {
+                openBtn.addEventListener('click', function() {
+                    sidebar.classList.add('mobile-active');
+                    document.body.style.overflow = 'hidden';
+                });
+            }
+            if (closeBtn && sidebar) {
+                closeBtn.addEventListener('click', function() {
+                    sidebar.classList.remove('mobile-active');
+                    document.body.style.overflow = '';
+                });
+            }
+        })();
+    </script>
+}

@@ -14,6 +14,9 @@ public sealed class ProductService(ProductCatalogReader reader) : IProductServic
     public Task<IReadOnlyList<ProductCard>> GetProductsAsync(CatalogQuery query, CancellationToken cancellationToken = default) =>
         reader.GetProductsAsync(query, cancellationToken);
 
+    public Task<PagedCatalogResult> GetPagedProductsAsync(CatalogQuery query, CancellationToken cancellationToken = default) =>
+        reader.GetPagedProductsAsync(query, cancellationToken);
+
     public Task<IReadOnlyList<ProductCard>> GetNewestAsync(int count, CancellationToken cancellationToken = default) =>
         reader.GetNewestAsync(count, cancellationToken);
 
