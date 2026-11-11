@@ -208,7 +208,10 @@ document.querySelectorAll('form[data-ui-submit]').forEach(form => {
     }
 
     document.addEventListener('submit', async function (event) {
-        const form = event.target.closest('form[data-cart-form], form[action="/cart/add"], form[action^="/cart/add"]');
+        const form = (event.target && event.target.matches && event.target.matches('form[data-cart-form], form[action="/cart/add"], form[action^="/cart/add"]'))
+            ? event.target
+            : ((event.target && event.target.closest ? event.target.closest('form[data-cart-form], form[action="/cart/add"], form[action^="/cart/add"]') : null)
+                || (event.submitter && event.submitter.closest ? event.submitter.closest('form[data-cart-form], form[action="/cart/add"], form[action^="/cart/add"]') : null));
         if (!form) return;
 
         // Prevent default browser navigation/redirect
@@ -242,15 +245,17 @@ document.querySelectorAll('form[data-ui-submit]').forEach(form => {
                 }
             });
 
-            // If backend redirected to login or another HTML page
+            // If backend redirected to login
             if (response.redirected) {
-                window.location.href = response.url;
-                return;
+                if (response.url && response.url.toLowerCase().includes('/account/login')) {
+                    window.location.href = response.url;
+                    return;
+                }
             }
 
             const contentType = response.headers.get('content-type') || '';
             if (contentType.includes('text/html')) {
-                window.location.href = response.url || '/cart';
+                showCartToast('Không thể thêm vào giỏ hàng. Vui lòng thử lại sau.', 'error');
                 return;
             }
 
@@ -278,4 +283,155 @@ document.querySelectorAll('form[data-ui-submit]').forEach(form => {
             }
         }
     });
+})();
+
+// S29.9J.0 — Header Dropdown Navigation (Account & Cart)
+(function () {
+    const dropdowns = document.querySelectorAll('[data-header-dropdown]');
+    if (!dropdowns.length) return;
+
+    function closeDropdown(dropdown) {
+        if (!dropdown) return;
+        dropdown.removeAttribute('data-open');
+        const trigger = dropdown.querySelector('.header-dropdown-trigger');
+        if (trigger) {
+            trigger.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    function openDropdown(dropdown) {
+        if (!dropdown) return;
+        dropdowns.forEach(d => {
+            if (d !== dropdown) closeDropdown(d);
+        });
+        dropdown.setAttribute('data-open', 'true');
+        const trigger = dropdown.querySelector('.header-dropdown-trigger');
+        if (trigger) {
+            trigger.setAttribute('aria-expanded', 'true');
+        }
+    }
+
+    function closeAllDropdowns() {
+        dropdowns.forEach(closeDropdown);
+    }
+
+    dropdowns.forEach(dropdown => {
+        const trigger = dropdown.querySelector('.header-dropdown-trigger');
+        const menu = dropdown.querySelector('.header-dropdown-menu');
+        if (!trigger || !menu) return;
+
+        trigger.addEventListener('click', function (event) {
+            event.stopPropagation();
+            const isOpen = dropdown.getAttribute('data-open') === 'true';
+            if (isOpen) {
+                closeDropdown(dropdown);
+            } else {
+                openDropdown(dropdown);
+            }
+        });
+
+        // Close on blur when keyboard focus leaves this dropdown
+        dropdown.addEventListener('focusout', function (event) {
+            if (!dropdown.contains(event.relatedTarget)) {
+                closeDropdown(dropdown);
+            }
+        });
+
+        // When a menu item (link or logout submit) is clicked, close dropdown
+        menu.addEventListener('click', function (event) {
+            const item = event.target.closest('a, button[type="submit"]');
+            if (item) {
+                closeDropdown(dropdown);
+            }
+        });
+    });
+
+    // Close on click outside
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest('[data-header-dropdown]')) {
+            closeAllDropdowns();
+        }
+    });
+
+    // Close on Escape key and return focus to active trigger
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' || event.key === 'Esc') {
+            const openDropdown = document.querySelector('[data-header-dropdown][data-open="true"]');
+            if (openDropdown) {
+                const trigger = openDropdown.querySelector('.header-dropdown-trigger');
+                closeAllDropdowns();
+                if (trigger) {
+                    trigger.focus();
+                }
+            }
+        }
+    });
+})();
+
+// S29.9J — Compact Cart Stepper Controls (- / +)
+(function () {
+    function initCartSteppers() {
+        document.querySelectorAll('[data-cart-update-form]').forEach(form => {
+            if (form.dataset.stepperInitialized) return;
+            form.dataset.stepperInitialized = 'true';
+
+            const input = form.querySelector('.qty-input');
+            const minusBtn = form.querySelector('.qty-btn-minus');
+            const plusBtn = form.querySelector('.qty-btn-plus');
+            if (!input || !minusBtn || !plusBtn) return;
+
+            function submitUpdate() {
+                minusBtn.disabled = true;
+                plusBtn.disabled = true;
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    form.submit();
+                }
+            }
+
+            minusBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const current = parseInt(input.value, 10) || 1;
+                const min = parseInt(input.min, 10) || 1;
+                if (current > min) {
+                    input.value = current - 1;
+                    submitUpdate();
+                }
+            });
+
+            plusBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const current = parseInt(input.value, 10) || 1;
+                const max = parseInt(input.max, 10) || 9999;
+                if (current < max) {
+                    input.value = current + 1;
+                    submitUpdate();
+                }
+            });
+
+            input.addEventListener('change', function () {
+                let val = parseInt(input.value, 10);
+                const min = parseInt(input.min, 10) || 1;
+                const max = parseInt(input.max, 10) || 9999;
+                if (isNaN(val) || val < min) val = min;
+                if (val > max) val = max;
+                input.value = val;
+                submitUpdate();
+            });
+
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    input.blur();
+                }
+            });
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCartSteppers);
+    } else {
+        initCartSteppers();
+    }
 })();

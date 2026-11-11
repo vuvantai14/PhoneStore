@@ -1,38 +1,162 @@
 @model CartViewModel
 @using System.Globalization
 @{ ViewData["Title"] = "Giỏ hàng"; }
-<div class="container purchasing-page cart-page">
-    <nav class="breadcrumbs" aria-label="Đường dẫn"><a href="/">Trang chủ</a><span aria-hidden="true">/</span><span aria-current="page">Giỏ hàng</span></nav>
-    <div class="catalog-heading"><span class="eyebrow">LỰA CHỌN CỦA BẠN</span><h1>Giỏ hàng</h1><p>Kiểm tra sản phẩm và số lượng trước khi đặt hàng.</p></div>
-    @if (TempData["CartMessage"] is string message) { <div class="purchase-message" role="status">@message</div> }
+<div class="cart-compact-container cart-page">
+    <div class="cart-header-bar">
+        <div class="cart-header-main">
+            <nav class="cart-breadcrumbs" aria-label="Đường dẫn">
+                <a href="/">Trang chủ</a>
+                <span aria-hidden="true">/</span>
+                <span aria-current="page">Giỏ hàng</span>
+            </nav>
+            <h1 class="cart-title">Giỏ hàng <span class="cart-title-count">(@Model.TotalQuantity sản phẩm)</span></h1>
+        </div>
+        <a class="cart-back-link" href="/products">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Tiếp tục mua sắm</span>
+        </a>
+    </div>
+
+    @if (TempData["CartMessage"] is string message)
+    {
+        <div class="cart-alert-message @(message.Contains("không") || message.Contains("vượt") || message.Contains("Chưa thể") ? "cart-alert-error" : "cart-alert-info")" role="status">
+            <svg class="cart-alert-icon" aria-hidden="true" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M12 8v4M12 16h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span>@message</span>
+        </div>
+    }
+
     @if (Model.Items.Count == 0)
     {
-        <section class="empty-state"><div class="empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3h2l3 12h11l2-8H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg></div><h2>Giỏ hàng của bạn đang trống.</h2><p>Khám phá điện thoại và thêm lựa chọn phù hợp vào giỏ hàng.</p><a class="button button-primary" href="/products">Tiếp tục mua sắm <span aria-hidden="true">→</span></a></section>
+        <section class="cart-empty-box">
+            <div class="cart-empty-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M3 3h2l3 12h11l2-8H6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="20" r="1.5" fill="currentColor"/><circle cx="18" cy="20" r="1.5" fill="currentColor"/></svg>
+            </div>
+            <h2>Giỏ hàng của bạn đang trống</h2>
+            <p>Khám phá các dòng điện thoại chính hãng và thêm lựa chọn phù hợp vào giỏ hàng.</p>
+            <a class="cart-empty-cta" href="/products">
+                <span>Khám phá sản phẩm</span>
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+        </section>
     }
     else
     {
-        <div class="purchase-layout"><section class="cart-lines" aria-label="Sản phẩm trong giỏ hàng">
-            @foreach (var line in Model.Items)
-            {
-                <article class="cart-line">
-                    <a href="/products/@line.Item.ProductId" class="cart-image"><img src="@ProductImageUrl.LocalOrPlaceholder(line.Product?.ImageUrl)" alt="@(line.Product?.ProductName ?? "Sản phẩm không khả dụng")" width="100" height="100" data-product-image /></a>
-                    <div class="cart-line-info"><h2><a href="/products/@line.Item.ProductId">@(line.Product?.ProductName ?? "Sản phẩm không còn khả dụng")</a></h2>
-                        @if (line.Product is not null) { <p>@line.Product.Price.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫</p> }
-                        @if (!line.Available) { <p class="field-error">Sản phẩm không khả dụng hoặc số lượng vượt tồn kho. Vui lòng cập nhật hoặc xóa.</p> }
-                        <form asp-controller="Cart" asp-action="Update" method="post" class="quantity-form" data-ui-submit data-pending-label="Đang cập nhật…">
-                            <input type="hidden" name="productId" value="@line.Item.ProductId" /><label for="quantity-@line.Item.ProductId">Số lượng<span class="sr-only"> @(line.Product?.ProductName)</span></label>
-                            <input id="quantity-@line.Item.ProductId" type="number" name="quantity" value="@line.Item.Quantity" min="1" step="1" required /><button class="sort-submit" type="submit">Cập nhật</button>
-                        </form>
+        <div class="cart-layout-grid">
+            <section class="cart-items-section" aria-label="Danh sách sản phẩm trong giỏ hàng">
+                <div class="cart-items-list">
+                    @foreach (var line in Model.Items)
+                    {
+                        <article class="cart-item-row @(!line.Available ? "is-unavailable" : "")">
+                            <a href="/products/@line.Item.ProductId" class="cart-item-thumb" title="@(line.Product?.ProductName ?? "Sản phẩm")">
+                                <img src="@ProductImageUrl.LocalOrPlaceholder(line.Product?.ImageUrl)"
+                                     alt="@(line.Product?.ProductName ?? "Sản phẩm không khả dụng")"
+                                     width="76"
+                                     height="76"
+                                     data-product-image />
+                            </a>
+
+                            <div class="cart-item-details">
+                                <h2 class="cart-item-name">
+                                    <a href="/products/@line.Item.ProductId">@(line.Product?.ProductName ?? "Sản phẩm không còn khả dụng")</a>
+                                </h2>
+                                @if (line.Product is not null)
+                                {
+                                    <div class="cart-item-price">
+                                        @line.Product.Price.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫
+                                    </div>
+                                }
+                                @if (!line.Available)
+                                {
+                                    <div class="cart-item-warning">Sản phẩm không khả dụng hoặc vượt tồn kho.</div>
+                                }
+                            </div>
+
+                            <div class="cart-item-stepper">
+                                <form asp-controller="Cart" asp-action="Update" method="post" class="cart-stepper-form" data-cart-update-form>
+                                    <input type="hidden" name="productId" value="@line.Item.ProductId" />
+                                    <div class="stepper-box">
+                                        <button type="button" class="stepper-btn qty-btn-minus" aria-label="Giảm số lượng" @(line.Item.Quantity <= 1 ? "disabled" : "")>−</button>
+                                        <input id="quantity-@line.Item.ProductId"
+                                               type="number"
+                                               name="quantity"
+                                               value="@line.Item.Quantity"
+                                               min="1"
+                                               max="@(line.Product?.StockQuantity ?? 99)"
+                                               step="1"
+                                               class="stepper-input qty-input"
+                                               aria-label="Số lượng @(line.Product?.ProductName)"
+                                               required />
+                                        <button type="button" class="stepper-btn qty-btn-plus" aria-label="Tăng số lượng" @(line.Product != null && line.Item.Quantity >= line.Product.StockQuantity ? "disabled" : "")>+</button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <div class="cart-item-subtotal">
+                                <strong class="subtotal-amount">@line.LineTotal.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫</strong>
+                            </div>
+
+                            <div class="cart-item-delete">
+                                <form asp-controller="Cart" asp-action="Remove" method="post" class="cart-remove-form">
+                                    <input type="hidden" name="productId" value="@line.Item.ProductId" />
+                                    <button class="cart-delete-btn" type="submit" aria-label="Xóa @(line.Product?.ProductName) khỏi giỏ hàng" title="Xóa sản phẩm">
+                                        <svg class="cart-delete-icon" aria-hidden="true" viewBox="0 0 24 24">
+                                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        <span class="delete-label">Xóa</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </article>
+                    }
+                </div>
+            </section>
+
+            <div class="cart-sidebar-section">
+                <aside class="cart-summary-box" aria-labelledby="cart-summary-title">
+                    <h2 id="cart-summary-title" class="cart-summary-title">Tóm tắt đơn hàng</h2>
+
+                    <div class="cart-summary-list">
+                        <div class="cart-summary-item">
+                            <span class="summary-item-label">Tổng số lượng</span>
+                            <span class="summary-item-val">@Model.TotalQuantity sản phẩm</span>
+                        </div>
+                        <div class="cart-summary-item">
+                            <span class="summary-item-label">Tạm tính</span>
+                            <span class="summary-item-val">@Model.TotalAmount.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫</span>
+                        </div>
+                        <div class="cart-summary-separator"></div>
+                        <div class="cart-summary-item summary-item-total">
+                            <span class="summary-total-label">Tổng cộng</span>
+                            <strong class="summary-total-val">@Model.TotalAmount.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫</strong>
+                        </div>
                     </div>
-                    <div class="cart-line-total"><strong>@line.LineTotal.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫</strong>
-                        <form asp-controller="Cart" asp-action="Remove" method="post" data-ui-submit data-pending-label="Đang xóa…"><input type="hidden" name="productId" value="@line.Item.ProductId" /><button class="remove-item" type="submit" aria-label="Xóa @(line.Product?.ProductName) khỏi giỏ hàng">Xóa sản phẩm</button></form>
+
+                    <div class="cart-summary-cta">
+                        @if (Model.CanCheckout)
+                        {
+                            <a class="cart-checkout-button" href="/checkout">
+                                <span>Tiến hành đặt hàng</span>
+                                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </a>
+                        }
+                        else
+                        {
+                            <button type="button" class="cart-checkout-button is-disabled" disabled>
+                                <span>Tiến hành đặt hàng</span>
+                            </button>
+                            <p class="cart-checkout-error">Vui lòng điều chỉnh số lượng hoặc xóa sản phẩm không khả dụng trước khi đặt hàng.</p>
+                        }
                     </div>
-                </article>
-            }
-            <a class="text-link" href="/products">← Tiếp tục mua sắm</a>
-        </section><div class="purchase-sidebar"><partial name="_OrderSummary" model="Model" />
-            @if (Model.CanCheckout) { <a class="button button-primary purchase-submit" href="/checkout">Tiến hành đặt hàng <span aria-hidden="true">→</span></a> }
-            else { <p class="field-error">Vui lòng điều chỉnh giỏ hàng trước khi đặt hàng.</p> }
-        </div></div>
+
+                    <div class="cart-summary-hint">
+                        <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 16v-4M12 8h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        <span>Giá và tồn kho được kiểm tra lại khi xác nhận đơn.</span>
+                    </div>
+                </aside>
+            </div>
+        </div>
     }
 </div>

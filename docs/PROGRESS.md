@@ -1,5 +1,108 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-12 — S29.9J.1 **READY FOR USER TEST, Khắc phục triệt để lỗi Add to Cart Redirect trên trang Danh sách sản phẩm (Catalog)**:
+- **Nguyên nhân gốc rễ (Root Cause Analysis)**:
+  - Trong `src/PhoneStore.Web/Views/Products/Index.cshtml`, thẻ `<form action="/products" method="get" class="catalog-layout" id="catalogFilterForm">` bọc ngoài toàn bộ layout bao gồm cả `<aside class="catalog-sidebar">` lẫn `<section class="catalog-results">`.
+  - Mỗi `_ProductCard` bên trong danh sách sản phẩm lại chứa thẻ form riêng: `<form asp-controller="Cart" asp-action="Add" method="post" data-cart-form>`.
+  - Theo đặc tả HTML5 (WHATWG Spec 13.2.6.4.7), các thẻ `<form>` lồng nhau (nested forms) là bất hợp pháp và bị trình duyệt tự động loại bỏ (drop/mangle). Khi đó các form con `data-cart-form` bị mất trong DOM, sự kiện click "Thêm vào giỏ" không kích hoạt AJAX handler trong `site.js` mà rơi vào submit thường. Backend `CartController` nhận request thông thường (`!IsAjaxRequest()`) nên thực hiện redirect sang `/cart`.
+- **Giải pháp xử lý**:
+  - **Tách biệt Form Lọc và Layout trong `Index.cshtml`**:
+    - Chuyển container `.catalog-layout` từ thẻ `<form>` thành thẻ `<div>`.
+    - Đưa `<form action="/products" method="get" class="filter-panel" id="catalogFilterForm">` vào trọn vẹn bên trong `<aside class="catalog-sidebar">`, kèm `<input type="hidden" name="sort" id="filterSortInput" value="@Model.Filter.Sort" />`.
+    - Cập nhật dropdown sắp xếp trong `.results-toolbar` đồng bộ giá trị với `#filterSortInput` và submit `#catalogFilterForm`.
+    - Toàn bộ `<section class="catalog-results">` và các thẻ `_ProductCard` hoàn toàn nằm ngoài `#catalogFilterForm`, chấm dứt 100% tình trạng nested forms.
+  - **Củng cố AJAX Handler trong `site.js`**:
+    - Tối ưu bộ chọn form bắt cả `event.target`, `closest` và `event.submitter`.
+    - Phòng thủ fallback: chỉ redirect khi backend chuyển hướng về trang `/account/login`. Các trường hợp trả về HTML khác đều hiển thị thông báo lỗi và giữ nguyên trang, tuyệt đối không tự ý chuyển hướng sang `/cart`.
+- **Files đã sửa**:
+  - `src/PhoneStore.Web/Views/Products/Index.cshtml`
+  - `src/PhoneStore.Web/wwwroot/js/site.js`
+  - `docs/PROGRESS.md`
+- **Kết quả đạt được**:
+  - Thao tác "Thêm vào giỏ" tại trang Danh sách sản phẩm (`/products`) hoạt động đồng nhất với Trang chủ (`/`) và Trang chi tiết (`/products/{id}`): không chuyển trang, không reload, không mất vị trí cuộn, hiển thị toast thành công, cập nhật ngay lập tức badge giỏ hàng trên Header, cho phép tiếp tục thêm sản phẩm khác.
+- **Tuân thủ nghiêm ngặt**: Không đụng DB/migration, không sửa UI ngoài phạm vi, không làm gián đoạn tính năng khác, không commit/push. Chờ user kiểm tra trực tiếp trên Chrome tại `http://localhost:5015/products`.
+
+Cập nhật 2026-11-12 — S29.9J **READY FOR USER TEST, Compact Cart UI/UX (Zoom 100%)**:
+- **Mục tiêu**: Tối ưu trực tiếp giao diện `/cart` của Customer Web, thu gọn layout để người dùng có thể xem trọn vẹn danh sách 3–4 sản phẩm cùng bảng tóm tắt đơn hàng và nút thanh toán trong một viewport laptop ở Chrome zoom 100% mà không cần cuộn trang.
+- **Thực hiện chi tiết**:
+  - **Bố cục & Header**:
+    - Loại bỏ banner cồng kềnh, thay bằng header nhỏ gọn: breadcrumbs mảnh "Trang chủ / Giỏ hàng", tiêu đề "Giỏ hàng (X sản phẩm)" hiển thị tổng số lượng thực tế, và link "← Tiếp tục mua sắm".
+    - Giới hạn chiều rộng nội dung tối đa 1180px, căn giữa trang.
+    - Chia bố cục Desktop 2 cột: Cột trái 68% (Danh sách sản phẩm) và Cột phải 32% (Tóm tắt đơn hàng).
+  - **Hàng sản phẩm thu gọn (Chiều cao mục tiêu 105–115px)**:
+    - Chiều cao thực tế 106px (ảnh 76×76px + padding 14px + viền 1px).
+    - Cấu trúc 1 hàng ngang trên Desktop: Ảnh thu nhỏ 76×76px bo góc 8px -> Tên sản phẩm & đơn giá -> Bộ điều khiển số lượng stepper (− / +) -> Thành tiền nổi bật màu xanh thương hiệu -> Nút Xóa (icon thùng rác + nhãn hover đỏ).
+    - Bộ stepper (− / +): Tự động giảm/tăng số lượng và gửi cập nhật về backend, vô hiệu hóa nút trừ khi số lượng là 1, chặn vượt quá tồn kho.
+  - **Khung tóm tắt đơn hàng (Bên phải)**:
+    - Chỉ hiển thị 4 thành phần thiết yếu: Tổng số lượng sản phẩm, Tạm tính, Tổng cộng (20px bold), và Nút "Tiến hành đặt hàng →".
+    - Hoàn toàn không lặp lại danh sách sản phẩm ở cột phải.
+    - Giữ nguyên luồng kiểm tra `CanCheckout` và chuyển sang `/checkout`.
+  - **Responsive & Tương thích**:
+    - Đảm bảo giỏ hàng 3–4 sản phẩm hiển thị đầy đủ trong 1 màn hình laptop zoom 100%. Khi nhiều sản phẩm (> 5), cuộn tự nhiên.
+    - Không sinh thanh cuộn ngang, không dùng CSS zoom/scale.
+    - Responsive mượt mà trên Laptop, Tablet (991px xếp chồng) và Mobile (680px tối ưu 2 hàng gọn gàng).
+    - Bảo toàn 100% dữ liệu SessionCart, kiểm tra tồn kho, CSRF token, không ảnh hưởng các màn hình khác (Home, Catalog, Detail, Checkout, Admin).
+- **Files đã sửa**:
+  - `src/PhoneStore.Web/Views/Cart/Index.cshtml`
+  - `src/PhoneStore.Web/wwwroot/css/site.css`
+  - `src/PhoneStore.Web/wwwroot/js/site.js`
+  - `docs/PROGRESS.md`
+- **Tuân thủ nghiêm ngặt**: Không đụng DB/migration, không sửa UI ngoài phạm vi, không chạy build/test/server, không stage/commit/push. Chờ user kiểm tra trực tiếp trên Chrome zoom 100% tại `http://localhost:5015/cart`.
+
+Cập nhật 2026-11-12 — S29.9J.0 **READY FOR USER TEST, điều hướng Header Dropdown Navigation (Tài khoản & Giỏ hàng)**:
+- **Mục tiêu**: Nâng cấp khu vực điều hướng trên Header của Customer Web (`http://localhost:5015`), thay thế các liên kết rời rạc bằng 2 dropdown độc lập (Tài khoản & Giỏ hàng), đồng bộ nhận diện thương hiệu, tối ưu trải nghiệm người dùng ở zoom 100%.
+- **Thực hiện chi tiết**:
+  - **Dropdown Tài khoản (khi đã đăng nhập)**:
+    - Trigger hiển thị gọn gàng: icon tài khoản SVG, tên người dùng linh hoạt (`Xin chào, @User.Identity.Name`), mũi tên chevron xoay 180° khi mở.
+    - Click vào lời chào chỉ mở/đóng dropdown, không tự động điều hướng sang Đơn hàng.
+    - Menu dropdown gồm đúng 2 mục chuẩn:
+      1. *Hồ sơ của tôi*: điều hướng đến `/account/profile`.
+      2. *Đăng xuất*: sử dụng POST `/account/logout` với antiforgery token bảo mật theo luồng hiện có.
+    - Khi chưa đăng nhập: giữ nguyên liên kết Đăng nhập (`/account/login`) với icon tài khoản hài hòa cùng phong cách mới.
+  - **Dropdown Giỏ hàng (áp dụng toàn bộ)**:
+    - Trigger hiển thị: icon giỏ hàng SVG, chữ "Giỏ hàng", badge số lượng (`<b>@CartStore.Count</b>`), mũi tên chevron xoay 180° khi mở.
+    - Click vào khu vực Giỏ hàng chỉ mở/đóng dropdown, không tự động chuyển hướng sang trang `/cart`.
+    - Menu dropdown gồm đúng 2 mục chuẩn:
+      1. *Đơn hàng của tôi*: điều hướng đến `/orders` (nếu chưa đăng nhập sẽ tự chuyển đến login với returnUrl).
+      2. *Giỏ hàng của tôi*: điều hướng đến `/cart`.
+    - Badge giỏ hàng phản ánh chính xác số lượng từ `CartStore.Count` và tương thích 100% với hàm `updateCartCount` AJAX từ S29.9I.1.
+  - **UI/UX & Tương tác**:
+    - Nền trắng tinh tế, viền mảnh `#d9e2ee`, bo góc 12px, bóng đổ nhẹ (`box-shadow`), icon riêng cho từng mục.
+    - Hiệu ứng hover và focus-visible sắc nét; `z-index: 1050` đảm bảo không bị che khuất bởi banner/hero/content bên dưới.
+    - Click lần 1 mở, click lần 2 đóng; click ra ngoài tự đóng; nhấn phím Escape tự đóng và focus lại nút bấm; mở dropdown này thì dropdown kia tự đóng; đóng khi focus rời khỏi dropdown; chỉ mở khi click chuột (không mở khi rê chuột qua).
+    - Responsive linh hoạt: desktop, tablet và mobile (rút gọn text, giữ icon và badge, dropdown căn sát mép phải không tràn màn hình).
+- **Files đã sửa**:
+  - `src/PhoneStore.Web/Views/Shared/_Layout.cshtml`
+  - `src/PhoneStore.Web/wwwroot/css/site.css`
+  - `src/PhoneStore.Web/wwwroot/js/site.js`
+  - `docs/PROGRESS.md`
+- **Tuân thủ nghiêm ngặt**: Không đụng DB/migration, không sửa UI Home/Catalog/Product Detail/Checkout/Admin, không làm gián đoạn AJAX Add to Cart, không chạy build/test/server, không stage/commit/push. Chờ user kiểm tra trực tiếp trên Chrome zoom 100% tại `http://localhost:5015`.
+
+Cập nhật 2026-11-12 — S29.9I.3 **READY FOR USER TEST, tối ưu Sản phẩm liên quan thành 6 card nhỏ gọn (Desktop 6 cột)**:
+- **Mục tiêu**: Nâng cấp khu vực "Sản phẩm liên quan" trong trang Chi tiết sản phẩm (`/products/{id}`), hiển thị tối đa 6 sản phẩm liên quan trên cùng 1 hàng desktop (thay vì 4 card lớn), thu gọn kích thước card và ảnh, đảm bảo đồng bộ thiết kế, không ảnh hưởng Home và Catalog.
+- **Thực hiện chi tiết**:
+  - **Backend (`ProductCatalogReader.cs`)**:
+    - Điều chỉnh truy vấn `GetRelatedAsync`: tăng giới hạn `.Take(4)` thành `.Take(6)`, giữ nguyên điều kiện lọc theo cùng danh mục hoặc cùng thương hiệu, loại trừ sản phẩm hiện tại (`p.ProductId != product.ProductId`), sắp xếp mới nhất.
+  - **CSS Scoped (`site.css`)**:
+    - Định dạng `.detail-related-grid`: Desktop rộng (≥ 1400px) hiển thị chính xác 6 cột (`repeat(6, minmax(0, 1fr))`), `gap: 13px`.
+    - Card thu gọn: padding `11px 11px 12px`, bo góc 14px, đổ bóng nhẹ.
+    - Ảnh sản phẩm: chiều cao chuẩn `145px` (trong khoảng 140–150px), `object-fit: contain`, nền gradient xanh nhạt bo góc, zoom nhẹ khi hover.
+    - Thông tin: tên sản phẩm font 13.5px tối đa 2 dòng (`-webkit-line-clamp: 2`, cao cố định 36px cân bằng hàng), giá 18px đậm rõ, badge RAM và bộ nhớ 10px nhỏ gọn, tồn kho rõ ràng.
+    - Cặp nút thao tác: nút "Thêm vào giỏ" (34px, font 11.5px bold, icon 13px) và nút "Chi tiết" (34px, font 11.5px, viền mảnh) nằm cùng hàng ngang gọn gàng.
+  - **Responsive đa màn hình**:
+    - Desktop rộng (≥ 1400px): 6 cột (toàn bộ 6 sản phẩm trên 1 hàng).
+    - Laptop (1200–1399px): 5 cột (`repeat(5, minmax(0, 1fr))`).
+    - Tablet / Màn hình vừa (961–1199px): 4 cột.
+    - Tablet (681–960px): 3 cột.
+    - Mobile (361–680px): 2 cột (ảnh 140px, 2 nút chuyển sang xếp dọc dễ bấm).
+    - Mobile nhỏ (≤ 360px): 1 cột, không tràn ngang.
+  - **Bảo toàn**: Không ảnh hưởng `.product-card` hay `.product-grid` trên Home và Catalog; giữ nguyên 100% luồng Thêm vào giỏ AJAX không reload từ S29.9I.1.
+- **Files đã sửa**:
+  - `src/PhoneStore.Data/Catalog/ProductCatalogReader.cs`
+  - `src/PhoneStore.Web/wwwroot/css/site.css`
+  - `docs/PROGRESS.md`
+- **Tuân thủ nghiêm ngặt**: Không đụng DB/migration, không sửa UI Home/Catalog/Cart/Admin, không chạy build/test/server, không stage/commit/push. Chờ user kiểm tra trực tiếp trên Chrome zoom 100% tại `http://localhost:5015/products/29`.
+
 Cập nhật 2026-11-12 — S29.9I.2 **READY FOR USER TEST, gộp Thông số kỹ thuật & Mô tả sản phẩm thành bố cục 2 cột (60/40)**:
 - **Mục tiêu**: Tái cấu trúc giao diện trang Chi tiết sản phẩm (`/products/{id}`), đưa 2 khối Thông số kỹ thuật và Mô tả sản phẩm lên cùng một hàng theo tỷ lệ 60% / 40% (CSS Grid `3fr 2fr`), chiều cao 2 khung bằng nhau, khối Sản phẩm liên quan nằm bên dưới toàn chiều rộng.
 - **Thực hiện chi tiết**:

@@ -28,7 +28,7 @@ public sealed class ProductCatalogReader(PhoneStoreDbContext db)
         await Cards(db.Products.AsNoTracking()
             .Where(p => p.IsActive && p.ProductId != product.ProductId
                 && (p.CategoryId == product.CategoryId || p.BrandId == product.BrandId))
-            .OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.ProductId).Take(4))
+            .OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.ProductId).Take(6))
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<ProductCard>> GetProductsAsync(

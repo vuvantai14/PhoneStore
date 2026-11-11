@@ -26,17 +26,75 @@ if (Context.Request.Query.ContainsKey(key)) { <input type="hidden" name="@key" v
 <div class="header-actions">
 @if (User.Identity?.IsAuthenticated == true)
 {
-    <a class="auth-greeting" href="/orders" title="Đơn hàng của tôi">Xin chào, @User.Identity.Name</a>
-    @if (User.IsInRole("Customer")) { <a href="/account/profile">Hồ sơ của tôi</a> }
-    <form asp-controller="Account" asp-action="Logout" method="post" class="header-logout">
-        <button type="submit" class="logout-button">Đăng xuất</button>
-    </form>
+    <div class="header-dropdown account-dropdown" data-header-dropdown>
+        <button type="button" class="header-dropdown-trigger auth-greeting-btn" aria-expanded="false" aria-haspopup="true" aria-controls="account-dropdown-menu" id="account-dropdown-trigger">
+            <svg class="dropdown-trigger-icon" aria-hidden="true" viewBox="0 0 24 24">
+                <circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/>
+                <path d="M4.5 21v-2a7.5 7.5 0 0 1 15 0v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span class="auth-greeting-name">Xin chào, @User.Identity.Name</span>
+            <svg class="dropdown-chevron" aria-hidden="true" viewBox="0 0 24 24">
+                <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        <div id="account-dropdown-menu" class="header-dropdown-menu" role="menu" aria-labelledby="account-dropdown-trigger">
+            <a class="dropdown-item" href="/account/profile" role="menuitem">
+                <svg class="dropdown-item-icon" aria-hidden="true" viewBox="0 0 24 24">
+                    <circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <path d="M4.5 21v-2a7.5 7.5 0 0 1 15 0v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span>Hồ sơ của tôi</span>
+            </a>
+            <form asp-controller="Account" asp-action="Logout" method="post" class="dropdown-logout-form">
+                <button type="submit" class="dropdown-item dropdown-logout-btn" role="menuitem">
+                    <svg class="dropdown-item-icon" aria-hidden="true" viewBox="0 0 24 24">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Đăng xuất</span>
+                </button>
+            </form>
+        </div>
+    </div>
 }
 else
 {
-    <a class="auth-entry" href="/account/login" aria-label="Đăng nhập"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21v-2a7.5 7.5 0 0 1 15 0v2"/></svg><span>Đăng nhập</span></a>
+    <a class="auth-entry" href="/account/login" aria-label="Đăng nhập">
+        <svg class="dropdown-trigger-icon" aria-hidden="true" viewBox="0 0 24 24">
+            <circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M4.5 21v-2a7.5 7.5 0 0 1 15 0v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span>Đăng nhập</span>
+    </a>
 }
-<a class="cart-entry" href="/cart" aria-label="Giỏ hàng, @CartStore.Count sản phẩm"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 3h2l3 12h11l2-8H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg><span>Giỏ hàng <b>@CartStore.Count</b></span></a>
+<div class="header-dropdown cart-dropdown" data-header-dropdown>
+    <button type="button" class="header-dropdown-trigger cart-entry" aria-expanded="false" aria-haspopup="true" aria-controls="cart-dropdown-menu" id="cart-dropdown-trigger" aria-label="Giỏ hàng, @CartStore.Count sản phẩm">
+        <svg class="dropdown-trigger-icon" aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M3 3h2l3 12h11l2-8H6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="9" cy="20" r="1.5" fill="currentColor"/>
+            <circle cx="18" cy="20" r="1.5" fill="currentColor"/>
+        </svg>
+        <span class="cart-entry-text">Giỏ hàng <b>@CartStore.Count</b></span>
+        <svg class="dropdown-chevron" aria-hidden="true" viewBox="0 0 24 24">
+            <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </button>
+    <div id="cart-dropdown-menu" class="header-dropdown-menu" role="menu" aria-labelledby="cart-dropdown-trigger">
+        <a class="dropdown-item" href="/orders" role="menuitem">
+            <svg class="dropdown-item-icon" aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 5h6M9 12h6M9 16h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Đơn hàng của tôi</span>
+        </a>
+        <a class="dropdown-item" href="/cart" role="menuitem">
+            <svg class="dropdown-item-icon" aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M3 3h2l3 12h11l2-8H6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="9" cy="20" r="1.5" fill="currentColor"/>
+                <circle cx="18" cy="20" r="1.5" fill="currentColor"/>
+            </svg>
+            <span>Giỏ hàng của tôi</span>
+        </a>
+    </div>
+</div>
 </div>
 </div></header>
 <main id="main-content" tabindex="-1">@RenderBody()</main>

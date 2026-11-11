@@ -17,10 +17,11 @@
         <p>Lựa chọn theo thương hiệu, nhu cầu và mức giá phù hợp với cam kết chính hãng.</p>
     </div>
 
-    <form action="/products" method="get" class="catalog-layout" id="catalogFilterForm">
+    <div class="catalog-layout">
         <!-- Sidebar Bộ lọc sản phẩm -->
         <aside class="catalog-sidebar" id="catalogSidebar">
-            <div class="filter-panel">
+            <form action="/products" method="get" class="filter-panel" id="catalogFilterForm">
+                <input type="hidden" name="sort" id="filterSortInput" value="@Model.Filter.Sort" />
                 <div class="filter-panel-header">
                     <div class="filter-panel-title">
                         <svg class="filter-icon" viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -167,7 +168,7 @@
                         </a>
                     </div>
                 </div>
-            </div>
+            </form>
         </aside>
 
         <!-- Phần hiển thị sản phẩm -->
@@ -190,7 +191,7 @@
                 </div>
                 <div class="sort-control">
                     <label for="sort">Sắp xếp:</label>
-                    <select id="sort" name="sort" onchange="this.form.submit()">
+                    <select id="sort" onchange="var s = document.getElementById('filterSortInput'); if (s) s.value = this.value; var f = document.getElementById('catalogFilterForm'); if (f) f.submit();">
                         <option value="newest" selected="@(Model.Filter.Sort == "newest")">Mới nhất</option>
                         <option value="price-asc" selected="@(Model.Filter.Sort == "price-asc")">Giá tăng dần</option>
                         <option value="price-desc" selected="@(Model.Filter.Sort == "price-desc")">Giá giảm dần</option>
@@ -295,7 +296,7 @@
                 }
             }
         </section>
-    </form>
+    </div>
 </div>
 
 @section Scripts {
