@@ -19,6 +19,7 @@ public sealed class OrdersController(IOrderService orders, IOrderManagementServi
     public async Task<IActionResult> Index([FromQuery] OrderFilterViewModel? filter, CancellationToken ct)
     {
         filter ??= new OrderFilterViewModel();
+        const int pageSize = 10;
         try
         {
             var (isValid, errorMessage, fromUtc, toUtc) = ValidateAndResolveDateRange(filter, VietnamTz);
@@ -28,18 +29,72 @@ public sealed class OrdersController(IOrderService orders, IOrderManagementServi
                 {
                     Orders = [],
                     Filter = filter,
-                    ErrorMessage = errorMessage
+                    ErrorMessage = errorMessage,
+                    TotalCount = 0,
+                    PageNumber = 1,
+                    PageSize = pageSize
                 });
             }
 
-            var result = await orders.GetCustomerOrdersAsync(UserId, filter.Status, fromUtc, toUtc, ct);
+            var targetPage = filter.Page < 1 ? 1 : filter.Page;
+            var pagedResult = await orders.GetPagedCustomerOrdersAsync(
+                UserId, filter.Status, fromUtc, toUtc, targetPage, pageSize, ct);
+
+            filter.Page = pagedResult.PageNumber;
+
             return View(new CustomerOrdersViewModel
             {
-                Orders = result,
-                Filter = filter
+                Orders = pagedResult.Orders,
+                Filter = filter,
+                TotalCount = pagedResult.TotalCount,
+                PageNumber = pagedResult.PageNumber,
+                PageSize = pagedResult.PageSize
             });
         }
         catch (DbException) { return StatusCode(503, "Chưa thể tải danh sách đơn hàng. Vui lòng thử lại sau."); }
+    }
+
+    public static string BuildFilterUrl(OrderFilterViewModel filter, int? targetPage = null)
+    {
+        var query = new List<string>();
+
+        if (filter.Status.HasValue)
+            query.Add($"status={filter.Status.Value}");
+
+        if (!string.IsNullOrWhiteSpace(filter.DateFilterType) && filter.DateFilterType != "all")
+        {
+            query.Add($"dateFilterType={Uri.EscapeDataString(filter.DateFilterType)}");
+            switch (filter.DateFilterType.ToLowerInvariant())
+            {
+                case "day":
+                    if (!string.IsNullOrWhiteSpace(filter.Day))
+                        query.Add($"day={Uri.EscapeDataString(filter.Day)}");
+                    break;
+                case "month":
+                    if (filter.Month.HasValue)
+                        query.Add($"month={filter.Month.Value}");
+                    if (filter.MonthYear.HasValue)
+                        query.Add($"monthYear={filter.MonthYear.Value}");
+                    break;
+                case "year":
+                    if (filter.Year.HasValue)
+                        query.Add($"year={filter.Year.Value}");
+                    break;
+                case "range":
+                    if (!string.IsNullOrWhiteSpace(filter.FromDate))
+                        query.Add($"fromDate={Uri.EscapeDataString(filter.FromDate)}");
+                    if (!string.IsNullOrWhiteSpace(filter.ToDate))
+                        query.Add($"toDate={Uri.EscapeDataString(filter.ToDate)}");
+                    break;
+            }
+        }
+
+        if (targetPage.HasValue && targetPage.Value > 1)
+        {
+            query.Add($"page={targetPage.Value}");
+        }
+
+        return query.Count > 0 ? $"/orders?{string.Join("&", query)}" : "/orders";
     }
 
     private static (bool IsValid, string? ErrorMessage, DateTime? FromUtc, DateTime? ToExclusiveUtc) ValidateAndResolveDateRange(OrderFilterViewModel filter, TimeZoneInfo tz)

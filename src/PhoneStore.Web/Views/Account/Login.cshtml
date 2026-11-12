@@ -1,21 +1,59 @@
-@model LoginViewModel
-@{ ViewData["Title"] = "Đăng nhập"; }
-<div class="container auth-page customer-account-page login-page">
-    <section class="auth-card" aria-labelledby="auth-title">
-        <div class="auth-intro"><span class="eyebrow">TÀI KHOẢN PHONESTORE</span><h1 id="auth-title">Chào mừng trở lại.</h1><p>Đăng nhập để tiếp tục cùng PhoneStore.</p></div>
+@model PhoneStore.Web.Models.LoginViewModel
+@{
+    ViewData["Title"] = "Đăng nhập";
+}
+
+<div class="auth-compact auth-compact-login">
+    <section class="auth-compact-card" aria-labelledby="auth-title">
+        <!-- Đầu trang gọn gàng -->
+        <div class="auth-compact-header">
+            <h1 id="auth-title" class="auth-compact-title">Chào mừng trở lại</h1>
+            <p class="auth-compact-subtitle">Đăng nhập để tiếp tục cùng PhoneStore.</p>
+        </div>
+
         @if (TempData["AuthSuccess"] is string message)
         {
-            <div class="auth-success" role="status">@message</div>
+            <div class="auth-compact-alert auth-compact-alert-success" role="status">
+                <svg class="alert-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+                <span>@message</span>
+            </div>
         }
-        <form asp-controller="Account" asp-action="Login" method="post" class="auth-form" data-ui-submit data-pending-label="Đang đăng nhập…">
+
+        <form asp-controller="Account" asp-action="Login" method="post" class="auth-compact-form" data-ui-submit data-pending-label="Đang đăng nhập…">
             <input asp-for="ReturnUrl" type="hidden" />
-            <div asp-validation-summary="All" class="auth-errors" role="alert" tabindex="-1" data-error-summary aria-label="Thông tin cần kiểm tra"></div>
-            <div class="field"><label asp-for="Email"></label><input asp-for="Email" type="email" autocomplete="username" inputmode="email" placeholder="Email của bạn" required aria-describedby="email-error" /><span asp-validation-for="Email" id="email-error" class="field-error"></span></div>
-            <div class="field"><label asp-for="Password"></label><input asp-for="Password" type="password" value="" autocomplete="current-password" placeholder="Mật khẩu của bạn" required aria-describedby="password-error" /><span asp-validation-for="Password" id="password-error" class="field-error"></span></div>
-            <div class="remember-field"><input asp-for="RememberMe" /><label asp-for="RememberMe"></label></div>
-            <button class="button button-primary auth-submit" type="submit">Đăng nhập <span aria-hidden="true">→</span></button>
+            <div asp-validation-summary="All" class="auth-compact-errors auth-errors" role="alert" tabindex="-1" data-error-summary aria-label="Thông tin cần kiểm tra"></div>
+
+            <div class="auth-compact-field">
+                <label asp-for="Email" class="auth-compact-label">Email</label>
+                <input asp-for="Email" type="email" class="auth-compact-input" autocomplete="username" inputmode="email" placeholder="Email của bạn" required aria-describedby="email-error" />
+                <span asp-validation-for="Email" id="email-error" class="field-error"></span>
+            </div>
+
+            <div class="auth-compact-field">
+                <label asp-for="Password" class="auth-compact-label">Mật khẩu</label>
+                <input asp-for="Password" type="password" value="" class="auth-compact-input" autocomplete="current-password" placeholder="Mật khẩu của bạn" required aria-describedby="password-error" />
+                <span asp-validation-for="Password" id="password-error" class="field-error"></span>
+            </div>
+
+            <div class="auth-compact-remember">
+                <input asp-for="RememberMe" class="auth-compact-checkbox" id="RememberMe" />
+                <label asp-for="RememberMe" for="RememberMe" class="auth-compact-checkbox-label">Ghi nhớ đăng nhập</label>
+            </div>
+
+            <button class="button button-primary auth-compact-submit" type="submit">
+                <span>Đăng nhập</span>
+                <span aria-hidden="true">→</span>
+            </button>
         </form>
-        <p class="auth-switch">Chưa có tài khoản? <a href="/account/register">Đăng ký</a></p>
-        <a href="/products" class="auth-back">← Tiếp tục khám phá sản phẩm</a>
+
+        <div class="auth-compact-footer">
+            <p class="auth-compact-switch">
+                Chưa có tài khoản? <a href="/account/register">Đăng ký ngay</a>
+            </p>
+            <a href="/products" class="auth-compact-back">← Tiếp tục khám phá sản phẩm</a>
+        </div>
     </section>
 </div>

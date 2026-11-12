@@ -13,5 +13,6 @@ public interface IOrderService
     Task<OrderReceipt?> GetReceiptAsync(int orderId, int userId, CancellationToken ct = default);
     Task<IReadOnlyList<CustomerOrderRow>> GetCustomerOrdersAsync(int userId, CancellationToken ct = default);
     Task<IReadOnlyList<CustomerOrderRow>> GetCustomerOrdersAsync(int userId, OrderStatus? status, DateTime? fromUtc, DateTime? toExclusiveUtc, CancellationToken ct = default);
+    Task<PagedCustomerOrdersResult> GetPagedCustomerOrdersAsync(int userId, OrderStatus? status, DateTime? fromUtc, DateTime? toExclusiveUtc, int page = 1, int pageSize = 10, CancellationToken ct = default);
 }
 

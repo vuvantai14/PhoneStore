@@ -87,5 +87,57 @@ public sealed class PurchaseStore(PhoneStoreDbContext db)
             .Select(order => new CustomerOrderRow(order.OrderId, order.OrderCode, order.OrderDate,
                 order.TotalAmount, order.Status, order.ReceiverName)).ToListAsync(ct);
     }
+
+    public async Task<PagedCustomerOrdersResult> CustomerOrdersPagedAsync(
+        int userId,
+        OrderStatus? status,
+        DateTime? fromUtc,
+        DateTime? toExclusiveUtc,
+        int page,
+        int pageSize,
+        CancellationToken ct)
+    {
+        pageSize = pageSize <= 0 ? 10 : pageSize;
+
+        var query = db.Orders.AsNoTracking().Where(order => order.UserId == userId);
+        if (status.HasValue)
+            query = query.Where(order => order.Status == status.Value);
+        if (fromUtc.HasValue)
+            query = query.Where(order => order.OrderDate >= fromUtc.Value);
+        if (toExclusiveUtc.HasValue)
+            query = query.Where(order => order.OrderDate < toExclusiveUtc.Value);
+
+        var totalCount = await query.CountAsync(ct);
+
+        var totalPages = totalCount > 0 ? (int)Math.Ceiling((double)totalCount / pageSize) : 0;
+        var normalizedPage = page < 1 ? 1 : page;
+        if (totalCount == 0)
+        {
+            normalizedPage = 1;
+        }
+        else if (normalizedPage > totalPages)
+        {
+            normalizedPage = totalPages;
+        }
+
+        var skip = (normalizedPage - 1) * pageSize;
+        var orders = totalCount == 0
+            ? (IReadOnlyList<CustomerOrderRow>)[]
+            : await query
+                .OrderByDescending(order => order.OrderDate)
+                .ThenByDescending(order => order.OrderId)
+                .Skip(skip)
+                .Take(pageSize)
+                .Select(order => new CustomerOrderRow(
+                    order.OrderId,
+                    order.OrderCode,
+                    order.OrderDate,
+                    order.TotalAmount,
+                    order.Status,
+                    order.ReceiverName))
+                .ToListAsync(ct);
+
+        return new PagedCustomerOrdersResult(orders, totalCount, normalizedPage, pageSize);
+    }
 }
 

@@ -1,6 +1,7 @@
 @model PhoneStore.Web.Models.CustomerOrdersViewModel
 @using PhoneStore.Models.Enums
 @using PhoneStore.Models.Management
+@using PhoneStore.Web.Controllers
 @using System.Globalization
 @{
     ViewData["Title"] = "Đơn hàng của tôi";
@@ -191,6 +192,113 @@
                 </article>
             }
         </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            var fromIndex = (Model.PageNumber - 1) * Model.PageSize + 1;
+            var toIndex = Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount);
+
+            List<int?> pageNumbers = new();
+            if (Model.TotalPages <= 7)
+            {
+                for (int i = 1; i <= Model.TotalPages; i++) pageNumbers.Add(i);
+            }
+            else
+            {
+                pageNumbers.Add(1);
+                if (Model.PageNumber > 3)
+                {
+                    pageNumbers.Add(null);
+                }
+
+                var start = Math.Max(2, Model.PageNumber - 1);
+                var end = Math.Min(Model.TotalPages - 1, Model.PageNumber + 1);
+
+                if (Model.PageNumber <= 3)
+                {
+                    end = 4;
+                }
+                else if (Model.PageNumber >= Model.TotalPages - 2)
+                {
+                    start = Model.TotalPages - 3;
+                }
+
+                for (int i = start; i <= end; i++)
+                {
+                    pageNumbers.Add(i);
+                }
+
+                if (Model.PageNumber < Model.TotalPages - 2)
+                {
+                    pageNumbers.Add(null);
+                }
+                pageNumbers.Add(Model.TotalPages);
+            }
+
+            <div class="orders-pagination-wrapper">
+                <p class="orders-pagination-info">
+                    Hiển thị <strong>@fromIndex–@toIndex</strong> trong tổng số <strong>@Model.TotalCount</strong> đơn hàng
+                </p>
+
+                <nav class="orders-pagination" aria-label="Phân trang đơn hàng">
+                    @if (Model.HasPreviousPage)
+                    {
+                        <a class="pagination-btn pagination-prev" href="@OrdersController.BuildFilterUrl(Model.Filter, targetPage: Model.PageNumber - 1)" aria-label="Trang trước">
+                            <svg class="pagination-icon" viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M15 18l-6-6 6-6"/>
+                            </svg>
+                            <span>Trước</span>
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="pagination-btn pagination-prev disabled" aria-disabled="true" aria-label="Trang trước (không khả dụng)">
+                            <svg class="pagination-icon" viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M15 18l-6-6 6-6"/>
+                            </svg>
+                            <span>Trước</span>
+                        </span>
+                    }
+
+                    <div class="pagination-pages" role="list">
+                        @foreach (var p in pageNumbers)
+                        {
+                            if (!p.HasValue)
+                            {
+                                <span class="pagination-ellipsis" aria-hidden="true">…</span>
+                            }
+                            else if (p.Value == Model.PageNumber)
+                            {
+                                <span class="pagination-page active" aria-current="page" role="listitem">@p.Value</span>
+                            }
+                            else
+                            {
+                                <a class="pagination-page" href="@OrdersController.BuildFilterUrl(Model.Filter, targetPage: p.Value)" aria-label="Trang @p.Value" role="listitem">@p.Value</a>
+                            }
+                        }
+                    </div>
+
+                    @if (Model.HasNextPage)
+                    {
+                        <a class="pagination-btn pagination-next" href="@OrdersController.BuildFilterUrl(Model.Filter, targetPage: Model.PageNumber + 1)" aria-label="Trang tiếp">
+                            <span>Tiếp</span>
+                            <svg class="pagination-icon" viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="pagination-btn pagination-next disabled" aria-disabled="true" aria-label="Trang tiếp (không khả dụng)">
+                            <span>Tiếp</span>
+                            <svg class="pagination-icon" viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </span>
+                    }
+                </nav>
+            </div>
+        }
     }
 </div>
 

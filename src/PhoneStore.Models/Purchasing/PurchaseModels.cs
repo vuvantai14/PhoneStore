@@ -10,6 +10,17 @@ public sealed record OrderCreationResult(int? OrderId, string? Error);
 public sealed record PurchasedItem(string ProductName, int Quantity, decimal UnitPrice);
 public sealed record CustomerOrderRow(int OrderId, string OrderCode, DateTime OrderDate, decimal TotalAmount,
     OrderStatus Status, string ReceiverName);
+public sealed record PagedCustomerOrdersResult(
+    IReadOnlyList<CustomerOrderRow> Orders,
+    int TotalCount,
+    int PageNumber,
+    int PageSize)
+{
+    public int TotalPages => PageSize <= 0 ? 0 : (int)Math.Ceiling((double)TotalCount / PageSize);
+    public int CurrentPage => PageNumber;
+    public bool HasPreviousPage => PageNumber > 1;
+    public bool HasNextPage => PageNumber < TotalPages;
+}
 public sealed class OrderReceipt
 {
     public int OrderId { get; init; }

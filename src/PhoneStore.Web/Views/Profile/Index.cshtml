@@ -1,18 +1,100 @@
-@model CustomerProfileViewModel
-@{ ViewData["Title"] = "Hồ sơ của tôi"; }
-<div class="container auth-page customer-account-page customer-profile-page">
-    <section class="auth-card" aria-labelledby="profile-title">
-        <div class="auth-intro"><span class="eyebrow">TÀI KHOẢN CỦA BẠN</span><h1 id="profile-title">Hồ sơ của tôi</h1><p>Xem và cập nhật thông tin cá nhân của bạn.</p></div>
-        <div class="profile-identity" role="group" aria-label="Email đăng nhập"><span class="profile-identity-label">Email đăng nhập</span><strong>@Model.Email</strong><p>Email không thể thay đổi tại đây.</p></div>
-        @if (TempData["ProfileSuccess"] is string message) { <p class="auth-success" role="status">@message</p> }
-        <p class="account-required-hint">Các trường có dấu * là bắt buộc.</p>
-        <form asp-controller="Profile" asp-action="Index" method="post" class="auth-form" data-ui-submit data-pending-label="Đang lưu hồ sơ…">
-            <div asp-validation-summary="All" class="auth-errors" role="alert" tabindex="-1" data-error-summary aria-label="Thông tin cần kiểm tra"></div>
-            <div class="field"><label asp-for="FullName">Họ tên <span aria-hidden="true">*</span></label><input asp-for="FullName" autocomplete="name" required minlength="2" aria-describedby="profile-name-error" /><span asp-validation-for="FullName" class="field-error" id="profile-name-error"></span></div>
-            <div class="field"><label asp-for="Phone"></label><span class="optional-label">Không bắt buộc</span><input asp-for="Phone" type="tel" autocomplete="tel" aria-describedby="profile-phone-error" /><span asp-validation-for="Phone" class="field-error" id="profile-phone-error"></span></div>
-            <div class="field"><label asp-for="Address"></label><span class="optional-label">Không bắt buộc</span><textarea asp-for="Address" rows="3" autocomplete="street-address" aria-describedby="profile-address-error"></textarea><span asp-validation-for="Address" class="field-error" id="profile-address-error"></span></div>
-            <button type="submit" class="button button-primary">Lưu hồ sơ</button>
+@model PhoneStore.Web.Models.CustomerProfileViewModel
+@{
+    ViewData["Title"] = "Hồ sơ của tôi";
+}
+
+<div class="profile-compact">
+    <!-- Breadcrumb -->
+    <nav class="profile-breadcrumbs" aria-label="Đường dẫn">
+        <a href="/">Trang chủ</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">Hồ sơ của tôi</span>
+    </nav>
+
+    <!-- Khung hồ sơ compact -->
+    <section class="profile-card" aria-labelledby="profile-title">
+        <!-- Đầu trang thu gọn -->
+        <div class="profile-header">
+            <h1 id="profile-title" class="profile-title">Hồ sơ của tôi</h1>
+            <p class="profile-subtitle">Xem và cập nhật thông tin liên hệ cho các đơn hàng của bạn.</p>
+        </div>
+
+        <!-- Thông báo cập nhật thành công -->
+        @if (TempData["ProfileSuccess"] is string message)
+        {
+            <div class="profile-alert profile-alert-success" role="status">
+                <svg class="alert-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+                <span>@message</span>
+            </div>
+        }
+
+        <!-- Hàng hiển thị Email đăng nhập (chỉ đọc) -->
+        <div class="profile-email-row" role="group" aria-label="Email đăng nhập">
+            <div class="profile-email-label">
+                <svg class="email-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <rect width="20" height="16" x="2" y="4" rx="2" />
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                </svg>
+                <span>Email:</span>
+            </div>
+            <div class="profile-email-value">
+                <strong>@Model.Email</strong>
+                <span class="profile-badge-readonly" title="Email định danh tài khoản, không thể thay đổi">Chỉ đọc</span>
+            </div>
+        </div>
+
+        <!-- Form cập nhật hồ sơ -->
+        <form asp-controller="Profile" asp-action="Index" method="post" class="profile-form" data-ui-submit data-pending-label="Đang lưu hồ sơ…">
+            <div asp-validation-summary="All" class="profile-errors auth-errors" role="alert" tabindex="-1" data-error-summary aria-label="Thông tin cần kiểm tra"></div>
+
+            <!-- Hàng 1: Họ tên (50%) & Số điện thoại (50%) -->
+            <div class="profile-row-two-col">
+                <div class="profile-field">
+                    <label asp-for="FullName" class="profile-label">
+                        Họ tên <span class="required-star" aria-hidden="true">*</span>
+                    </label>
+                    <input asp-for="FullName" class="profile-input" autocomplete="name" required minlength="2" placeholder="Nhập họ và tên" aria-describedby="profile-name-error" />
+                    <span asp-validation-for="FullName" class="field-error" id="profile-name-error"></span>
+                </div>
+
+                <div class="profile-field">
+                    <div class="profile-label-wrap">
+                        <label asp-for="Phone" class="profile-label">Số điện thoại</label>
+                        <span class="optional-label">Không bắt buộc</span>
+                    </div>
+                    <input asp-for="Phone" class="profile-input" type="tel" autocomplete="tel" placeholder="Ví dụ: 0901234567" aria-describedby="profile-phone-error" />
+                    <span asp-validation-for="Phone" class="field-error" id="profile-phone-error"></span>
+                </div>
+            </div>
+
+            <!-- Hàng 2: Địa chỉ (100%), textarea gọn 74px -->
+            <div class="profile-field">
+                <div class="profile-label-wrap">
+                    <label asp-for="Address" class="profile-label">Địa chỉ nhận hàng</label>
+                    <span class="optional-label">Không bắt buộc</span>
+                </div>
+                <textarea asp-for="Address" class="profile-textarea" rows="2" autocomplete="street-address" placeholder="Nhập địa chỉ nhận hàng (số nhà, tên đường, phường/xã, quận/huyện...)" aria-describedby="profile-address-error"></textarea>
+                <span asp-validation-for="Address" class="field-error" id="profile-address-error"></span>
+            </div>
+
+            <!-- Hàng thao tác: Nút Lưu hồ sơ + Liên kết Đơn hàng của tôi cùng hàng -->
+            <div class="profile-actions-row">
+                <button type="submit" class="button button-primary profile-btn-submit">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    <span>Lưu hồ sơ</span>
+                </button>
+                <a href="/orders" class="profile-orders-link">
+                    <span>Xem đơn hàng của tôi</span>
+                    <span aria-hidden="true">→</span>
+                </a>
+            </div>
         </form>
-        <p class="auth-switch"><a href="/orders">Xem đơn hàng của tôi <span aria-hidden="true">→</span></a></p>
     </section>
 </div>

@@ -1,5 +1,69 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-12 — S29.9P **READY FOR USER TEST, Compact Login & Register UI/UX**:
+- **Trang Đăng nhập (`/account/login`)**:
+  - Giới hạn card `max-width: 480px`, căn giữa, padding thu gọn còn 24–28px, bỏ đường xanh dày 4px trên đỉnh card và bỏ eyebrow "TÀI KHOẢN PHONESTORE".
+  - Tiêu đề "Chào mừng trở lại" 24px, mô tả ngắn; input Email và Password cao chuẩn 42px; checkbox "Ghi nhớ đăng nhập" 16px gọn gàng; nút "Đăng nhập" xanh PhoneStore 42px.
+  - Hai liên kết "Chưa có tài khoản? Đăng ký ngay" và "← Tiếp tục khám phá sản phẩm" nằm gọn ở footer dưới form. Hiển thị trọn vẹn trong 1 màn hình laptop zoom 100% không cần cuộn trang.
+- **Trang Đăng ký (`/account/register`)**:
+  - Giới hạn card `max-width: 540px`, căn giữa, padding 24–28px, bỏ đường xanh dày và bỏ eyebrow.
+  - Tiêu đề "Tạo tài khoản" 24px; chia bố cục 2 cột (50/50) cho "Họ và tên" & "Số điện thoại", và "Mật khẩu" & "Xác nhận mật khẩu"; Email chiếm toàn bộ chiều rộng (100%).
+  - Tất cả input cao chuẩn 42px; dòng hint mật khẩu 12px thu gọn; nút "Tạo tài khoản" xanh PhoneStore 42px.
+  - Hai liên kết "Đã có tài khoản? Đăng nhập ngay" và "← Tiếp tục khám phá sản phẩm" nằm gọn ở footer. Hiển thị trọn vẹn trong 1 viewport laptop zoom 100%.
+- **Chống hiển thị hộp đỏ rỗng**:
+  - Thêm quy tắc `.auth-compact-errors.validation-summary-valid, .auth-compact-errors:empty { display: none; }` đảm bảo khi form hợp lệ không có bất kỳ viền/nền đỏ thừa nào.
+- **Files đã sửa**:
+  - `src/PhoneStore.Web/Views/Account/Login.cshtml`
+  - `src/PhoneStore.Web/Views/Account/Register.cshtml`
+  - `src/PhoneStore.Web/wwwroot/css/site.css`
+  - `docs/PROGRESS.md`
+- **Bảo toàn**: Giữ nguyên `AccountController`, `LoginViewModel`, `RegisterViewModel`, `data-ui-submit`, antiforgery token, logic mật khẩu và phân quyền. Không đụng DB/migration, không commit/push. Chờ user kiểm tra trực tiếp trên Chrome `http://localhost:5015/account/login` và `/account/register`.
+
+Cập nhật 2026-11-12 — S29.9O.1 **READY FOR USER TEST, Fix Empty Validation Alert trên Profile**:
+- **Nguyên nhân**: Tag helper `asp-validation-summary="All"` của ASP.NET Core luôn sinh sẵn container kèm `<ul><li style="display:none"></li></ul>` và class `validation-summary-valid` khi chưa có lỗi. Khối CSS `.profile-compact .profile-errors ul` trước đó áp dụng padding và border/background đỏ nhạt vô điều kiện, khiến thẻ `<ul>` rỗng hiển thị thành một hộp đỏ trống dưới Email.
+- **Xử lý**:
+  - `site.css`: Thêm `.profile-compact .profile-errors.validation-summary-valid, .profile-compact .profile-errors:empty { display: none; }` để ẩn hoàn toàn khung và không chiếm diện tích khi không có lỗi.
+  - `Views/Profile/Index.cshtml`: Bổ sung class `auth-errors` đồng bộ với line 65 của `site.css`.
+  - Khi có lỗi thực sự (server hoặc client `site.js`), class `validation-summary-valid` bị gỡ bỏ và `validation-summary-errors` được gán vào, khung cảnh báo đỏ nhạt cùng danh sách lỗi hiển thị chính xác.
+- Files đã sửa: `src/PhoneStore.Web/Views/Profile/Index.cshtml`, `src/PhoneStore.Web/wwwroot/css/site.css`, `docs/PROGRESS.md`.
+- Bảo toàn: Giữ nguyên bố cục Compact Profile, không sửa Controller/Model/DB, không commit/push. Chờ user kiểm tra trực tiếp trên Chrome `http://localhost:5015/account/profile`.
+
+Cập nhật 2026-11-12 — S29.9O **READY FOR USER TEST, PhoneStore Compact Profile UI/UX**:
+- Tái thiết kế trực tiếp giao diện Hồ sơ của tôi tại `Views/Profile/Index.cshtml`:
+  - Loại bỏ các khối padding khổng lồ và dòng eyebrow "TÀI KHOẢN CỦA BẠN".
+  - Tiêu đề "Hồ sơ của tôi" thu gọn 22px, kèm breadcrumbs mảnh `Trang chủ / Hồ sơ của tôi`.
+  - Khung nội dung tối đa 900px, căn giữa, nền trắng, viền mảnh `#d9e2ee`, bo góc 14px, đổ bóng nhẹ.
+  - Hàng hiển thị Email đăng nhập: thu gọn trong 1 hàng ngang duy nhất (icon thư, nhãn "Email:", giá trị email in đậm, badge "Chỉ đọc"), giữ nguyên trạng thái chỉ đọc không cho sửa.
+  - Form thông tin cá nhân: Họ tên và Số điện thoại nằm trên cùng 1 hàng ở desktop (mỗi trường 50%, grid 1fr 1fr); Địa chỉ nhận hàng ở hàng tiếp theo với textarea gọn cao 74px; chiều cao input chuẩn 42px.
+  - Hàng thao tác: Nút "Lưu hồ sơ" xanh PhoneStore chiều rộng vừa phải (padding 0 22px, cao 42px, icon lưu); liên kết "Xem đơn hàng của tôi →" đặt cùng hàng bên phải nút lưu.
+  - Responsive: Trên mobile ($\le 680\text{px}$), Họ tên & SĐT tự xếp dọc 1 cột, nút Lưu hồ sơ full-width, không tràn ngang.
+- CSS: Thêm khối style mới scope riêng `.profile-compact` ở cuối `site.css`, tái sử dụng toàn bộ design token hiện có.
+- Files đã sửa:
+  - `src/PhoneStore.Web/Views/Profile/Index.cshtml`
+  - `src/PhoneStore.Web/wwwroot/css/site.css`
+  - `docs/PROGRESS.md`
+- Bảo toàn: Giữ nguyên `ProfileController`, ViewModel, antiforgery token, form POST, `data-ui-submit`, TempData thông báo và validation. Không đụng DB/migration, không commit/push. Chờ user kiểm tra trực tiếp trên Chrome tại `http://localhost:5015/account/profile`.
+
+Cập nhật 2026-11-12 — S29.9N.2 **READY FOR USER TEST, Server-side Pagination cho My Orders**:
+- **Triển khai Server-side Pagination**:
+  - Tầng Data (`PurchaseStore.cs`): Thêm phương thức `CustomerOrdersPagedAsync` thực hiện truy vấn phân trang trực tiếp trên SQL Server qua EF Core. Thứ tự truy vấn: lọc `UserId` -> lọc trạng thái -> lọc thời gian UTC+7 -> `CountAsync()` -> `OrderByDescending(OrderDate).ThenByDescending(OrderId)` -> `Skip((page - 1) * pageSize).Take(pageSize)`.
+  - An toàn số trang: Cố định `PageSize = 10` ở server. Chuẩn hóa page: nếu `page < 1` tự về 1; nếu `totalCount == 0` trả về trang 1 rỗng; nếu `page > totalPages` tự về trang cuối `totalPages`, ngăn chặn hoàn toàn lỗi tràn số (overflow) hoặc HTTP 500.
+  - Tầng Business & Service (`IOrderService.cs`, `OrderService.cs`): Bổ sung `GetPagedCustomerOrdersAsync`, bảo toàn 100% các overload cũ cho unit test và workflow hiện tại.
+  - Models (`PurchaseModels.cs`, `PurchaseViewModels.cs`): Thêm record `PagedCustomerOrdersResult(Orders, TotalCount, PageNumber, PageSize)`; mở rộng `CustomerOrdersViewModel` với `TotalCount`, `PageNumber`, `PageSize`, `CurrentPage`, `TotalPages`, `HasPreviousPage`, `HasNextPage`; thêm `Page` vào `OrderFilterViewModel`.
+  - Controller (`OrdersController.cs`): Thêm static helper `BuildFilterUrl` bảo toàn trọn vẹn toàn bộ tham số bộ lọc khi chuyển trang. Tự động reset về trang 1 khi lọc tiêu chí mới hoặc nhấn "Đặt lại".
+  - Giao diện phân trang (`Index.cshtml` & `site.css`): Thanh phân trang đồng bộ với Catalog (`‹ Trước`, `1`, `2`, `3`, `Tiếp ›`), hỗ trợ dấu `…` khi số trang lớn, badge active xanh PhoneStore, vô hiệu hóa Trước ở trang đầu và Tiếp ở trang cuối, hiển thị tóm tắt `Hiển thị 1–10 trong tổng số X đơn hàng`. Chỉ hiển thị thanh khi `TotalPages > 1`.
+- **Files đã sửa**:
+  - `src/PhoneStore.Models/Purchasing/PurchaseModels.cs`
+  - `src/PhoneStore.Web/Models/PurchaseViewModels.cs`
+  - `src/PhoneStore.Data/Purchasing/PurchaseStore.cs`
+  - `src/PhoneStore.Business/Purchasing/IOrderService.cs`
+  - `src/PhoneStore.Business/Purchasing/OrderService.cs`
+  - `src/PhoneStore.Web/Controllers/OrdersController.cs`
+  - `src/PhoneStore.Web/Views/Orders/Index.cshtml`
+  - `src/PhoneStore.Web/wwwroot/css/site.css`
+  - `docs/PROGRESS.md`
+- **Bảo toàn**: Không sửa DB/migration, không thay đổi dữ liệu đơn, không sửa các trang khác, bảo toàn validation S29.9N.1. Chờ user kiểm tra trực tiếp trên Chrome `http://localhost:5015/orders`.
+
 Cập nhật 2026-11-12 — S29.9N.1 **READY FOR USER TEST, Hoàn thiện bộ lọc và validation My Orders**:
 - **Khắc phục lỗi nghiệp vụ bộ lọc thời gian**: Loại bỏ hoàn toàn cơ chế tự động đảo ngày (`auto-swap`) khi `Từ ngày > Đến ngày` của S29.9N; thay bằng validation chặt chẽ 2 lớp (Client & Server).
 - **Validation quy tắc lọc**:

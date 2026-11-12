@@ -49,6 +49,7 @@ public sealed class OrderFilterViewModel
     public int? Year { get; set; }
     public string? FromDate { get; set; }
     public string? ToDate { get; set; }
+    public int Page { get; set; } = 1;
 
     public bool HasFilters =>
         Status.HasValue ||
@@ -64,6 +65,12 @@ public sealed class CustomerOrdersViewModel
     public IReadOnlyList<CustomerOrderRow> Orders { get; init; } = [];
     public OrderFilterViewModel Filter { get; init; } = new();
     public string? ErrorMessage { get; init; }
-    public int TotalCount => Orders.Count;
+    public int TotalCount { get; init; }
+    public int PageNumber { get; init; } = 1;
+    public int PageSize { get; init; } = 10;
+    public int CurrentPage => PageNumber;
+    public int TotalPages => PageSize <= 0 ? 0 : (int)Math.Ceiling((double)TotalCount / PageSize);
+    public bool HasPreviousPage => PageNumber > 1;
+    public bool HasNextPage => PageNumber < TotalPages;
 }
 
