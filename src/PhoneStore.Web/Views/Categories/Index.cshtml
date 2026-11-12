@@ -1,0 +1,65 @@
+@model PhoneStore.Web.Models.CategoriesViewModel
+@{
+    ViewData["Title"] = "Danh mục";
+}
+
+<div class="categories-page-container">
+    <div class="categories-header-bar">
+        <nav class="categories-breadcrumbs" aria-label="Đường dẫn">
+            <a href="/">Trang chủ</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">Danh mục</span>
+        </nav>
+        <h1 class="categories-title">Khám phá danh mục</h1>
+        <p class="categories-subtitle">Tìm kiếm sản phẩm theo danh mục phù hợp với nhu cầu của bạn.</p>
+    </div>
+
+    @if (Model.Categories.Count == 0)
+    {
+        <div class="categories-empty-box">
+            <div class="categories-empty-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7"/>
+                    <rect x="14" y="3" width="7" height="7"/>
+                    <rect x="14" y="14" width="7" height="7"/>
+                    <rect x="3" y="14" width="7" height="7"/>
+                </svg>
+            </div>
+            <h2>Chưa có thông tin danh mục</h2>
+            <p>Dữ liệu danh mục đang được cập nhật. Vui lòng quay lại sau.</p>
+            <a href="/products" class="button button-primary">Xem tất cả sản phẩm</a>
+        </div>
+    }
+    else
+    {
+        <div class="categories-grid">
+            @foreach (var category in Model.Categories)
+            {
+                <a class="category-page-card" href="/products?categoryId=@category.Id" aria-label="Xem @category.ProductCount sản phẩm thuộc danh mục @category.Name">
+                    <div class="category-card-top">
+                        <div class="category-icon-area" aria-hidden="true">
+                            <svg class="category-card-icon" viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="5" y="2" width="14" height="20" rx="3" ry="3"/>
+                                <path d="M12 18h.01"/>
+                            </svg>
+                        </div>
+                        <h2 class="category-card-name">@category.Name</h2>
+                        @if (!string.IsNullOrWhiteSpace(category.Description) && !string.Equals(category.Description, category.Name, StringComparison.OrdinalIgnoreCase))
+                        {
+                            <p class="category-card-desc">@category.Description</p>
+                        }
+                        <span class="category-card-count">
+                            @(category.ProductCount > 0 ? $"{category.ProductCount} sản phẩm" : "Đang cập nhật")
+                        </span>
+                    </div>
+                    <div class="category-card-footer">
+                        <span class="category-card-link-text">Xem sản phẩm</span>
+                        <svg class="category-card-arrow" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                </a>
+            }
+        </div>
+    }
+</div>

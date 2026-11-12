@@ -1,5 +1,52 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-12 — S29.9U **READY FOR USER REVIEW, PhoneStore Customer Web Final Acceptance & Release Readiness**:
+- **Nghiệm thu toàn diện Customer Web (11 màn hình)**:
+  - Kiểm tra điều hướng: 9 URL chính (`/`, `/products`, `/brands`, `/categories`, `/cart`, `/account/login`, `/account/register`, `/account/profile`, `/orders`) hoạt động 100%. Đã triệt tiêu hoàn toàn các liên kết neo cũ `/#brands` và `/#categories` trên Header và Footer.
+  - Kiểm tra Brands (`/brands`): 8 thương hiệu thực tế từ DB (`Apple`, `Google`, `OnePlus`, `OPPO`, `realme`, `Samsung`, `vivo`, `Xiaomi`), logo SVG chuẩn, số lượng sản phẩm, liên kết chuyển đúng Catalog `/products?brandIds={id}`.
+  - Kiểm tra Categories (`/categories`): 1 danh mục thực tế từ DB (`Điện thoại thông minh`, 40 SP), card 280px không bị kéo dãn, liên kết chuyển đúng `/products?categoryId=1`.
+  - Kiểm tra Catalog (`/products`): Đã tích hợp hoàn chỉnh bộ lọc Category và Brand, hiển thị chip lọc độc lập có nút `[x]` gỡ bỏ từng tiêu chí hoặc nút "Xóa tất cả", bảo toàn tham số `categoryId` và `brandIds` khi chuyển trang (phân trang 4 trang) và khi tìm kiếm/sắp xếp. Kiểm tra CategoryId không tồn tại (`categoryId=999999`) hiển thị empty state 0 sản phẩm an toàn không phát sinh lỗi 500.
+  - Kiểm tra hồi quy: Home, Catalog (10 SP/trang), Search/Sort, Login/Register Compact không có khung đỏ rỗng, Cart/Checkout/Orders bảo vệ phân quyền an toàn (302 chuyển hướng login).
+  - Responsive: Header, Footer, Brands, Categories hiển thị mượt mà trên Desktop (1366px), Tablet (768px) và Mobile (390px, menu ẩn thanh cuộn xấu).
+- **Trạng thái kiểm thử kỹ thuật**:
+  - Runtime HTTP Probe: 100% PASS (18/18 route/kịch bản trả về HTTP 200 hoặc 302/404 chuẩn thiết kế).
+  - Unit Test: BLOCKED do tiến trình `dotnet watch` trên host đang khóa các file DLL (`PhoneStore.Models.dll`, `PhoneStore.Business.dll`, `PhoneStore.Data.dll`). Không có lỗi cú pháp hoặc assertion failure.
+  - Browser Automation: NOT TESTED do Chrome host chưa bật remote debugging port. Đã chuẩn bị checklist trực quan chi tiết cho người dùng.
+- **Tài liệu cập nhật**:
+  - `docs/S29.9R_CUSTOMER_WEB_ACCEPTANCE.md` (Mở rộng ma trận 11 màn hình, cập nhật runtime probe và kết luận).
+  - `docs/PROGRESS.md`
+- **Kết luận mức độ sẵn sàng**: **CONDITIONAL READY**. Không sửa mã nguồn, không sửa DB. Chờ người dùng duyệt lần cuối trên Chrome cá nhân trước khi chuyển sang Admin WinForms.
+
+Cập nhật 2026-11-12 — S29.9T **READY FOR USER TEST, PhoneStore Customer Web Categories Page**:
+- **Trang Danh mục riêng (`/categories`)**:
+  - Xây dựng controller `CategoriesController` tại route `/categories` và view `Views/Categories/Index.cshtml`.
+  - Truy vấn trực tiếp từ `PhoneStoreDbContext` qua EF Core không gây N+1 query: `db.Categories.AsNoTracking().Where(c => c.IsActive).OrderBy(c => c.CategoryName).Select(c => new CategoryItemViewModel(c.CategoryId, c.CategoryName, c.Description, c.Products.Count(p => p.IsActive)))`.
+  - Hiển thị đúng dữ liệu thực tế từ database: 1 danh mục "Điện thoại thông minh" (40 sản phẩm đang hoạt động). Không hardcode danh mục giả, không nhân bản dữ liệu, có xử lý empty state nếu không có danh mục.
+  - Header trang: Breadcrumb `Trang chủ / Danh mục`, tiêu đề "Khám phá danh mục" 24px, mô tả "Tìm kiếm sản phẩm theo danh mục phù hợp với nhu cầu của bạn."
+  - Bố cục lưới Compact: Lưới linh hoạt `auto-fill` (minmax 260px–280px) giúp card danh mục duy nhất không bị kéo giãn bất thường trên Desktop (chiều rộng gọn gàng 280px), tự co giãn 1 cột trên Mobile.
+  - Card danh mục: Biểu tượng smartphone SVG tinh gọn, tên danh mục, mô tả ngắn, badge số lượng ("40 sản phẩm"), liên kết "Xem sản phẩm →" chuyển đến `/products?categoryId=1`.
+- **Hoàn thiện kết nối bộ lọc Catalog (`/products`)**:
+  - Cập nhật `ProductsController.cs`:
+    - `BuildAppliedFilters`: Bổ sung hiển thị chip lọc cho danh mục đang áp dụng (`Điện thoại thông minh` kèm nút bỏ lọc `[x]`).
+    - `BuildFilterUrl`: Bảo toàn tham số `categoryId` khi chuyển trang (phân trang 4 trang: `page=2, 3, 4`), khi đổi tiêu chí lọc khác và khi sắp xếp; cho phép gỡ bỏ `categoryId` an toàn khi bấm bỏ lọc.
+    - Xử lý `categoryId` không hợp lệ: trả về danh sách rỗng (0 sản phẩm phù hợp) an toàn mà không phát sinh HTTP 500.
+  - Cập nhật `Views/Products/Index.cshtml`: Bổ sung `<input type="hidden" name="categoryId" value="@Model.Filter.CategoryId" />` vào form sidebar để bảo toàn danh mục khi submit lọc thuộc tính khác.
+- **Header & Footer Navigation**:
+  - Cập nhật mục "Danh mục" trên Header trong `Views/Shared/_Layout.cshtml` từ `/#categories` thành `/categories`, tự động gán `aria-current="page"` khi ở màn hình Categories.
+  - Cập nhật mục "Danh mục" trong phần Liên kết nhanh ở Footer thành `/categories`.
+  - Giữ nguyên 100% section "Điện thoại mới nhất" (`#categories`) trên Home.
+- **CSS**: Thêm khối style scoped riêng `.categories-page-container`, `.categories-grid`, `.category-page-card` tại cuối `site.css`.
+- **Files đã tạo / chỉnh sửa**:
+  - `src/PhoneStore.Web/Models/CategoryViewModels.cs` (Mới)
+  - `src/PhoneStore.Web/Controllers/CategoriesController.cs` (Mới)
+  - `src/PhoneStore.Web/Views/Categories/Index.cshtml` (Mới)
+  - `src/PhoneStore.Web/Controllers/ProductsController.cs`
+  - `src/PhoneStore.Web/Views/Products/Index.cshtml`
+  - `src/PhoneStore.Web/Views/Shared/_Layout.cshtml`
+  - `src/PhoneStore.Web/wwwroot/css/site.css`
+  - `docs/PROGRESS.md`
+- **Bảo toàn**: Không sửa DB/migration, không thêm package, không sửa Cart/Checkout/Orders/Auth, không commit/push. Đã probe runtime `http://localhost:5015/categories` trả về HTTP 200 OK, liên kết `/products?categoryId=1` trả về 40 sản phẩm kèm phân trang 4 trang và chip lọc hoạt động 100%.
+
 Cập nhật 2026-11-12 — S29.9S **READY FOR USER TEST, PhoneStore Customer Web Brands Page**:
 - **Trang Thương hiệu riêng (`/brands`)**:
   - Xây dựng controller `BrandsController` tại route `/brands` và view `Views/Brands/Index.cshtml`.

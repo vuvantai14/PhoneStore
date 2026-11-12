@@ -22,6 +22,10 @@
         <aside class="catalog-sidebar" id="catalogSidebar">
             <form action="/products" method="get" class="filter-panel" id="catalogFilterForm">
                 <input type="hidden" name="sort" id="filterSortInput" value="@Model.Filter.Sort" />
+                @if (Model.Filter.CategoryId.HasValue)
+                {
+                    <input type="hidden" name="categoryId" value="@Model.Filter.CategoryId.Value" />
+                }
                 <div class="filter-panel-header">
                     <div class="filter-panel-title">
                         <svg class="filter-icon" viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

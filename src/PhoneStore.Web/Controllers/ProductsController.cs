@@ -128,7 +128,7 @@ public class ProductsController(IProductService products) : Controller
         // Đồng bộ số trang nếu page vượt quá totalPages hoặc < 1
         filter.Page = paged.PageNumber;
 
-        var appliedFilters = BuildAppliedFilters(filter, brands, min, max);
+        var appliedFilters = BuildAppliedFilters(filter, brands, categories, min, max);
 
         return View(new ProductListViewModel
         {
@@ -144,13 +144,20 @@ public class ProductsController(IProductService products) : Controller
     }
 
     private static List<AppliedFilterItem> BuildAppliedFilters(
-        ProductFilterViewModel filter, IReadOnlyList<CatalogOption> brands, decimal? min, decimal? max)
+        ProductFilterViewModel filter, IReadOnlyList<CatalogOption> brands, IReadOnlyList<CatalogOption> categories, decimal? min, decimal? max)
     {
         var list = new List<AppliedFilterItem>();
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
             list.Add(new AppliedFilterItem("search", filter.Search, $"Tìm: \"{filter.Search}\"",
                 BuildFilterUrl(filter, removeKey: "search")));
+        }
+
+        if (filter.CategoryId.HasValue)
+        {
+            var categoryName = categories.FirstOrDefault(c => c.Id == filter.CategoryId.Value)?.Name ?? $"Danh mục #{filter.CategoryId.Value}";
+            list.Add(new AppliedFilterItem("category", filter.CategoryId.Value.ToString(), categoryName,
+                BuildFilterUrl(filter, removeKey: "categoryId")));
         }
 
         foreach (var bId in filter.BrandIds)
@@ -200,6 +207,9 @@ public class ProductsController(IProductService products) : Controller
         var query = new List<string>();
         if (removeKey != "search" && !string.IsNullOrWhiteSpace(filter.Search))
             query.Add($"search={Uri.EscapeDataString(filter.Search)}");
+
+        if (removeKey != "category" && removeKey != "categoryId" && filter.CategoryId.HasValue)
+            query.Add($"categoryId={filter.CategoryId.Value}");
 
         if (removeKey != "brand")
         {
