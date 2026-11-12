@@ -2,6 +2,14 @@
 bin/
 obj/
 
+# Temporary build/test output created by local verification runs
+scratch/
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage*.xml
+
 # Visual Studio / user settings
 .vs/
 *.user

@@ -450,9 +450,17 @@ public sealed class OrderDonutChartControl : UserControl
         legend.SetData(data);
     }
 
+    public void SetError(string message = "Không thể tải dữ liệu trạng thái đơn hàng.")
+    {
+        data = [];
+        canvas.SetError();
+        legend.SetError(message);
+    }
+
     private sealed class DonutCanvasControl : Control
     {
         private IReadOnlyList<OrderStatusMetric> data = [];
+        private bool isError;
 
         public DonutCanvasControl()
         {
@@ -468,7 +476,15 @@ public sealed class OrderDonutChartControl : UserControl
 
         public void SetData(IReadOnlyList<OrderStatusMetric> values)
         {
+            isError = false;
             data = values;
+            Invalidate();
+        }
+
+        public void SetError()
+        {
+            isError = true;
+            data = [];
             Invalidate();
         }
 
@@ -492,6 +508,21 @@ public sealed class OrderDonutChartControl : UserControl
 
             var outerRect = new Rectangle(cx - outerRadius, cy - outerRadius, diameter, diameter);
             var innerRect = new Rectangle(cx - innerRadius, cy - innerRadius, innerRadius * 2, innerRadius * 2);
+
+            if (isError)
+            {
+                using var errorBrush = new SolidBrush(Color.FromArgb(254, 242, 242));
+                using var holeBrush = new SolidBrush(Color.White);
+                using var borderPen = new Pen(Color.FromArgb(254, 202, 202), 1f);
+
+                e.Graphics.FillEllipse(errorBrush, outerRect);
+                e.Graphics.FillEllipse(holeBrush, innerRect);
+                e.Graphics.DrawEllipse(borderPen, outerRect);
+                e.Graphics.DrawEllipse(borderPen, innerRect);
+
+                DrawCenterText(e.Graphics, "!", "lỗi", innerRect, AdminTheme.CancelledText, AdminTheme.CancelledText);
+                return;
+            }
 
             var total = CanonicalStatuses.Sum(s => (long)Math.Max(0, GetCount(s)));
             if (total == 0)
@@ -558,7 +589,13 @@ public sealed class OrderDonutChartControl : UserControl
             DrawCenterText(e.Graphics, total.ToString("N0", ReportingUi.Vietnamese), "đơn hàng", innerRect);
         }
 
-        private static void DrawCenterText(Graphics g, string countText, string labelText, Rectangle innerRect)
+        private static void DrawCenterText(
+            Graphics g,
+            string countText,
+            string labelText,
+            Rectangle innerRect,
+            Color? countColor = null,
+            Color? labelColor = null)
         {
             if (innerRect.Width < 28 || innerRect.Height < 28) return;
 
@@ -576,9 +613,9 @@ public sealed class OrderDonutChartControl : UserControl
             var countRect = new Rectangle(innerRect.X + 2, top, innerRect.Width - 4, countSz.Height);
             var labelRect = new Rectangle(innerRect.X + 2, top + countSz.Height + gap, innerRect.Width - 4, labelSz.Height);
 
-            TextRenderer.DrawText(g, countText, countFont, countRect, AdminTheme.Navy,
+            TextRenderer.DrawText(g, countText, countFont, countRect, countColor ?? AdminTheme.Navy,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
-            TextRenderer.DrawText(g, labelText, labelFont, labelRect, AdminTheme.Secondary,
+            TextRenderer.DrawText(g, labelText, labelFont, labelRect, labelColor ?? AdminTheme.Secondary,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
         }
 
@@ -601,6 +638,8 @@ public sealed class OrderDonutChartControl : UserControl
     private sealed class DonutLegendControl : Control
     {
         private IReadOnlyList<OrderStatusMetric> data = [];
+        private bool isError;
+        private string errorMessage = "Không thể tải dữ liệu trạng thái đơn hàng.";
 
         public DonutLegendControl()
         {
@@ -616,7 +655,18 @@ public sealed class OrderDonutChartControl : UserControl
 
         public void SetData(IReadOnlyList<OrderStatusMetric> values)
         {
+            isError = false;
             data = values;
+            Invalidate();
+        }
+
+        public void SetError(string message)
+        {
+            isError = true;
+            errorMessage = string.IsNullOrWhiteSpace(message)
+                ? "Không thể tải dữ liệu trạng thái đơn hàng."
+                : message;
+            data = [];
             Invalidate();
         }
 
@@ -630,6 +680,14 @@ public sealed class OrderDonutChartControl : UserControl
 
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             e.Graphics.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+
+            if (isError)
+            {
+                using var errFont = AdminTheme.CreateFont(9f, FontStyle.Bold);
+                TextRenderer.DrawText(e.Graphics, errorMessage, errFont, ClientRectangle, AdminTheme.CancelledText,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
+                return;
+            }
 
             var total = CanonicalStatuses.Sum(s => (long)Math.Max(0, GetCount(s)));
             if (total == 0)
@@ -734,5 +792,389 @@ public sealed class RevenueBarsControl : Control
                     new Rectangle((int)(chart.Left + i * slot), chart.Bottom + 3, (int)Math.Ceiling(slot), 20), AdminTheme.Muted,
                     TextFormatFlags.HorizontalCenter);
         }
+    }
+}
+
+public sealed class RevenueColumnChartControl : Control
+{
+    private readonly ToolTip toolTip = new()
+    {
+        ShowAlways = true,
+        InitialDelay = 120,
+        ReshowDelay = 60,
+        AutoPopDelay = 8000
+    };
+
+    private IReadOnlyList<RevenueBucket> data = [];
+    private string emptyMessage = "Không có doanh thu hoàn thành trong kỳ này.";
+    private bool isError;
+    private int hoveredIndex = -1;
+    private Rectangle cachedPlotRect = Rectangle.Empty;
+
+    public RevenueColumnChartControl()
+    {
+        SetStyle(
+            ControlStyles.UserPaint |
+            ControlStyles.AllPaintingInWmPaint |
+            ControlStyles.OptimizedDoubleBuffer |
+            ControlStyles.ResizeRedraw,
+            true);
+        UpdateStyles();
+        BackColor = Color.White;
+        MinimumSize = new Size(260, 165);
+    }
+
+    public void SetData(IReadOnlyList<RevenueBucket> buckets, string? emptyText = null)
+    {
+        isError = false;
+        data = buckets ?? [];
+        emptyMessage = !string.IsNullOrWhiteSpace(emptyText)
+            ? emptyText
+            : "Không có doanh thu hoàn thành trong kỳ này.";
+        hoveredIndex = -1;
+        toolTip.SetToolTip(this, null);
+        Invalidate();
+    }
+
+    public void SetError(string message = "Không thể tải dữ liệu doanh thu.")
+    {
+        isError = true;
+        data = [];
+        emptyMessage = string.IsNullOrWhiteSpace(message)
+            ? "Không thể tải dữ liệu doanh thu."
+            : message;
+        hoveredIndex = -1;
+        toolTip.SetToolTip(this, null);
+        Invalidate();
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        var next = HitTestBucket(e.Location);
+        if (next == hoveredIndex) return;
+
+        hoveredIndex = next;
+        if (hoveredIndex >= 0 && hoveredIndex < data.Count)
+        {
+            var bucket = data[hoveredIndex];
+            var tip = $"{bucket.TooltipLabel}\nDoanh thu (theo ngày đặt): {ReportingUi.Currency(bucket.Revenue)}\nĐơn hoàn thành: {ReportingUi.Number(bucket.CompletedOrders)}";
+            toolTip.SetToolTip(this, tip);
+        }
+        else
+        {
+            toolTip.SetToolTip(this, null);
+        }
+        Invalidate();
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        if (hoveredIndex != -1)
+        {
+            hoveredIndex = -1;
+            toolTip.SetToolTip(this, null);
+            Invalidate();
+        }
+    }
+
+    private int HitTestBucket(Point location)
+    {
+        if (data.Count == 0 || cachedPlotRect.IsEmpty || !cachedPlotRect.Contains(location))
+            return -1;
+        var relativeX = location.X - cachedPlotRect.Left;
+        var slotWidth = cachedPlotRect.Width / (double)data.Count;
+        if (slotWidth < 2.5)
+        {
+            var fromIdx = Math.Clamp((int)Math.Floor((relativeX - 1.5) * data.Count / cachedPlotRect.Width), 0, data.Count - 1);
+            var toIdx = Math.Clamp((int)Math.Floor((relativeX + 1.5) * data.Count / cachedPlotRect.Width), 0, data.Count - 1);
+            var bestIdx = fromIdx;
+            var bestRev = -1m;
+            for (var i = fromIdx; i <= toIdx; i++)
+            {
+                if (data[i].Revenue > bestRev)
+                {
+                    bestRev = data[i].Revenue;
+                    bestIdx = i;
+                }
+            }
+            return bestIdx;
+        }
+
+        var index = (int)Math.Floor(relativeX / slotWidth);
+        return Math.Clamp(index, 0, data.Count - 1);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.Clear(BackColor);
+        if (Width < 80 || Height < 80)
+        {
+            cachedPlotRect = Rectangle.Empty;
+            return;
+        }
+
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        e.Graphics.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+
+        if (data.Count == 0 || data.All(item => item.Revenue <= 0m))
+        {
+            cachedPlotRect = Rectangle.Empty;
+            PaintEmptyState(e.Graphics);
+            return;
+        }
+
+        var maxRevenue = data.Max(item => item.Revenue);
+        var yMax = ComputeNiceCeiling(maxRevenue);
+
+        using var axisFont = AdminTheme.CreateFont(7.75f);
+        var tickLabels = new string[5];
+        var maxTickWidth = 0;
+        for (var t = 0; t <= 4; t++)
+        {
+            var tickVal = yMax * t / 4m;
+            tickLabels[t] = FormatAxisCurrency(tickVal);
+            var w = TextRenderer.MeasureText(e.Graphics, tickLabels[t], axisFont, Size.Empty, TextFormatFlags.NoPadding).Width;
+            if (w > maxTickWidth) maxTickWidth = w;
+        }
+
+        var tickHeight = axisFont.Height;
+        var topPad = Math.Max(8, tickHeight / 2 + 2);
+        var xAxisHeight = Math.Max(20, tickHeight + 8);
+        var plotLeft = Math.Max(46, maxTickWidth + 10);
+        const int rightPad = 10;
+
+        var plotWidth = Math.Max(40, Width - plotLeft - rightPad);
+        var plotHeight = Math.Max(40, Height - topPad - xAxisHeight);
+        var plotRect = new Rectangle(plotLeft, topPad, plotWidth, plotHeight);
+        cachedPlotRect = plotRect;
+
+        // Horizontal gridlines & Y labels
+        using var gridPen = new Pen(AdminTheme.BorderLight, 1f);
+        using var axisPen = new Pen(AdminTheme.Border, 1f);
+        for (var t = 0; t <= 4; t++)
+        {
+            var y = plotRect.Bottom - (int)Math.Round(plotRect.Height * t / 4.0);
+            e.Graphics.DrawLine(t == 0 ? axisPen : gridPen, plotRect.Left, y, plotRect.Right, y);
+
+            var tickRect = new Rectangle(2, y - tickHeight / 2, plotLeft - 8, tickHeight + 2);
+            TextRenderer.DrawText(e.Graphics, tickLabels[t], axisFont, tickRect, AdminTheme.Muted,
+                TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+        }
+
+        var slotWidth = plotRect.Width / (double)data.Count;
+
+        // Columns + hover track
+        if (slotWidth >= 2.5)
+        {
+            for (var i = 0; i < data.Count; i++)
+            {
+                var xStart = plotRect.Left + (int)Math.Round(i * slotWidth);
+                var xEnd = plotRect.Left + (int)Math.Round((i + 1) * slotWidth);
+                var cellWidth = Math.Max(2, xEnd - xStart);
+
+                if (i == hoveredIndex)
+                {
+                    using var trackBrush = new SolidBrush(Color.FromArgb(145, AdminTheme.PrimaryLight));
+                    e.Graphics.FillRectangle(trackBrush, xStart, plotRect.Top, cellWidth, plotRect.Height);
+                }
+
+                var bucket = data[i];
+                if (bucket.Revenue > 0m)
+                {
+                    var sidePad = cellWidth <= 4 ? 0 : Math.Max(1, Math.Min(8, (int)Math.Floor(cellWidth * 0.22)));
+                    var barWidth = Math.Max(2, cellWidth - sidePad * 2);
+                    var barX = xStart + (cellWidth - barWidth) / 2;
+                    var barH = Math.Max(4, (int)Math.Round((plotRect.Height - 2) * (double)(bucket.Revenue / yMax)));
+                    var barRect = new Rectangle(barX, plotRect.Bottom - barH, barWidth, barH);
+
+                    var fillColor = i == hoveredIndex ? AdminTheme.PrimaryDark : AdminTheme.Primary;
+                    using var barBrush = new SolidBrush(fillColor);
+                    if (barWidth >= 6 && barH >= 6)
+                    {
+                        using var barPath = CreateTopRoundedRectanglePath(barRect, Math.Min(4, barWidth / 2));
+                        e.Graphics.FillPath(barBrush, barPath);
+                    }
+                    else
+                    {
+                        e.Graphics.FillRectangle(barBrush, barRect);
+                    }
+                }
+            }
+        }
+        else
+        {
+            // Khoảng ngày rất dài: gom hiển thị theo dải pixel giữ nguyên đỉnh doanh thu từng ngày, không bỏ dữ liệu gốc
+            const int bandStride = 3;
+            for (var px = 0; px < plotRect.Width; px += bandStride)
+            {
+                var startIdx = Math.Clamp((int)Math.Floor(px / slotWidth), 0, data.Count - 1);
+                var endIdx = Math.Clamp((int)Math.Ceiling((px + bandStride) / slotWidth) - 1, startIdx, data.Count - 1);
+                var peakRev = 0m;
+                var hasHover = false;
+                for (var idx = startIdx; idx <= endIdx; idx++)
+                {
+                    if (data[idx].Revenue > peakRev) peakRev = data[idx].Revenue;
+                    if (idx == hoveredIndex) hasHover = true;
+                }
+
+                var barX = plotRect.Left + px;
+                var barW = Math.Min(2, plotRect.Right - barX);
+                if (barW <= 0) continue;
+
+                if (hasHover)
+                {
+                    using var trackBrush = new SolidBrush(Color.FromArgb(145, AdminTheme.PrimaryLight));
+                    e.Graphics.FillRectangle(trackBrush, barX, plotRect.Top, Math.Min(bandStride, plotRect.Right - barX), plotRect.Height);
+                }
+
+                if (peakRev > 0m)
+                {
+                    var barH = Math.Max(4, (int)Math.Round((plotRect.Height - 2) * (double)(peakRev / yMax)));
+                    var barRect = new Rectangle(barX, plotRect.Bottom - barH, barW, barH);
+                    using var barBrush = new SolidBrush(hasHover ? AdminTheme.PrimaryDark : AdminTheme.Primary);
+                    e.Graphics.FillRectangle(barBrush, barRect);
+                }
+            }
+        }
+
+        // X-axis labels: luôn chống chồng chữ, giữ mốc đầu và mốc cuối khi thưa bước
+        var dpiScale = (DeviceDpi > 0 ? DeviceDpi : 96) / 96.0;
+        var minGap = Math.Max(6, (int)Math.Round(6 * dpiScale));
+
+        var maxXWidth = 0;
+        for (var i = 0; i < data.Count; i++)
+        {
+            var w = TextRenderer.MeasureText(e.Graphics, data[i].Label, axisFont, Size.Empty, TextFormatFlags.NoPadding).Width;
+            if (w > maxXWidth) maxXWidth = w;
+        }
+
+        Rectangle ComputeLabelRect(int index)
+        {
+            var label = data[index].Label;
+            var lw = TextRenderer.MeasureText(e.Graphics, label, axisFont, Size.Empty, TextFormatFlags.NoPadding).Width + 4;
+            var centerX = plotRect.Left + (int)Math.Round((index + 0.5) * slotWidth);
+            var labelLeft = Math.Max(2, Math.Min(Width - lw - 2, centerX - lw / 2));
+            return new Rectangle(labelLeft, plotRect.Bottom + 5, lw, tickHeight + 2);
+        }
+
+        void DrawXLabel(int index, Rectangle rect)
+        {
+            TextRenderer.DrawText(e.Graphics, data[index].Label, axisFont, rect,
+                index == hoveredIndex ? AdminTheme.Navy : AdminTheme.Muted,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+        }
+
+        if (data.Count == 1)
+        {
+            DrawXLabel(0, ComputeLabelRect(0));
+            return;
+        }
+
+        var step = Math.Max(1, (int)Math.Ceiling((maxXWidth + minGap) / Math.Max(0.2, slotWidth)));
+        var finalIdx = data.Count - 1;
+        var finalRect = ComputeLabelRect(finalIdx);
+        var lastRight = int.MinValue;
+
+        for (var i = 0; i < finalIdx; i += step)
+        {
+            var rect = ComputeLabelRect(i);
+            if (lastRight != int.MinValue && rect.Left < lastRight + minGap)
+                continue;
+            if (rect.Right + minGap > finalRect.Left)
+                continue;
+
+            DrawXLabel(i, rect);
+            lastRight = rect.Right;
+        }
+
+        if (lastRight == int.MinValue || finalRect.Left >= lastRight + minGap)
+        {
+            DrawXLabel(finalIdx, finalRect);
+        }
+    }
+
+    private void PaintEmptyState(Graphics g)
+    {
+        var iconSize = Math.Max(24, Math.Min(32, Width / 12));
+        using var mainFont = AdminTheme.CreateFont(9.5f, isError ? FontStyle.Bold : FontStyle.Regular);
+        using var subFont = AdminTheme.CreateFont(8f);
+        var subText = isError
+            ? "Kiểm tra kết nối dữ liệu và nhấn Làm mới."
+            : "Chỉ tính đơn Hoàn thành · nhóm theo ngày đặt (OrderDate)";
+
+        var availTextW = Math.Max(120, Width - 32);
+        var mainSz = TextRenderer.MeasureText(g, emptyMessage, mainFont, new Size(availTextW, 0), TextFormatFlags.WordBreak);
+        var subSz = TextRenderer.MeasureText(g, subText, subFont, new Size(availTextW, 0), TextFormatFlags.WordBreak);
+
+        var totalH = iconSize + 8 + mainSz.Height + 4 + subSz.Height;
+        var y = Math.Max(8, (Height - totalH) / 2);
+
+        AdminTheme.DrawIcon(g, "revenue", new Rectangle((Width - iconSize) / 2, y, iconSize, iconSize),
+            isError ? AdminTheme.CancelledText : AdminTheme.Muted);
+        y += iconSize + 8;
+
+        var mainRect = new Rectangle(16, y, Width - 32, mainSz.Height + 2);
+        TextRenderer.DrawText(g, emptyMessage, mainFont, mainRect,
+            isError ? AdminTheme.CancelledText : AdminTheme.Secondary,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.WordBreak);
+        y += mainSz.Height + 4;
+
+        var subRect = new Rectangle(16, y, Width - 32, subSz.Height + 2);
+        TextRenderer.DrawText(g, subText, subFont, subRect, AdminTheme.Muted,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.WordBreak);
+    }
+
+    private static decimal ComputeNiceCeiling(decimal maxValue)
+    {
+        if (maxValue <= 0m) return 1_000_000m;
+        var rawStep = (double)maxValue / 4.0;
+        var magnitude = Math.Pow(10.0, Math.Floor(Math.Log10(rawStep)));
+        var residual = rawStep / magnitude;
+        var niceStep = residual switch
+        {
+            <= 1.0 => 1.0,
+            <= 2.0 => 2.0,
+            <= 2.5 => 2.5,
+            <= 5.0 => 5.0,
+            _ => 10.0
+        };
+        return (decimal)(niceStep * magnitude * 4.0);
+    }
+
+    private static string FormatAxisCurrency(decimal value)
+    {
+        if (value <= 0m) return "0";
+        if (value >= 1_000_000_000m)
+            return (value / 1_000_000_000m).ToString("0.##", ReportingUi.Vietnamese) + " tỷ";
+        if (value >= 1_000_000m)
+            return (value / 1_000_000m).ToString("0.##", ReportingUi.Vietnamese) + " triệu";
+        if (value >= 1_000m)
+            return (value / 1_000m).ToString("0.##", ReportingUi.Vietnamese) + " nghìn";
+        return value.ToString("0", ReportingUi.Vietnamese) + " đ";
+    }
+
+    private static GraphicsPath CreateTopRoundedRectanglePath(Rectangle rect, int radius)
+    {
+        var path = new GraphicsPath();
+        var d = Math.Min(radius * 2, Math.Min(rect.Width, rect.Height));
+        if (d <= 0)
+        {
+            path.AddRectangle(rect);
+            return path;
+        }
+        path.AddArc(rect.Left, rect.Top, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Top, d, d, 270, 90);
+        path.AddLine(rect.Right, rect.Bottom, rect.Left, rect.Bottom);
+        path.CloseFigure();
+        return path;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            toolTip.Dispose();
+        base.Dispose(disposing);
     }
 }

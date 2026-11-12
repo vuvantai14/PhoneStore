@@ -337,6 +337,38 @@ public static class AdminTheme
                 g.DrawLine(pen, x + w / 2 - (int)(coinR * 0.45f), y + h / 2, x + w / 2 + (int)(coinR * 0.45f), y + h / 2);
                 g.DrawLine(pen, x + w / 2, y + h / 2 - (int)(coinR * 0.55f), x + w / 2, y + h / 2 + (int)(coinR * 0.55f));
                 break;
+
+            case "filter":
+                // Clean funnel filter icon
+                var funnelPts = new[]
+                {
+                    new Point(x + 1, y + 2),
+                    new Point(x + w - 1, y + 2),
+                    new Point(x + w / 2 + 2, y + h / 2 + 1),
+                    new Point(x + w / 2 + 2, y + h - 2),
+                    new Point(x + w / 2 - 2, y + h - 1),
+                    new Point(x + w / 2 - 2, y + h / 2 + 1)
+                };
+                g.DrawPolygon(pen, funnelPts);
+                break;
+
+            case "chevron-left":
+                g.DrawLines(pen, new Point[]
+                {
+                    new Point(x + (int)(w * 0.64f), y + 2),
+                    new Point(x + (int)(w * 0.36f), y + h / 2),
+                    new Point(x + (int)(w * 0.64f), y + h - 2)
+                });
+                break;
+
+            case "chevron-right":
+                g.DrawLines(pen, new Point[]
+                {
+                    new Point(x + (int)(w * 0.36f), y + 2),
+                    new Point(x + (int)(w * 0.64f), y + h / 2),
+                    new Point(x + (int)(w * 0.36f), y + h - 2)
+                });
+                break;
         }
     }
 }

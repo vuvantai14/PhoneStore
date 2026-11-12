@@ -20,7 +20,7 @@ public sealed class ReportingStore(PhoneStoreDbContext db) : IReportingStore
         var completedRevenue = await db.Orders.AsNoTracking().Where(order => order.Status == OrderStatus.Completed)
             .SumAsync(order => (decimal?)order.TotalAmount, ct) ?? 0m;
         var recent = await db.Orders.AsNoTracking().OrderByDescending(order => order.OrderDate)
-            .ThenByDescending(order => order.OrderId).Take(8)
+            .ThenByDescending(order => order.OrderId).Take(5)
             .Select(order => new RecentOrderMetric(order.OrderCode, order.ReceiverName, order.TotalAmount,
                 order.Status, order.OrderDate)).ToListAsync(ct);
         var best = await BestSellers(db.OrderDetails.AsNoTracking()
@@ -69,6 +69,51 @@ public sealed class ReportingStore(PhoneStoreDbContext db) : IReportingStore
             TotalStock = totalStock, OutOfStockProducts = outOfStock, LowStockProducts = lowStock,
             InventoryAlerts = alerts, RevenueTrend = trend
         };
+    }
+
+    public Task<IReadOnlyList<RevenueBucketAggregate>> CompletedRevenueBucketsAsync(RevenueChartPeriod period,
+        DateTime startUtc, DateTime endExclusiveUtc, int localOffsetMinutes, CancellationToken ct)
+    {
+        var completed = db.Orders.AsNoTracking()
+            .Where(order => order.Status == OrderStatus.Completed
+                && order.OrderDate >= startUtc
+                && order.OrderDate < endExclusiveUtc);
+
+        var grouped = period switch
+        {
+            RevenueChartPeriod.Day => completed.GroupBy(order => order.OrderDate.AddMinutes(localOffsetMinutes).Hour),
+            RevenueChartPeriod.Month => completed.GroupBy(order => order.OrderDate.AddMinutes(localOffsetMinutes).Day),
+            RevenueChartPeriod.Year => completed.GroupBy(order => order.OrderDate.AddMinutes(localOffsetMinutes).Month),
+            RevenueChartPeriod.Week => completed.GroupBy(order =>
+                order.OrderDate.AddMinutes(localOffsetMinutes).Year * 10000
+                + order.OrderDate.AddMinutes(localOffsetMinutes).Month * 100
+                + order.OrderDate.AddMinutes(localOffsetMinutes).Day),
+            RevenueChartPeriod.CustomRange => completed.GroupBy(order =>
+                order.OrderDate.AddMinutes(localOffsetMinutes).Year * 10000
+                + order.OrderDate.AddMinutes(localOffsetMinutes).Month * 100
+                + order.OrderDate.AddMinutes(localOffsetMinutes).Day),
+            _ => throw new ArgumentOutOfRangeException(nameof(period), period, null)
+        };
+
+        return AggregateBucketsAsync(grouped, ct);
+    }
+
+    private static async Task<IReadOnlyList<RevenueBucketAggregate>> AggregateBucketsAsync(
+        IQueryable<IGrouping<int, PhoneStore.Models.Entities.Order>> grouped, CancellationToken ct)
+    {
+        var rows = await grouped
+            .Select(group => new
+            {
+                Key = group.Key,
+                Revenue = group.Sum(order => order.TotalAmount),
+                CompletedOrders = group.Count()
+            })
+            .OrderBy(item => item.Key)
+            .ToListAsync(ct);
+
+        return rows
+            .Select(item => new RevenueBucketAggregate(item.Key, item.Revenue, item.CompletedOrders))
+            .ToArray();
     }
 
     private static async Task<IReadOnlyList<OrderStatusMetric>> StatusCounts(IQueryable<PhoneStore.Models.Entities.Order> query, CancellationToken ct)

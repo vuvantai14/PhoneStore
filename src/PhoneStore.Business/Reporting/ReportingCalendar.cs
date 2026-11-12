@@ -4,6 +4,7 @@ public static class ReportingCalendar
 {
     public const string TimeZoneId = "SE Asia Standard Time";
     public static TimeZoneInfo TimeZone { get; } = TimeZoneInfo.FindSystemTimeZoneById(TimeZoneId);
+    public static DateOnly Today => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZone));
 
     public static (DateTime StartUtc, DateTime EndExclusiveUtc, int OffsetMinutes) ToUtcRange(
         DateOnly fromDate, DateOnly toDate)

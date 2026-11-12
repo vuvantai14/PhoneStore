@@ -24,6 +24,18 @@ public sealed record LowStockMetric(string ProductName, string BrandName, string
     public string StockStatus => StockQuantity == 0 ? "Hết hàng" : "Sắp hết";
 }
 public sealed record RevenuePoint(DateTime Date, decimal Revenue);
+public enum RevenueChartPeriod { Day = 0, Month = 1, Year = 2, CustomRange = 3, Week = 4 }
+public sealed record RevenueBucket(int Key, string Label, string TooltipLabel, decimal Revenue, int CompletedOrders);
+
+public sealed class RevenueSeriesSnapshot
+{
+    public RevenueChartPeriod Period { get; init; }
+    public DateOnly FromDate { get; init; }
+    public DateOnly ToDate { get; init; }
+    public decimal TotalRevenue { get; init; }
+    public int CompletedOrders { get; init; }
+    public IReadOnlyList<RevenueBucket> Buckets { get; init; } = [];
+}
 
 public sealed class DashboardSnapshot
 {
