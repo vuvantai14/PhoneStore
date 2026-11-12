@@ -97,7 +97,7 @@ public sealed class PurchaseStore(PhoneStoreDbContext db)
         int pageSize,
         CancellationToken ct)
     {
-        pageSize = pageSize <= 0 ? 10 : pageSize;
+        pageSize = pageSize <= 0 ? 5 : pageSize;
 
         var query = db.Orders.AsNoTracking().Where(order => order.UserId == userId);
         if (status.HasValue)

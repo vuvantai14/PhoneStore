@@ -1,5 +1,168 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-13 — S30.2B **READY FOR USER TEST, PhoneStore Admin WinForms Shared Header Text Clipping Fix**:
+- **Nguyên nhân gốc (`src/PhoneStore.Admin/MainForm.cs`)**:
+  - `workspace.RowStyles[0]` (`Absolute, 68`) + `header.Padding(28, 8, 28, 8)` để lại khoảng cao hữu dụng ~`65px` tại 125% DPI (`120 DPI`), trong khi `_pageTitle.Height = Math.Max(28, Font.Height + 2)` (`37px`) đưa vào `RowStyle(Absolute, _pageTitle.Height + 2)` (`39px`) bị `AutoScaleMode.Dpi` nhân tiếp 1,25× thành `49px` (double-DPI scaling), ép hàng `_pageSubtitle` xuống còn `16px` (< ~`17–18px` thực tế của `Be Vietnam Pro` 8.5pt tại 125% DPI) nên phần dưới phụ đề bị cắt và dính sát đường viền đáy Header trên cả 7 màn hình (`brand` bên Sidebar cũng có cùng mẫu đặt `Absolute` từ `wordmark.Height`).
+- **Xử lý (`src/PhoneStore.Admin/MainForm.cs`)**:
+  - Tăng chiều cao chuẩn hàng Header (`workspace.RowStyles[0]`) và Brand (`sidebar.RowStyles[0]` trong `BuildSidebar`) đồng bộ lên `Absolute, 74`; đặt `header.Padding(28, 6, 28, 7)` và `brand.Padding(22, 6, 12, 7)`.
+  - Bỏ ép `SizeType.Absolute` từ `Font.Height`; chuyển `titleGroup`, `brand` và `accountInfo` sang `BufferedTableLayoutPanel` 4 hàng (`Percent 50`, `AutoSize`, `AutoSize`, `Percent 50`) với `AutoSize = true` trên `_pageTitle`, `_pageSubtitle`, `wordmark`, `subtitle`, `name`, `role`, giữ khoảng cách `_pageTitle` → `_pageSubtitle` = `4px` (5px tại 125% DPI) để căn giữa dọc chính xác ở mọi mức DPI mà không bị double-scaling hay cắt dấu tiếng Việt.
+- **Files đã sửa**: `src/PhoneStore.Admin/MainForm.cs`, `docs/PROGRESS.md`.
+- **Kiểm tra (2026-11-13)**:
+  - Build `src/PhoneStore.Admin/PhoneStore.Admin.csproj` (ra thư mục tạm, `--no-restore --no-dependencies --disable-build-servers -m:1`): **0 Warning(s), 0 Error(s)**.
+  - Harness render WinForms độc lập (`verify-ui`, host `PerMonitorV2` 125% DPI / 120 DPI, dữ liệu giả lập, không chạm `PhoneStoreDB`): **PASS** toàn bộ 7 tiêu đề màn hình (`Tổng quan`, `Sản phẩm`, `Thương hiệu`, `Danh mục`, `Khách hàng`, `Đơn hàng`, `Báo cáo`) ở `1200x760`, `1366x768`, `1920x1080` (`header=92px == sidebarBrand=92px`, `contentTop=92`, `Title` 32px, `Sub` 17px khớp `TextRenderer.MeasureText`, `gap=5`, `subBottomInHdr=72/92`, `clearanceToBorder=19px`, không tràn hay chồng chữ).
+  - Kiểm tra ảnh PNG (`s30_2b_header_thuonghieu_1200.png`, `full_1200x760_resize.png`): `Thương hiệu` / `Tổng quan`, phụ đề và `PhoneStore` / `HỆ THỐNG QUẢN TRỊ` hiển thị trọn vẹn dấu tiếng Việt, căn giữa cân đối, Dashboard & Sidebar S30.2A/S30.1A giữ nguyên.
+  - **Chưa kiểm thử (NOT TESTED)**: Runtime thực tế với `PhoneStoreDB` trên `PhoneStore.Admin` biên dịch lại do tiến trình Admin cũ của người dùng đang chạy; mức DPI **100%** và **150%** trên máy thật; toàn solution build/test; chưa commit/push.
+
+Cập nhật 2026-11-13 — S30.2A **READY FOR USER TEST, PhoneStore Admin WinForms Dashboard Overlap, Overflow & Duplicate Rendering Fix**:
+- **Nguyên nhân gốc & Xử lý (`ReportingUi.cs`, `DashboardControl.cs`, `MainForm.cs`, `AdminTheme.cs`)**:
+  - **Lặp thanh biểu đồ, lặp số liệu & viền lồng nhau (`ReportingUi.cs`)**: `StatusBarsControl`, `OrderDonutChartControl`, `RevenueBarsControl`, và `Panel`/`TableLayoutPanel` thẻ KPI/Card thiếu `ControlStyles.ResizeRedraw` và vẽ trực tiếp lên `Panel` nền trắng trong khi vùng nền là `#F5F7FB`. Đã thay bằng `RoundedCardPanel` (`ResizeRedraw | OptimizedDoubleBuffer | AllPaintingInWmPaint`, xóa 4 góc ngoài theo `Parent.BackColor`, vẽ 1 nền trắng + 1 viền `#D9E2EE` 12px) và `BufferedPanel`; gọi `e.Graphics.Clear(BackColor)` đầu `OnPaint`.
+  - **Chồng Donut & Legend (`OrderDonutChartControl`)**: Tách `OrderDonutChartControl` thành `TableLayoutPanel` 2 vùng độc lập (`DonutCanvasControl` 38% bên trái, `DonutLegendControl` 62% bên phải). Donut tính `diameter = Math.Max(48, Math.Min(Width, Height) - 16)` 1:1 căn giữa, tách lát bằng `FillPie` + đường chia trắng 2px + lỗ trắng trung tâm, scale font trung tâm vừa `innerRect`; trạng thái 0 đơn hiển thị vòng xám `0 / đơn hàng` + `"Chưa có dữ liệu đơn hàng"`. Legend đo động chiều rộng `count (pct%)`, chỉ render 1 lần cho mỗi trạng thái chuẩn.
+  - **KPI Doanh thu & Header thẻ (`SummaryCard`, `FittingLabel`)**: Chuyển `iconBox` về Hàng 0 và cho `value` (`FittingLabel : Label` tự đo chiều rộng khi vẽ, `17f` xuống `10.5f`) chiếm `ColumnSpan = 2` (tránh co cụm/rớt dòng khi doanh thu lớn ở 1200×760 DPI 125%).
+  - **Biểu đồ thanh ngang (`StatusBarsControl`)**: Đo động độ rộng nhãn/số bằng `TextRenderer.MeasureText`, vẽ đúng 1 nền thanh + 1 thanh màu khi `count > 0` + 1 số đếm.
+  - **Header & Logo Sidebar (`MainForm.cs`)**: Chuyển sang `BufferedTableLayoutPanel` (`DoubleBuffered`, `ResizeRedraw`), bỏ đường vẽ cứng `y = 63` trong `sidebar.Paint`, đặt đường gạch chân duy nhất dưới `brand` khớp pixel với đường dưới `HeaderPanel` (cùng `68px` trước scale -> `85px` tại 125% DPI), chỉnh chiều cao nhãn theo `Font.Height`.
+  - **Bảng Dashboard & Responsive (`DashboardControl.cs`, `ReportingUi.CompactGrid`, `AdminTheme.DrawBadge`)**: Đổi `recentGrid`, `bestGrid`, `stockGrid` sang `AutoSizeColumnsMode.Fill` với `FillWeight`/`MinimumWidth` hợp lý (ngày đặt `dd/MM HH:mm` + tooltip đầy đủ, rút gọn `OrderCode` + tooltip, vẽ badge giữ viền ngang); chỉnh chiều cao `stockCard` co giãn theo số dòng (`Clamp 148..280`); sửa `Resize` để cập nhật `SetCellPosition` + `RowStyles` khi chuyển 1/2 cột; thêm `label.SizeChanged` căn giữa empty states.
+- **Files đã sửa**: `src/PhoneStore.Admin/Styling/ReportingUi.cs`, `src/PhoneStore.Admin/Styling/AdminTheme.cs`, `src/PhoneStore.Admin/Controls/DashboardControl.cs`, `src/PhoneStore.Admin/MainForm.cs`, `docs/PROGRESS.md`.
+- **Kiểm tra (2026-11-13)**:
+  - Build `src/PhoneStore.Admin/PhoneStore.Admin.csproj` (ra output tạm, `--no-restore --no-dependencies -m:1`): **0 Warning(s), 0 Error(s)** (`bin/Debug/.../PhoneStore.Admin.exe` đang bị khóa bởi tiến trình Admin người dùng mở sẵn nên không ghi đè).
+  - Harness render WinForms độc lập (`verify-ui`, `PerMonitorV2` 125% DPI trên host, dữ liệu giả lập, không chạm DB): xác nhận `1200x760` (sau resize), `1366x768`, `1920x1080`, `1000x1100` (empty state): `headerH=85 == sidebarBrandRowEnd=85`, `overlap=False` Donut/Legend, `hOverflow=False` cả 3 grid, hiển thị đủ `"125.000.000 ₫"`.
+  - **Chưa kiểm thử (NOT TESTED)**: Chạy trực tiếp trên `PhoneStoreDB` trong app `PhoneStore.Admin` mới biên dịch lại của người dùng; mức DPI **100%** và **150%**. Chưa build/test toàn solution, chưa commit/push.
+
+Cập nhật 2026-11-12 — S30.2 **READY FOR USER TEST, PhoneStore Admin WinForms Dashboard Redesign + Donut Chart**:
+- **Thiết kế lại toàn diện Dashboard Admin (`DashboardControl.cs`, `ReportingUi.cs`, `AdminTheme.cs`)**:
+  - **Hàng 1 — 4 Thẻ KPI Tổng quan**:
+    - Thiết kế card nền trắng, viền `#D9E2EE`, bo góc 12px, chiều cao đồng đều 118px.
+    - Tích hợp Icon vector trong huy hiệu bo tròn (Sản phẩm: xanh `#1559D6`, Khách hàng: xám slate `#475569`, Đơn hàng: cam `#B45309`, Doanh thu: xanh lá `#15803D`).
+    - Số liệu nổi bật 20pt bold Navy `#14243C`, phụ đề mô tả rõ ràng, không số liệu phần trăm giả.
+  - **Hàng 2 — Hai biểu đồ song song (Thanh ngang 55% + Donut 45%)**:
+    - **Biểu đồ thanh ngang (`StatusBarsControl`)**: Hiển thị 5 trạng thái chuẩn với thanh nền xám nhạt `#F1F5F9`, thanh màu bo góc 4px, nhãn trạng thái 114px không cắt chữ, số lượng căn phải rõ ràng.
+    - **Bổ sung Biểu đồ Donut (`OrderDonutChartControl`)**: Vẽ bằng GDI+ WinForms thuần, giữ tỷ lệ tròn 1:1. Chính giữa hiển thị tổng số đơn (18pt bold) và "đơn hàng". Các lát cắt màu sắc chuẩn, viền trắng ngăn cách 2px, hiển thị phần trăm trên lát cắt khi $\ge 10\%$. Chú giải bên phải với chấm tròn màu, tên trạng thái, số lượng và tỷ lệ phần trăm.
+    - Màu sắc đồng bộ 100%: Chờ xác nhận `#F59E0B` (Cam), Đã xác nhận `#2563EB` (Xanh dương), Đang giao `#38BDF8` (Xanh da trời), Hoàn thành `#22C55E` (Xanh lá), Đã hủy `#EF4444` (Đỏ).
+  - **Hàng 3 — Hai bảng song song (Đơn hàng gần đây 55% + Sản phẩm bán chạy 45%)**:
+    - **Đơn hàng gần đây (`recentGrid`)**: Cột Mã đơn tự rút gọn mã dài kèm tooltip đầy đủ; cột Tổng tiền định dạng VNĐ (`#,##0 ₫`) căn phải; cột Trạng thái vẽ badge bo góc màu chuẩn; không bị cắt cột, hạn chế cuộn ngang.
+    - **Sản phẩm bán chạy (`bestGrid`)**: Hiển thị Rank `#`, Sản phẩm, Đã bán, Doanh thu. Khi không có dữ liệu bán hàng, hiển thị icon và thông báo "Chưa có dữ liệu bán hàng" căn giữa chuyên nghiệp.
+  - **Hàng 4 — Cảnh báo tồn kho (`stockGrid`)**:
+    - Chiều rộng 100%, ngưỡng $\le 5$. Tự co giãn tên sản phẩm (`AutoSizeMode.Fill`), vẽ badge "Hết hàng" (đỏ) hoặc "Sắp hết" (cam).
+    - Cuối trang hiển thị dòng trạng thái cập nhật thời gian thực ("Đã cập nhật lúc HH:mm:ss · PhoneStoreDB").
+  - **Responsive WinForms**:
+    - Hỗ trợ màn hình 1366×768 và 1920×1080 (DPI 100%, 125%, 150%).
+    - Khi chiều rộng cửa sổ $< 850\text{px}$, bố cục tự động chuyển sang xếp dọc (1 cột) tránh chồng chữ/cắt biểu đồ.
+- **Files đã sửa**:
+  - `src/PhoneStore.Admin/Controls/DashboardControl.cs`
+  - `src/PhoneStore.Admin/Styling/ReportingUi.cs`
+  - `src/PhoneStore.Admin/Styling/AdminTheme.cs`
+  - `docs/PROGRESS.md`
+- **Bảo toàn**: Không sửa database hay migration, không sửa `ReportingService` hay `ReportingStore`, không sửa `LoginForm.cs` hay Shell/Sidebar, không thêm thư viện bên thứ 3, không commit/push.
+
+Cập nhật 2026-11-12 — S30.1C **READY FOR USER TEST, PhoneStore Admin LoginForm Compact Spacing Fix**:
+- **Căn giữa chữ trong ô nhập liệu và căn sát lề trái (`CreateInputFrame` trong `LoginForm.cs`)**:
+  - Xác định nguyên nhân gốc từ ảnh kiểm tra: Textbox dùng `DockStyle.Fill` kết hợp với `Padding.Top = 8px` khiến chữ `admin@admin.com` bị dồn sát viền đáy (khoảng cách trên 18px, khoảng cách dưới chỉ 1px). Đồng thời trong `TableLayoutPanel`, đặt `Margin.Bottom` trên panel làm co bớt chiều cao khả dụng của ô.
+  - Xử lý:
+    1. Chuyển `emailFrame.Margin = Padding.Empty` và `passwordFrame.Margin = Padding.Empty` để khung nhận trọn vẹn chiều cao chuẩn 38px. Đưa khoảng cách lề vào `passwordLabel.Margin.Top = 12` và `showPassword.Margin.Top = 8`.
+    2. Thay `DockStyle.Fill` bằng cơ chế định vị linh hoạt `LayoutInput()`: `left = 10` (nằm sát lề trái ngay sau góc bo 6px), `top = (frame.ClientSize.Height - input.Height) / 2`. Kết quả đo đạc pixel thực tế: khoảng cách trên 13px, khoảng cách dưới 13px — văn bản nằm chính giữa khung tuyệt đối.
+    3. Thêm sự kiện `frame.Click` để bấm vào bất kỳ đâu trong khung đều tự động focus vào ô nhập liệu và thiết lập con trỏ chuột dạng `Cursors.IBeam`.
+- **Tinh chỉnh khoảng cách và bố cục LoginForm theo đặc tả chuẩn Compact**:
+  - Tiêu đề "Đăng nhập quản trị": Giữ nguyên hàng AutoSize độc lập, font 16pt bold chuẩn tiếng Việt.
+  - Phụ đề: Đặt cách tiêu đề đúng 8px (`title.Margin = new Padding(0, 0, 0, 8)`).
+  - Nhãn Email: Đặt cách phụ đề 15px (`subtitle.Margin = new Padding(0, 0, 0, 15)`, nằm trong khoảng 14–16px).
+  - Ô Email: Chiều cao chuẩn 38px, cách nhãn Mật khẩu đúng 12px.
+  - Nhãn Mật khẩu: Cách ô Email 12px, cách ô Mật khẩu 4px.
+  - Ô Mật khẩu: Chiều cao chuẩn 38px, cách checkbox Hiện mật khẩu đúng 8px.
+  - Checkbox: Cách ô Mật khẩu 8px, cách nút Đăng nhập đúng 14px.
+  - Nút Đăng nhập: Chiều cao chuẩn 40px, cách nút Thoát ứng dụng đúng 18px (nằm trong khoảng 16–20px).
+  - Nút Thoát ứng dụng: Chiều cao compact 26px, phẳng nhẹ không viền, đặt cách nút Đăng nhập 18px.
+- **Bố cục tổng thể & Giảm khoảng trắng dư thừa**:
+  - `Padding` formLayout cân đối: `new Padding(32, 20, 32, 18)`.
+  - `ClientSize` thiết lập chuẩn compact 680×380px (giảm từ 410px), đưa toàn bộ khối nhập liệu lên cao hơn và loại bỏ hoàn toàn khoảng trắng dư thừa dưới nút Đăng nhập / Thoát.
+  - Khoảng cách trên (~20px) và dưới (~20px) đạt độ cân đối thị giác.
+  - Tự động điều chỉnh `ClientSize` linh hoạt khi có thông báo lỗi (mở rộng lên 415px để hiển thị alert box không bị cắt chữ, tự thu về 380px khi lỗi được xóa).
+  - Cột thương hiệu bên trái (250px) được giữ nguyên vẹn 100%, bảo toàn tỷ lệ 2 cột và các badge an toàn DPI.
+- **Files đã sửa**:
+  - `src/PhoneStore.Admin/LoginForm.cs`
+  - `docs/PROGRESS.md`
+- **Bảo toàn**: Không sửa database, không sửa xác thực Admin hay SingleAdminPolicy, không thay đổi MainForm/Dashboard, không commit/push.
+
+Cập nhật 2026-11-12 — S30.1B **READY FOR USER TEST, PhoneStore Admin LoginForm Text Overlap & DPI Layout Fix**:
+- **Sửa triệt để lỗi tiêu đề bị cắt và đè phụ đề trên LoginForm (`LoginForm.cs`)**:
+  - Xác định nguyên nhân gốc: Tiêu đề 16pt bold (yêu cầu chiều cao $\ge 30\text{px}$) bị ép vào hàng TableLayoutPanel lồng nhau cố định chỉ 24px khiến phần chân chữ bị cắt, và phụ đề ở hàng liền sau bắt đầu ngay tại mốc 24px đè trực tiếp lên dấu tiếng Việt (`ă`, `đ`, `ị`, `g`, `p`).
+  - Xử lý: Tách tiêu đề "Đăng nhập quản trị" và phụ đề thành hai hàng độc lập trong `formLayout` với `SizeType.AutoSize`. Tiêu đề nhận trọn vẹn 100% chiều cao tự nhiên theo font metric của `Be Vietnam Pro`, phụ đề nằm phía dưới với khoảng cách lề chuẩn 8–12px, không cắt dấu tiếng Việt và không thể chồng lấn ở bất kỳ mức DPI nào (100%, 125%, 150%).
+- **Sửa lỗi cắt dòng "Đồng bộ dữ liệu PhoneStoreDB" trên Panel thương hiệu**:
+  - Xác định nguyên nhân: Chiều rộng panel bên trái chỉ 240px (khoảng trống khả dụng 196px) không đủ cho chuỗi 31 ký tự 8.5pt (~217px), đồng thời điều khiển sử dụng `Dock = Top/Bottom` không tự động ngắt dòng.
+  - Xử lý: Tăng chiều rộng cột thương hiệu lên 250px, thiết lập `MaximumSize = new Size(206, 0)` và chuyển khối badge sang `TableLayoutPanel` hai hàng `SizeType.AutoSize`. Cho phép tự động xuống dòng an toàn khi cần, không bị cắt mép phải và không đè lên dòng "Chính sách một quản trị viên".
+- **Chuẩn hóa chiều cao chữ và bố cục Form**:
+  - `ClientSize` thiết lập chuẩn compact 680×410px.
+  - Toàn bộ các label nhãn (Tiêu đề, Phụ đề, Email, Mật khẩu, Checkbox, Footer) đều dùng `SizeType.AutoSize` để tự động thích ứng với Windows DPI Scaling.
+- **Files đã sửa**:
+  - `src/PhoneStore.Admin/LoginForm.cs`
+  - `docs/PROGRESS.md`
+- **Bảo toàn**: Không sửa database, không sửa xác thực Admin, không thay đổi MainForm/Dashboard, không ảnh hưởng Customer Web.
+
+Cập nhật 2026-11-12 — S30.1A **READY FOR USER TEST, PhoneStore Admin WinForms Runtime UI Fix**:
+- **Khắc phục lỗi Sidebar chồng chữ (`MainForm.cs`)**:
+  - Xác định chính xác nguyên nhân gốc: WinForms `Button` vẽ thuộc tính `Button.Text` mặc định qua `base.OnPaint`, đồng thời sự kiện `Paint` tùy biến lại gọi `TextRenderer.DrawText` dẫn đến chữ bị in đè 2 lớp.
+  - Xử lý: Xóa rỗng `button.Text = string.Empty` và `logout.Text = string.Empty` (chuyển sang dùng `AccessibleName` cho hỗ trợ truy cập), chỉ để sự kiện `Paint` vẽ duy nhất 1 lần nhãn font `Be Vietnam Pro`, căn lề chuẩn xác cạnh vector icon, không chồng chữ, không cắt chữ.
+- **Loại bỏ khoảng trắng dư thừa trên LoginForm (`LoginForm.cs`)**:
+  - Thu gọn kích thước cửa sổ từ 780×520px về chuẩn compact 660×360px.
+  - Cân đối lại khoảng cách padding và chiều cao các trường nhập liệu (Email, Mật khẩu, checkbox).
+  - Đưa alert thông báo lỗi thành hàng `SizeType.AutoSize` (chỉ chiếm chỗ khi có lỗi, không chiếm khoảng trống khi form bình thường).
+  - Chuyển nút "Thoát ứng dụng" thành nút phụ compact dạng flat link tinh tế (chiều cao 26px, không cạnh tranh thị giác với nút Đăng nhập chính).
+- **Files đã sửa**:
+  - `src/PhoneStore.Admin/MainForm.cs`
+  - `src/PhoneStore.Admin/LoginForm.cs`
+  - `docs/PROGRESS.md`
+- **Bảo toàn**: 100% logic xác thực `AdminLoginGateway`, `SingleAdminPolicy`, các phím tắt Enter/Esc, database và các màn hình khác.
+
+Cập nhật 2026-11-12 — S30.1 **READY FOR USER TEST, PhoneStore Admin WinForms: Theme, Login & Main Shell Redesign**:
+- **Design System & Typography (`AdminTheme.cs`)**:
+  - Tích hợp font thương hiệu `Be Vietnam Pro` thông qua `PrivateFontCollection` (liên kết từ tài nguyên font có sẵn trong Customer Web), tự động fallback về `Segoe UI` nếu môi trường không tải được, không phụ thuộc đường dẫn tuyệt đối.
+  - Bổ sung bảng màu chuẩn Customer Web: Primary `#1559D6`, Navy `#14243C`, Secondary `#5A738E`, Surface `#F5F7FB`, Border `#D9E2EE`, cùng hệ thống màu Semantic Badges (Pending, Confirmed, Shipping, Completed, Cancelled, Active, Inactive).
+  - Bổ sung helpers: `CreateInputFrame` (khung viền bo góc có highlight focus), `CreateRoundedRectanglePath`, `DrawBadge`, và hệ thống vector icons `DrawIcon` vẽ trực tiếp bằng GDI+ cho 7 phân hệ và chức năng đăng xuất/alert/eye.
+- **Tái thiết kế màn hình Đăng nhập (`LoginForm.cs`)**:
+  - Kích thước thu gọn chuẩn compact: 780×520px (thay vì 920×660px cồng kềnh).
+  - Cột trái (Brand Panel, 280px): Nền xanh `#1559D6`, logo PhoneStore, thông điệp quản trị tập trung, điểm nhấn bảo mật và thông tin phiên bản.
+  - Cột phải (Form Panel): Tiêu đề "Đăng nhập quản trị", phụ đề hướng dẫn, input Email và Mật khẩu trong khung bo góc 6px tinh tế, checkbox hiện mật khẩu, alert card thông báo lỗi chỉ xuất hiện khi có lỗi (không chiếm khoảng trống rỗng).
+  - Giữ nguyên 100% cơ chế xác thực bất đồng bộ `AdminLoginGateway.LoginAsync`, phím Enter để đăng nhập và phím Escape để thoát.
+- **Tái thiết kế Khung chính Shell (`MainForm.cs`)**:
+  - Header thu gọn từ 100px xuống 64px, hiển thị tiêu đề trang, phụ đề module và khu vực tài khoản quản trị (Avatar circle AD, Tên quản trị viên, Email).
+  - Sidebar cố định 228px (thay vì 244px), chiều cao header logo 64px thẳng hàng với top header, bổ sung vector icon cho tất cả 7 phân hệ điều hướng (Tổng quan, Sản phẩm, Thương hiệu, Danh mục, Khách hàng, Đơn hàng, Báo cáo).
+  - Trạng thái Active item: Nền xanh nhạt `#EBF2FE`, chữ và icon xanh `#1559D6`, vạch chỉ báo active 3.5px bo góc ở mép trái.
+  - Nút "Đăng xuất" đặt cố định dưới đáy sidebar với icon và đường phân cách tinh tế.
+  - ContentPanel tự động co giãn theo kích thước cửa sổ (hỗ trợ màn hình 1366×768 và 1920×1080, tương thích Windows DPI scaling).
+- **Files đã sửa / cập nhật**:
+  - `src/PhoneStore.Admin/Styling/AdminTheme.cs`
+  - `src/PhoneStore.Admin/LoginForm.cs`
+  - `src/PhoneStore.Admin/MainForm.cs`
+  - `src/PhoneStore.Admin/PhoneStore.Admin.csproj`
+  - `docs/PROGRESS.md`
+- **Bảo toàn**: Giữ nguyên toàn bộ logic xác thực, `SingleAdminPolicy`, cơ chế phân quyền, database `PhoneStoreDB`, các UserControl và Dialogs nghiệp vụ. Không commit/push.
+
+Cập nhật 2026-11-12 — S29.9V **READY FOR USER TEST, PhoneStore Customer Web Orders Pagination (5 Orders Per Page)**:
+- **Cấu hình phân trang 5 đơn hàng/trang (`PageSize = 5`)**:
+  - `OrdersController.cs`: Cập nhật `pageSize = 5` (thay vì 10). Tự động chuẩn hóa `page < 1` về 1, bảo toàn bộ lọc khi chuyển trang.
+  - `PurchaseViewModels.cs`: Cập nhật mặc định `CustomerOrdersViewModel.PageSize = 5`.
+  - `PurchaseStore.cs`: Truy vấn database EF Core `Skip((page - 1) * pageSize).Take(pageSize)` với `pageSize <= 0 ? 5 : pageSize`. Sắp xếp ổn định `OrderByDescending(OrderDate).ThenByDescending(OrderId)`. Giới hạn chặt chẽ `UserId == userId`.
+  - `IOrderService.cs` & `OrderService.cs`: Cập nhật tham số mặc định `pageSize = 5` cho `GetPagedCustomerOrdersAsync`.
+- **Giao diện & Tích hợp bộ lọc**:
+  - Tái sử dụng thanh phân trang Compact hiện có trong `Views/Orders/Index.cshtml` và `site.css`: nút active xanh `#1559d6` chữ trắng, các trang khác viền xám nhạt `#d8e5f5`, Trước/Tiếp vô hiệu hóa ở trang đầu/cuối.
+  - Hiển thị dòng thông tin tính động: `Hiển thị 1–5 trong tổng số X đơn hàng` (tính từ `(PageNumber - 1) * PageSize + 1` đến `Math.Min(PageNumber * PageSize, TotalCount)`).
+  - Tự ẩn thanh phân trang khi `TotalPages <= 1` (khi có $\le 5$ đơn hàng).
+  - Khi bấm "Lọc": Áp dụng bộ lọc và reset về trang 1.
+  - Khi chuyển trang: Bảo toàn query filter qua `BuildFilterUrl`.
+  - Khi bấm "Đặt lại": Xóa bộ lọc và quay về trang 1 hiển thị 5 đơn hàng mới nhất.
+- **Dữ liệu thực tế & Kiểm thử**:
+  - Tài khoản khách hàng test (`UserId = 2`, `tai123@gmail.com`): Có đúng 7 đơn hàng trong `PhoneStoreDB`.
+  - Kết quả mong đợi: Trang 1 hiển thị 5 đơn hàng mới nhất (từ 2026-11-11 đến 2026-11-02), trang 2 hiển thị 2 đơn hàng cũ nhất.
+  - Runtime HTTP probe: `/orders`, `/orders?page=2`, `/orders?page=3` trả về HTTP 302 chuyển hướng login bảo vệ an toàn.
+  - Bổ sung unit test tập trung: `tests/PhoneStore.Tests/OrderPaginationTests.cs` (kiểm tra tính toán ViewModel, `BuildFilterUrl`, phân trang EF Core 5 đơn/trang, cách ly dữ liệu user, clamp page âm và overflow).
+- **Files đã sửa / tạo**:
+  - `src/PhoneStore.Web/Controllers/OrdersController.cs`
+  - `src/PhoneStore.Web/Models/PurchaseViewModels.cs`
+  - `src/PhoneStore.Data/Purchasing/PurchaseStore.cs`
+  - `src/PhoneStore.Business/Purchasing/IOrderService.cs`
+  - `src/PhoneStore.Business/Purchasing/OrderService.cs`
+  - `tests/PhoneStore.Tests/OrderPaginationTests.cs` (Mới)
+  - `docs/PROGRESS.md`
+- **Bảo toàn**: Không sửa DB/migration, không sửa Cart/Checkout/Profile/Admin, không commit/push. Chờ user kiểm tra trực tiếp trên Chrome `http://localhost:5015/orders`.
+
 Cập nhật 2026-11-12 — S29.9U **READY FOR USER REVIEW, PhoneStore Customer Web Final Acceptance & Release Readiness**:
 - **Nghiệm thu toàn diện Customer Web (11 màn hình)**:
   - Kiểm tra điều hướng: 9 URL chính (`/`, `/products`, `/brands`, `/categories`, `/cart`, `/account/login`, `/account/register`, `/account/profile`, `/orders`) hoạt động 100%. Đã triệt tiêu hoàn toàn các liên kết neo cũ `/#brands` và `/#categories` trên Header và Footer.

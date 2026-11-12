@@ -19,7 +19,7 @@ public sealed class OrdersController(IOrderService orders, IOrderManagementServi
     public async Task<IActionResult> Index([FromQuery] OrderFilterViewModel? filter, CancellationToken ct)
     {
         filter ??= new OrderFilterViewModel();
-        const int pageSize = 10;
+        const int pageSize = 5;
         try
         {
             var (isValid, errorMessage, fromUtc, toUtc) = ValidateAndResolveDateRange(filter, VietnamTz);

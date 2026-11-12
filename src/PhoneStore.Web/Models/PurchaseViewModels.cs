@@ -67,7 +67,7 @@ public sealed class CustomerOrdersViewModel
     public string? ErrorMessage { get; init; }
     public int TotalCount { get; init; }
     public int PageNumber { get; init; } = 1;
-    public int PageSize { get; init; } = 10;
+    public int PageSize { get; init; } = 5;
     public int CurrentPage => PageNumber;
     public int TotalPages => PageSize <= 0 ? 0 : (int)Math.Ceiling((double)TotalCount / PageSize);
     public bool HasPreviousPage => PageNumber > 1;
