@@ -2948,6 +2948,16 @@ details[open] .filter-chevron {
     }
 }
 
+/* S29.9Q — Smooth mobile main nav scroll without ugly horizontal scrollbars */
+.main-nav {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.main-nav::-webkit-scrollbar {
+    display: none;
+}
+
 /* ==========================================================================
    S29.9J — PhoneStore: Compact Cart UI/UX (Zoom 100%)
    ========================================================================== */
@@ -5961,5 +5971,240 @@ details[open] .filter-chevron {
     }
     .auth-compact-row-two-col .auth-compact-field {
         margin-bottom: 14px;
+    }
+}
+
+/* ==========================================================================
+   S29.9S — PhoneStore: Brands Page UI/UX (Compact)
+   ========================================================================== */
+.brands-page-container {
+    max-width: 1180px;
+    margin-inline: auto;
+    width: 100%;
+    padding-inline: 20px;
+    padding-top: 16px;
+    padding-bottom: 48px;
+}
+.brands-header-bar {
+    margin-bottom: 24px;
+}
+.brands-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 10px;
+}
+.brands-breadcrumbs a {
+    color: #64748b;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+.brands-breadcrumbs a:hover {
+    color: var(--primary, #1559d6);
+}
+.brands-breadcrumbs span[aria-current="page"] {
+    color: #0f172a;
+    font-weight: 500;
+}
+.brands-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 6px;
+    letter-spacing: -0.4px;
+}
+.brands-subtitle {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0;
+}
+
+/* Brands Grid (4 cols on desktop) */
+.brands-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+
+/* Brand Card */
+.brand-page-card {
+    background: #ffffff;
+    border: 1px solid #d9e2ee;
+    border-radius: 14px;
+    padding: 22px 20px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 2px 8px rgba(15, 34, 64, 0.04);
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    min-height: 180px;
+    box-sizing: border-box;
+}
+.brand-page-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--primary, #1559d6);
+    box-shadow: 0 8px 24px rgba(21, 89, 214, 0.12);
+}
+.brand-page-card:focus-visible {
+    outline: 2px solid var(--primary, #1559d6);
+    outline-offset: 2px;
+}
+
+.brand-card-top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+.brand-logo-area {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    width: 100%;
+}
+.brand-card-logo {
+    object-fit: contain;
+    max-height: 38px;
+    width: auto;
+    max-width: 110px;
+    display: block;
+    transition: transform 0.18s ease;
+}
+.brand-page-card:hover .brand-card-logo {
+    transform: scale(1.05);
+}
+
+/* Individual Brand Logo Sizing */
+.brand-card-logo.brand-logo--apple   { max-width: 36px; max-height: 38px; }
+.brand-card-logo.brand-logo--google  { max-width: 36px; max-height: 36px; }
+.brand-card-logo.brand-logo--oneplus { max-width: 38px; max-height: 38px; }
+.brand-card-logo.brand-logo--xiaomi  { max-width: 38px; max-height: 38px; }
+.brand-card-logo.brand-logo--oppo    { max-width: 95px; max-height: 24px; }
+.brand-card-logo.brand-logo--vivo    { max-width: 90px; max-height: 24px; }
+.brand-card-logo.brand-logo--realme  { max-width: 95px; max-height: 24px; }
+.brand-card-logo.brand-logo--samsung { max-width: 105px; max-height: 22px; }
+
+.brand-fallback-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: #edf5ff;
+    color: var(--primary, #1559d6);
+    font-size: 22px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.brand-card-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0 0 4px;
+    letter-spacing: -0.2px;
+}
+.brand-card-count {
+    display: inline-block;
+    font-size: 12.5px;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 9px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.brand-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding-top: 14px;
+    margin-top: 12px;
+    border-top: 1px solid #f1f5f9;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary, #1559d6);
+}
+.brand-card-arrow {
+    transition: transform 0.15s ease;
+}
+.brand-page-card:hover .brand-card-arrow {
+    transform: translateX(3px);
+}
+
+/* Empty state */
+.brands-empty-box {
+    background: #ffffff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 14px;
+    padding: 48px 24px;
+    text-align: center;
+    max-width: 500px;
+    margin: 40px auto;
+}
+.brands-empty-icon {
+    color: #94a3b8;
+    margin-bottom: 16px;
+}
+.brands-empty-box h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0 0 8px;
+}
+.brands-empty-box p {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0 0 20px;
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+    .brands-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+    }
+}
+
+@media (max-width: 680px) {
+    .brands-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+    .brand-page-card {
+        padding: 16px 14px 14px;
+        min-height: 160px;
+    }
+    .brand-logo-area {
+        height: 40px;
+        margin-bottom: 10px;
+    }
+    .brand-card-name {
+        font-size: 15px;
+    }
+    .brand-card-count {
+        font-size: 11.5px;
+    }
+    .brand-card-footer {
+        font-size: 12px;
+        padding-top: 10px;
+        margin-top: 10px;
+    }
+}
+
+@media (max-width: 380px) {
+    .brands-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .brand-page-card {
+        padding: 12px 10px 10px;
     }
 }

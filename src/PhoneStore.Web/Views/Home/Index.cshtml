@@ -48,7 +48,7 @@
     @if (Model.Brands.Count > 0)
     {
         <section class="home-section" id="brands" aria-labelledby="brands-title">
-            <div class="home-section-heading home-section-heading-centered"><div><h2 id="brands-title">Thương hiệu bạn yêu thích</h2></div><a class="home-section-link" href="/products">Xem tất cả <span aria-hidden="true">→</span></a></div>
+            <div class="home-section-heading home-section-heading-centered"><div><h2 id="brands-title">Thương hiệu bạn yêu thích</h2></div><a class="home-section-link" href="/brands">Xem tất cả <span aria-hidden="true">→</span></a></div>
             <div class="home-brand-grid">
                 @foreach (var brand in Model.Brands)
                 {
@@ -69,7 +69,7 @@
         </section>
     }
 
-    <section class="home-section" aria-labelledby="newest-title">
+    <section class="home-section" id="categories" aria-labelledby="newest-title">
         <div class="home-section-heading home-section-heading-centered"><div><h2 id="newest-title">Điện thoại mới nhất</h2></div><a class="home-section-link" href="/products">Xem tất cả <span aria-hidden="true">→</span></a></div>
         @if (Model.Products.Count == 0) { <partial name="_EmptyCatalog" model='@("Chưa có sản phẩm.")' /> }
         else { <div class="home-product-grid">@foreach (var product in Model.Products) { <partial name="_HomeProductCard" model="product" /> }</div> }

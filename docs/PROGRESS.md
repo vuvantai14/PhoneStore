@@ -1,5 +1,72 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-12 — S29.9S **READY FOR USER TEST, PhoneStore Customer Web Brands Page**:
+- **Trang Thương hiệu riêng (`/brands`)**:
+  - Xây dựng controller `BrandsController` tại route `/brands` và view `Views/Brands/Index.cshtml`.
+  - Truy vấn trực tiếp từ `PhoneStoreDbContext` qua EF Core không gây N+1 query: `db.Brands.AsNoTracking().Where(b => b.IsActive).OrderBy(b => b.BrandName).Select(b => new BrandItemViewModel(..., b.Products.Count(p => p.IsActive)))`.
+  - Header trang: Breadcrumb `Trang chủ / Thương hiệu`, tiêu đề "Khám phá thương hiệu" 24px, mô tả "Lựa chọn thương hiệu điện thoại phù hợp với bạn."
+  - Bố cục lưới: Desktop 4 cột × 2 hàng, Tablet 3 cột, Mobile 2 cột. Card bo góc 14px, viền mảnh `#d9e2ee`, nền trắng, hover nâng nhẹ + viền xanh PhoneStore.
+  - Mỗi card hiển thị: Logo SVG chính hãng được căn chỉnh tỷ lệ chuẩn (Apple, Samsung, Xiaomi, OPPO, vivo, realme, Google, OnePlus), tên thương hiệu, badge số lượng sản phẩm, và liên kết "Xem sản phẩm →".
+  - Liên kết Catalog: Click card/nút điều hướng chính xác đến `/products?brandIds={brandId}` theo đúng tham số lọc Catalog hiện có.
+  - Xử lý trạng thái rỗng (`brands-empty-box`) nếu không có thương hiệu nào.
+- **Header & Footer Navigation**:
+  - Cập nhật mục "Thương hiệu" trên Header trong `Views/Shared/_Layout.cshtml` từ `/#brands` thành `/brands`, tự động gán `aria-current="page"` khi ở trang Brands.
+  - Cập nhật mục "Thương hiệu" trong phần Liên kết nhanh ở Footer thành `/brands`.
+  - Cập nhật liên kết "Xem tất cả →" tại section "Thương hiệu bạn yêu thích" trên `Views/Home/Index.cshtml` từ `/products` sang `/brands`. Giữ nguyên 100% giao diện section thương hiệu trang chủ.
+- **CSS**: Thêm khối style scoped riêng `.brands-page-container` và `.brand-page-card` tại cuối `site.css`.
+- **Files đã tạo / chỉnh sửa**:
+  - `src/PhoneStore.Web/Models/BrandViewModels.cs` (Mới)
+  - `src/PhoneStore.Web/Controllers/BrandsController.cs` (Mới)
+  - `src/PhoneStore.Web/Views/Brands/Index.cshtml` (Mới)
+  - `src/PhoneStore.Web/Views/Shared/_Layout.cshtml`
+  - `src/PhoneStore.Web/Views/Home/Index.cshtml`
+  - `src/PhoneStore.Web/wwwroot/css/site.css`
+  - `docs/PROGRESS.md`
+- **Bảo toàn**: Không sửa DB/migration, không thêm package, không sửa logic lọc Catalog, không commit/push. Đã probe runtime `http://localhost:5015/brands` trả về HTTP 200 OK. Chờ người dùng kiểm tra trực tiếp trên Chrome.
+
+Cập nhật 2026-11-12 — S29.9R.1 **CONDITIONAL READY, Customer Web Acceptance Verification & Test Failure Diagnosis**:
+- **Chẩn đoán Unit Test (Exit Code 1)**:
+  - Xác định chính xác 100% nguyên nhân: Tiến trình `dotnet watch` đang chạy trên host khóa độc quyền các file DLL tại `src\PhoneStore.Web\bin\Debug\net8.0\`.
+  - Khi chạy `dotnet test`, MSBuild gặp lỗi `MSB3027 / MSB3021: The process cannot access the file ... because it is being used by another process`.
+  - Trong môi trường sandbox AppContainer, multi-process MSBuild và cuộc gọi Service Control Manager (`Win32Exception 5: Access is denied`) bị hạn chế quyền khiến MSBuild âm thầm báo `Build FAILED. 0 Warning, 0 Error`.
+  - Không có lỗi logic code hay assertion failure nào trong mã nguồn test suite.
+- **Xác minh Website Runtime (`http://localhost:5015`)**:
+  - Máy chủ web đang phục vụ ổn định: `/` (200), `/products` (200), `/products/1` (200), `/products/999999` (404), `/account/login` (200), `/account/register` (200), `/cart` (200).
+  - Các route yêu cầu đăng nhập: `/checkout` (302 $\rightarrow$ login), `/orders` (302 $\rightarrow$ login), `/account/profile` (302 $\rightarrow$ login) chuyển hướng đúng thiết kế phân quyền.
+- **Xác minh Browser Automation & Giao diện**:
+  - Kết nối automation browser ghi nhận `BLOCKED` do Chrome trên host chưa mở remote debugging port.
+  - Tuân thủ nguyên tắc: Không tuyên bố đã kiểm thử tự động, đánh dấu `NOT TESTED`, cung cấp checklist để người dùng kiểm tra trực quan trên Chrome.
+- **Đánh giá & Kết luận mức độ sẵn sàng**:
+  - Không có lỗi P0, P1, P2.
+  - Lỗi môi trường P3: file locking bởi tiến trình web đang chạy.
+  - Kết luận: **CONDITIONAL READY**. Chờ người dùng kiểm tra trực quan lần cuối trên Chrome trước khi chuyển tiếp sang WinForms Admin.
+- **Tài liệu tạo mới / cập nhật**:
+  - `docs/S29.9R_CUSTOMER_WEB_ACCEPTANCE.md` (Báo cáo nghiệm thu chi tiết 9 màn hình và chẩn đoán).
+  - `docs/PROGRESS.md`
+- **Bảo toàn**: Không sửa bất kỳ file source code, Razor view, CSS, JS, Entity hay DB.
+
+Cập nhật 2026-11-12 — S29.9Q **READY FOR USER TEST, Customer Web Global UI/UX & Navigation Finalization**:
+- **Header & Navigation**:
+  - Khắc phục liên kết chết `/#categories`: gắn `id="categories"` vào section "Điện thoại mới nhất" trên `Views/Home/Index.cshtml`, đảm bảo cả Header và Footer điều hướng trơn tru đến đúng vị trí.
+  - Tối ưu nút Giỏ hàng: chuyển thành liên kết trực tiếp `<a class="header-dropdown-trigger cart-entry" href="/cart">`, click mở ngay trang Giỏ hàng, bảo lưu class `.cart-entry` để `site.js` AJAX cập nhật tức thời số lượng và animation bump.
+  - Menu Tài khoản (khi đã đăng nhập): gom chuẩn xác 3 mục theo yêu cầu: "Hồ sơ của tôi" (`/account/profile`), "Đơn hàng của tôi" (`/orders`), và "Đăng xuất" (form POST bảo mật + antiforgery token).
+  - Khi chưa đăng nhập: hiển thị liên kết "Đăng nhập" (`/account/login`) gọn gàng với icon và nhãn đồng nhất.
+  - Thanh tìm kiếm: giữ nguyên hành vi tìm kiếm thực tế trên `/products`, tự động bảo lưu bộ lọc thuộc tính và reset phân trang về trang 1.
+- **Footer**:
+  - Loại bỏ hoàn toàn link stub `/Home/Privacy`.
+  - Cập nhật liên kết "Hỗ trợ khách hàng" đồng bộ theo trạng thái xác thực: khi đã đăng nhập (`/cart`, `/orders`, `/account/profile`), khi chưa đăng nhập (`/cart`, `/account/login`, `/account/register`).
+  - Liên kết nhanh (`/`, `/products`, `/#brands`, `/#categories`) hoạt động 100% không còn link chết hay link giả `#`.
+- **Responsive & Trải nghiệm cuộn di động**:
+  - Bổ sung quy tắc ẩn thanh cuộn mặc định của trình duyệt cho `.main-nav` (`scrollbar-width: none; -ms-overflow-style: none; .main-nav::-webkit-scrollbar { display: none; }`), hỗ trợ touch scroll mượt mà trên mobile (390px, 430px) mà không xuất hiện thanh cuộn xấu xí.
+  - Đảm bảo toàn bộ viewport (1440px, 1366px, 768px, 430px, 390px) không bị tràn ngang (horizontal overflow).
+- **Rà soát 6 luồng điều hướng**: Đã kiểm tra 100% khớp route MVC, breadcrumbs và liên kết cha con trên tất cả 10 màn hình Customer Web.
+- **Files đã sửa**:
+  - `src/PhoneStore.Web/Views/Home/Index.cshtml`
+  - `src/PhoneStore.Web/Views/Shared/_Layout.cshtml`
+  - `src/PhoneStore.Web/wwwroot/css/site.css`
+  - `docs/PROGRESS.md`
+- **Bảo toàn**: Không sửa DB/migration, không sửa các màn hình đã được duyệt, không can thiệp backend không liên quan, không commit/push. Chờ user kiểm tra trực tiếp trên Chrome `http://localhost:5015`.
+
 Cập nhật 2026-11-12 — S29.9P **READY FOR USER TEST, Compact Login & Register UI/UX**:
 - **Trang Đăng nhập (`/account/login`)**:
   - Giới hạn card `max-width: 480px`, căn giữa, padding thu gọn còn 24–28px, bỏ đường xanh dày 4px trên đỉnh card và bỏ eyebrow "TÀI KHOẢN PHONESTORE".

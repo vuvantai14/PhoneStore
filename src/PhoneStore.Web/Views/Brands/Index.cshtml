@@ -1,0 +1,68 @@
+@model PhoneStore.Web.Models.BrandsViewModel
+@{
+    ViewData["Title"] = "Thương hiệu";
+}
+
+<div class="brands-page-container">
+    <div class="brands-header-bar">
+        <nav class="brands-breadcrumbs" aria-label="Đường dẫn">
+            <a href="/">Trang chủ</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">Thương hiệu</span>
+        </nav>
+        <h1 class="brands-title">Khám phá thương hiệu</h1>
+        <p class="brands-subtitle">Lựa chọn thương hiệu điện thoại phù hợp với bạn.</p>
+    </div>
+
+    @if (Model.Brands.Count == 0)
+    {
+        <div class="brands-empty-box">
+            <div class="brands-empty-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                </svg>
+            </div>
+            <h2>Chưa có thông tin thương hiệu</h2>
+            <p>Dữ liệu thương hiệu đang được cập nhật. Vui lòng quay lại sau.</p>
+            <a href="/products" class="button button-primary">Xem tất cả sản phẩm</a>
+        </div>
+    }
+    else
+    {
+        <div class="brands-grid">
+            @foreach (var brand in Model.Brands)
+            {
+                <a class="brand-page-card" href="/products?brandIds=@brand.Id" aria-label="Xem @brand.ProductCount sản phẩm thương hiệu @brand.Name">
+                    <div class="brand-card-top">
+                        <div class="brand-logo-area">
+                            @if (!string.IsNullOrEmpty(brand.LogoUrl))
+                            {
+                                <img src="@brand.LogoUrl" 
+                                     alt="@brand.Name" 
+                                     class="brand-card-logo brand-logo--@BrandLogoMap.GetCssSlug(brand.Name)" 
+                                     loading="lazy" 
+                                     width="110" 
+                                     height="40" />
+                            }
+                            else
+                            {
+                                <div class="brand-fallback-logo">@brand.Name.Substring(0, 1)</div>
+                            }
+                        </div>
+                        <h2 class="brand-card-name">@brand.Name</h2>
+                        <span class="brand-card-count">
+                            @(brand.ProductCount > 0 ? $"{brand.ProductCount} sản phẩm" : "Đang cập nhật")
+                        </span>
+                    </div>
+                    <div class="brand-card-footer">
+                        <span class="brand-card-link-text">Xem sản phẩm</span>
+                        <svg class="brand-card-arrow" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                </a>
+            }
+        </div>
+    }
+</div>
