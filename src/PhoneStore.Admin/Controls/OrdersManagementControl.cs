@@ -11,7 +11,7 @@ public sealed class OrdersManagementControl : UserControl
     private readonly CatalogManagementGateway gateway;
     private readonly DataGridView grid = ManagementUi.CreateGrid();
     private readonly TextBox search = new() { Width = 260, MaxLength = 150, PlaceholderText = "Mã đơn, người nhận, SĐT hoặc email" };
-    private readonly ComboBox statusFilter = new() { Width = 175, DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly ComboBox statusFilter = new() { Width = 200, DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly Button detail = ManagementUi.CreateButton("Xem chi tiết", true);
     private readonly Label status = AdminTheme.CreateLabel("");
     private bool busy;
@@ -19,18 +19,21 @@ public sealed class OrdersManagementControl : UserControl
     public OrdersManagementControl(CatalogManagementGateway gateway)
     {
         this.gateway = gateway; Name = nameof(OrdersManagementControl); Padding = new Padding(24);
-        BackColor = AdminTheme.Surface; Font = new Font("Segoe UI", 10); AutoScaleMode = AutoScaleMode.Dpi;
+        BackColor = AdminTheme.Surface; Font = new Font("Segoe UI", 10);
+        AutoScaleDimensions = new SizeF(96, 96); AutoScaleMode = AutoScaleMode.Dpi;
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5 };
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         var title = AdminTheme.CreateLabel("Quản lý đơn hàng", 21, true); title.Margin = new Padding(0, 0, 0, 8);
         var hint = AdminTheme.CreateLabel("Theo dõi đơn hàng, xem giá mua lịch sử và cập nhật đúng quy trình."); hint.ForeColor = AdminTheme.Muted; hint.Margin = new Padding(0, 0, 0, 18);
-        var toolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, WrapContents = true, Margin = new Padding(0, 0, 0, 14) };
+        var toolbar = ManagementUi.CreateFilterToolbar();
         var choices = new List<StatusChoice> { new("Tất cả trạng thái", null) };
         choices.AddRange(Enum.GetValues<OrderStatus>().Select(value => new StatusChoice(OrderStatusLabels.Display(value), value)));
         statusFilter.DataSource = choices; statusFilter.DisplayMember = nameof(StatusChoice.Text);
         var find = ManagementUi.CreateButton("Tìm kiếm"); var refresh = ManagementUi.CreateButton("Tải lại");
-        toolbar.Controls.AddRange([search, statusFilter, find, refresh, detail]);
+        var searchHost = ManagementUi.CreateFilterControlHost(search, 260);
+        var statusHost = ManagementUi.CreateFilterControlHost(statusFilter, 200);
+        toolbar.Controls.AddRange([searchHost, statusHost, ManagementUi.CreateToolbarActionGroup(find, refresh, detail)]);
         grid.Name = "OrdersGrid";
         ManagementUi.AddColumn(grid, nameof(OrderManagementRow.OrderId), "ID", 60);
         ManagementUi.AddColumn(grid, nameof(OrderManagementRow.OrderCode), "Mã đơn", 210);

@@ -1,5 +1,40 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-13 — S30.3D **READY FOR USER TEST** (Reports revenue chart & advanced filter UX):
+- Thay biểu đồ `RevenueBarsControl` cũ trên Reports bằng `RevenueColumnChartControl` dùng chung với Dashboard, có trục tiền tệ, tooltip thời gian/doanh thu/số đơn Completed, giới hạn bề rộng cột 44px logical để một điểm không kéo giãn toàn card, cùng loading/empty/error state riêng.
+- Card doanh thu mặc định tuần hiện tại UTC+7 (T2–CN), có thanh nhanh `Tuần | Tháng | Năm`, kỳ trước/sau, nhãn kỳ, tổng doanh thu/số đơn và panel `Bộ lọc` progressive disclosure. Draft chỉ được áp dụng khi nhấn `Áp dụng`; `Đặt lại` về tuần hiện tại; busy state khóa toàn bộ thao tác để tránh truy vấn chồng.
+- Panel nâng cao không lặp thanh nhanh: chọn ngày thuộc tuần, tháng+năm, năm, hoặc khoảng tùy chỉnh tối đa 366 ngày. Khoảng tùy chỉnh hiển thị ≤45 ngày theo ngày, 46–180 ngày gom theo tuần, >180 ngày gom theo tháng; tổng tiền/số đơn vẫn lấy từ chuỗi ngày gốc của `ReportingService` và đơn vị nhóm được ghi trên nhãn kỳ.
+- Phạm vi lọc tách biệt: ngày ở header là **bộ lọc toàn trang** cho KPI đơn/doanh thu/trung bình, trạng thái và Top 10; tồn kho/cảnh báo là số liệu hiện tại. Bộ lọc trong card chỉ gọi `GetRevenueSeriesAsync` và chỉ cập nhật biểu đồ; không tải lại KPI, status chart hoặc bảng.
+- Nghiệp vụ giữ nguyên: chỉ `Completed`, theo `OrderDate`, timezone `SE Asia Standard Time` UTC+7; không đổi Dashboard, database hoặc Customer Web.
+- Files S30.3D: mới `ReportRevenueChartPanel.cs`; sửa `ReportsControl.cs`, `ReportingUi.cs`, `docs/PROGRESS.md`. Các diff S30.3A–C được bảo toàn.
+- Kiểm tra mục tiêu: Admin build cô lập **0 warnings / 0 errors**; test-project build **0 warnings / 0 errors**; `PhoneStore.Tests.ReportingTests` **13/13 PASS**. Không chạy full suite hoặc Admin, không DML/migration/seed.
+- Chưa kiểm thử trực tiếp: cần người dùng nghiệm thu Reports tại 1366×768, DPI 100/125/150%, thao tác mở/đóng panel, điều hướng kỳ, tooltip và wrap của bộ lọc. Không commit/push.
+
+Cập nhật 2026-11-13 — S30.3C **READY FOR USER TEST** (Admin management tables ID ASC):
+- Query quản lý Product, Customer và Order nay mặc định `OrderBy(...Id)` tăng dần; tìm kiếm/lọc tiếp tục áp dụng trước khi sắp xếp. Brand và Category trong `LookupManagementStore` cũng chuyển từ thứ tự tên sang `BrandId`/`CategoryId` tăng dần.
+- Giữ nguyên ID thật, kiểu số và toàn bộ CRUD/filter. Không đánh lại identity, không DML/migration/seed và không thay đổi DataGridView.
+- Giữ thứ tự nghiệp vụ riêng: Dashboard/Reports (đơn gần đây, bán chạy, tồn thấp), Customer Web catalog/orders, chi tiết đơn theo `OrderDetailId`, và quản lý ảnh theo `IsPrimary → DisplayOrder → ImageId` vì Admin điều khiển DisplayOrder.
+- Files sửa S30.3C: `ProductManagementStore.cs`, `CustomerManagementStore.cs`, `OrderManagementStore.cs`, `LookupManagementStore.cs`, test mới `ManagementOrderingTests.cs`, và `docs/PROGRESS.md`.
+- Kiểm tra mục tiêu: test-project build cô lập **0 warnings / 0 errors**; `ManagementOrderingTests.Management_lists_are_sorted_by_numeric_id_ascending_after_filters` **1/1 PASS** trên SQLite cách ly, bao phủ Product/Customer/Order/Brand/Category với ID `5, 20`. Không chạy full suite hoặc Admin.
+- Chưa kiểm thử trực tiếp: cần người dùng mở năm bảng quản lý trên Admin để xác nhận dữ liệu SQL thật tăng dần sau tải lại/tìm kiếm/lọc. Không commit/push.
+
+Cập nhật 2026-11-13 — S30.3B **READY FOR USER TEST** (filter alignment & truncated text):
+- Thay cách ép `Height`/owner-draw của S30.3A bằng host panel 40px dùng chung: khung là chiều cao thị giác thống nhất, còn `TextBox`/`ComboBox` native được căn giữa theo cả hai trục và tiếp tục giữ hành vi bàn phím/accessibility nền tảng.
+- Product: bốn label dùng cùng cấu trúc hai hàng; nút Tìm kiếm dùng spacer label cùng typography nên căn chính xác theo hàng nhập liệu, không còn `Margin.Top` ước lượng; khoảng trống toolbar được giảm về nhịp 10–12px.
+- Customer/Order: dropdown trạng thái tăng từ 170/175px lên 200px để hiển thị đầy đủ `Tất cả trạng thái`; search, dropdown và nhóm button cùng khung 40px, nhóm action wrap nguyên khối khi thiếu chiều rộng.
+- Focus border dùng token `Primary`, border thường dùng token `Border`; AutoScale baseline 96 DPI được khai báo nhất quán cho cả ba màn hình. Không đổi handler, truy vấn hay business logic.
+- Files sửa trong S30.3A/B: `ManagementUi.cs`, `ProductsManagementControl.cs`, `CustomersManagementControl.cs`, `OrdersManagementControl.cs`, `docs/PROGRESS.md`.
+- Kiểm tra mục tiêu: Admin build cô lập tại `scratch/s30_3b/admin-out` **0 warnings / 0 errors**; `git diff --check` PASS. Không chạy full tests, không chạy Admin và không chạm database.
+- Chưa kiểm thử trực tiếp: người dùng cần nghiệm thu trực quan ở DPI 100/125/150%, resize cửa sổ và keyboard focus trên ba màn hình. Không commit/push.
+
+Cập nhật 2026-11-13 — S30.3A **READY FOR USER TEST** (Admin filter bar UI consistency):
+- Chuẩn hóa thanh lọc của Sản phẩm, Khách hàng và Đơn hàng bằng helper chung `ManagementUi`: control mục tiêu 40px tại DPI 100%, font Be Vietnam Pro/Segoe UI fallback 9.5pt, khoảng cách ngang 10px và khoảng cách wrap 8px.
+- `TextBox` dùng chiều cao thực 40px; `ComboBox` native dùng owner-draw item cao 30px để chiều cao đóng đạt khoảng 38–40px và text căn giữa; button giữ chuẩn theme 40px. Không thay đổi handler, truy vấn hoặc nghiệp vụ.
+- Product giữ lưới label phía trên và căn nút Tìm kiếm theo hàng nhập liệu. Customer/Order dùng toolbar chung và nhóm action không bị tách rời khi xuống hàng; nút chính/phụ giữ nguyên hierarchy hiện có.
+- Files sửa: `ManagementUi.cs`, `ProductsManagementControl.cs`, `CustomersManagementControl.cs`, `OrdersManagementControl.cs`, `docs/PROGRESS.md`.
+- Kiểm tra mục tiêu: `dotnet build src/PhoneStore.Admin/PhoneStore.Admin.csproj --no-restore --disable-build-servers -m:1 -nologo -o scratch/s30_3a/admin-out` — **0 warnings / 0 errors**. Không chạy full tests vì chỉ đổi layout/style, không chạy Admin và không chạm database.
+- Chưa kiểm thử trực tiếp: cần người dùng nghiệm thu ba toolbar tại 1366×768 và DPI 100/125/150%, đặc biệt wrap nhóm action và text ComboBox. Không commit/push.
+
 Cập nhật 2026-11-13 — S30.2G **READY FOR USER TEST** (Dashboard Revenue final UI/UX refinement):
 - **Điều hướng kỳ**: thêm nút vector kỳ trước/kỳ sau và đặt nhãn khoảng thời gian ở giữa. Tuần dịch ±7 ngày, tháng/năm dịch đúng biên lịch; giới hạn từ `01/01/2020` đến hết năm kế tiếp; điều hướng ẩn với khoảng tùy chỉnh. Nút có accessible name, tooltip và disabled state; mọi control doanh thu bị khóa ngay trước `await`, nên bấm nhanh không tạo truy vấn chồng. Mỗi lần chỉ gọi `ReloadRevenueOnlyAsync`.
 - **Bộ lọc không trùng lặp**: giữ duy nhất thanh nhanh `Tuần | Tháng | Năm`. Panel nâng cao không còn lặp ba chế độ; chỉ hiện checkbox `Khoảng ngày tùy chỉnh`, trường đúng với chế độ nhanh hiện tại và hai nút `Đặt lại` / `Áp dụng` căn phải. Draft vẫn tách applied: đóng panel không đổi biểu đồ; bỏ custom trở về chế độ chuẩn gần nhất; chọn nhanh thoát custom.

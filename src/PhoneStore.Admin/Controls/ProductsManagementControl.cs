@@ -77,9 +77,9 @@ public sealed class ProductsManagementControl : UserControl
         _filters.Controls.Add(FilterField("Trạng thái", _active));
         var filter = ManagementUi.CreateButton("Tìm kiếm");
         filter.Name = "ApplyProductFiltersButton";
-        filter.Margin = new Padding(0, 23, 0, 0);
+        filter.Margin = Padding.Empty;
         filter.Click += async (_, _) => await RefreshAsync();
-        _filters.Controls.Add(filter);
+        _filters.Controls.Add(FilterAction(filter));
         _search.KeyDown += async (_, e) =>
         {
             if (e.KeyCode == Keys.Enter)
@@ -159,10 +159,11 @@ public sealed class ProductsManagementControl : UserControl
 
     private static TableLayoutPanel FilterField(string caption, Control input)
     {
+        var host = ManagementUi.CreateFilterControlHost(input, input.Width);
         var group = new TableLayoutPanel
         {
             AutoSize = true, ColumnCount = 1, RowCount = 2,
-            Margin = new Padding(0, 0, 12, 10), Width = input.Width, MinimumSize = new Size(input.Width, 0)
+            Margin = new Padding(0, 0, 2, 2), Width = host.Width, MinimumSize = new Size(host.Width, 0)
         };
         group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -170,11 +171,26 @@ public sealed class ProductsManagementControl : UserControl
         var label = AdminTheme.CreateLabel(caption, 9, true);
         label.Dock = DockStyle.Fill;
         label.Margin = new Padding(0, 0, 0, 8);
-        input.Dock = DockStyle.Top;
-        input.Margin = Padding.Empty;
         input.AccessibleName = caption;
         group.Controls.Add(label, 0, 0);
-        group.Controls.Add(input, 0, 1);
+        group.Controls.Add(host, 0, 1);
+        return group;
+    }
+
+    private static TableLayoutPanel FilterAction(Button button)
+    {
+        var group = new TableLayoutPanel
+        {
+            AutoSize = true, ColumnCount = 1, RowCount = 2,
+            Margin = new Padding(0, 0, 0, 2)
+        };
+        group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var spacer = AdminTheme.CreateLabel(" ", 9, true);
+        spacer.Margin = new Padding(0, 0, 0, 8);
+        button.MinimumSize = new Size(0, ManagementUi.FilterControlHeight);
+        group.Controls.Add(spacer, 0, 0);
+        group.Controls.Add(button, 0, 1);
         return group;
     }
 

@@ -17,7 +17,7 @@ public sealed class CustomerManagementStore(PhoneStoreDbContext db)
             query = query.Where(user => user.FullName.Contains(search) || user.Email.Contains(search)
                 || (user.Phone != null && user.Phone.Contains(search)));
         if (filter.IsActive.HasValue) query = query.Where(user => user.IsActive == filter.IsActive.Value);
-        return await query.OrderByDescending(user => user.UserId)
+        return await query.OrderBy(user => user.UserId)
             .Select(user => new CustomerManagementRow(user.UserId, user.FullName, user.Email, user.Phone,
                 user.Address, user.IsActive, user.CreatedAt)).ToListAsync(ct);
     }

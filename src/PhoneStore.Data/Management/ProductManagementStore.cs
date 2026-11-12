@@ -18,7 +18,7 @@ public sealed class ProductManagementStore(PhoneStoreDbContext db)
         if (filter.BrandId.HasValue) query = query.Where(p => p.BrandId == filter.BrandId.Value);
         if (filter.CategoryId.HasValue) query = query.Where(p => p.CategoryId == filter.CategoryId.Value);
         if (filter.IsActive.HasValue) query = query.Where(p => p.IsActive == filter.IsActive.Value);
-        return await query.OrderByDescending(p => p.ProductId)
+        return await query.OrderBy(p => p.ProductId)
             .Select(p => new ProductManagementRow(p.ProductId, p.ProductName, p.Brand.BrandName,
                 p.Category.CategoryName, p.Price, p.StockQuantity, p.RAM, p.Storage, p.IsActive, p.UpdatedAt))
             .ToListAsync(ct);

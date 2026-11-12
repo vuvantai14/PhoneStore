@@ -1,5 +1,6 @@
 using PhoneStore.Admin.Management;
 using PhoneStore.Admin.Styling;
+using PhoneStore.Business.Reporting;
 using PhoneStore.Models.Reporting;
 
 namespace PhoneStore.Admin.Controls;
@@ -20,7 +21,7 @@ public sealed class ReportsControl : UserControl
     private readonly Label inventoryValue;
     private readonly Label inventoryDetail;
     private readonly StatusBarsControl statusChart = new() { Dock = DockStyle.Fill };
-    private readonly RevenueBarsControl revenueChart = new() { Dock = DockStyle.Fill };
+    private readonly ReportRevenueChartPanel revenueChart;
     private readonly DataGridView bestGrid = ReportingUi.CompactGrid();
     private readonly DataGridView inventoryGrid = ReportingUi.CompactGrid();
     private readonly Label bestEmpty = EmptyLabel();
@@ -32,6 +33,7 @@ public sealed class ReportsControl : UserControl
     public ReportsControl(CatalogManagementGateway gateway)
     {
         this.gateway = gateway;
+        revenueChart = new ReportRevenueChartPanel(gateway);
         SuspendLayout();
         Name = nameof(ReportsControl);
         AutoScaleDimensions = new SizeF(96, 96);
@@ -40,7 +42,7 @@ public sealed class ReportsControl : UserControl
         Padding = new Padding(24);
         AutoScroll = true;
 
-        var today = DateTime.Today;
+        var today = ReportingCalendar.Today.ToDateTime(TimeOnly.MinValue);
         fromDate.Value = new DateTime(today.Year, today.Month, 1);
         toDate.Value = today;
         fromDate.MaxDate = DateTimePicker.MaximumDateTime.Date;
@@ -61,10 +63,10 @@ public sealed class ReportsControl : UserControl
         root.Controls.Add(cards, 0, 1);
 
         var charts = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 2, Margin = new Padding(0, 0, 0, 16) };
-        charts.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        charts.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        charts.Controls.Add(SectionCard("Đơn hàng theo trạng thái", statusChart, 260), 0, 0);
-        charts.Controls.Add(SectionCard("Doanh thu hoàn thành theo ngày", revenueChart, 260), 1, 0);
+        charts.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35));
+        charts.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65));
+        charts.Controls.Add(SectionCard("Đơn hàng theo trạng thái", statusChart, 360), 0, 0);
+        charts.Controls.Add(revenueChart, 1, 0);
         root.Controls.Add(charts, 0, 2);
 
         ConfigureBestGrid();
@@ -92,7 +94,7 @@ public sealed class ReportsControl : UserControl
         header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         var text = new TableLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1 };
         var heading = AdminTheme.CreateLabel("Báo cáo & thống kê", 20, true);
-        var hint = AdminTheme.CreateLabel("Phân tích đơn hàng, doanh thu và tồn kho từ PhoneStoreDB.");
+        var hint = AdminTheme.CreateLabel("Bộ lọc toàn trang: KPI, trạng thái, bán chạy · Tồn kho là số liệu hiện tại.");
         hint.ForeColor = AdminTheme.Muted;
         hint.Margin = new Padding(0, 6, 0, 0);
         text.Controls.Add(heading, 0, 0);
@@ -172,7 +174,6 @@ public sealed class ReportsControl : UserControl
         inventoryValue.Text = ReportingUi.Number(report.TotalStock);
         inventoryDetail.Text = $"{ReportingUi.Number(report.ActiveProducts)} sản phẩm · {ReportingUi.Number(report.OutOfStockProducts)} hết hàng";
         statusChart.SetData(report.OrderStatuses);
-        revenueChart.SetData(report.RevenueTrend);
         BindGrid(bestGrid, bestEmpty, report.BestSellers, "Chưa có dữ liệu bán hàng.");
         BindGrid(inventoryGrid, inventoryEmpty, report.InventoryAlerts, "Không có sản phẩm sắp hết hàng.");
     }

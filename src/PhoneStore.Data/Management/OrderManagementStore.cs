@@ -18,7 +18,7 @@ public sealed class OrderManagementStore(PhoneStoreDbContext db)
             query = query.Where(order => order.OrderCode.Contains(search) || order.ReceiverName.Contains(search)
                 || order.ReceiverPhone.Contains(search) || order.User.Email.Contains(search));
         if (filter.Status.HasValue) query = query.Where(order => order.Status == filter.Status.Value);
-        return await query.OrderByDescending(order => order.OrderDate).ThenByDescending(order => order.OrderId)
+        return await query.OrderBy(order => order.OrderId)
             .Select(order => new OrderManagementRow(order.OrderId, order.OrderCode, order.User.FullName,
                 order.User.Email, order.ReceiverName, order.ReceiverPhone, order.OrderDate,
                 order.TotalAmount, order.Status)).ToListAsync(ct);

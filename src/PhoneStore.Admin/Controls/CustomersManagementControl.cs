@@ -10,7 +10,7 @@ public sealed class CustomersManagementControl : UserControl
     private readonly CatalogManagementGateway gateway;
     private readonly DataGridView grid = ManagementUi.CreateGrid();
     private readonly TextBox search = new() { Width = 270, MaxLength = 150, PlaceholderText = "Họ tên, email hoặc số điện thoại" };
-    private readonly ComboBox active = new() { Width = 170, DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly ComboBox active = new() { Width = 200, DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly Button detail = ManagementUi.CreateButton("Xem / chỉnh sửa", true);
     private readonly Button toggle = ManagementUi.CreateButton("Ngừng hoạt động");
     private readonly Label status = AdminTheme.CreateLabel("");
@@ -19,18 +19,21 @@ public sealed class CustomersManagementControl : UserControl
     public CustomersManagementControl(CatalogManagementGateway gateway)
     {
         this.gateway = gateway; Name = nameof(CustomersManagementControl); Padding = new Padding(24);
-        BackColor = AdminTheme.Surface; Font = new Font("Segoe UI", 10); AutoScaleMode = AutoScaleMode.Dpi;
+        BackColor = AdminTheme.Surface; Font = new Font("Segoe UI", 10);
+        AutoScaleDimensions = new SizeF(96, 96); AutoScaleMode = AutoScaleMode.Dpi;
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5 };
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         var title = AdminTheme.CreateLabel("Quản lý khách hàng", 21, true); title.Margin = new Padding(0, 0, 0, 8);
         var hint = AdminTheme.CreateLabel("Xem hồ sơ và quản lý trạng thái tài khoản Customer."); hint.ForeColor = AdminTheme.Muted; hint.Margin = new Padding(0, 0, 0, 18);
-        var toolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, WrapContents = true, Margin = new Padding(0, 0, 0, 14) };
+        var toolbar = ManagementUi.CreateFilterToolbar();
         active.DataSource = new[] { new StatusChoice("Tất cả trạng thái", null), new StatusChoice("Đang hoạt động", true), new StatusChoice("Ngừng hoạt động", false) };
         active.DisplayMember = nameof(StatusChoice.Text);
         var find = ManagementUi.CreateButton("Tìm kiếm"); var refresh = ManagementUi.CreateButton("Tải lại");
-        toolbar.Controls.AddRange([search, active, find, refresh, detail, toggle]);
+        var searchHost = ManagementUi.CreateFilterControlHost(search, 270);
+        var statusHost = ManagementUi.CreateFilterControlHost(active, 200);
+        toolbar.Controls.AddRange([searchHost, statusHost, ManagementUi.CreateToolbarActionGroup(find, refresh, detail, toggle)]);
         grid.Name = "CustomersGrid";
         ManagementUi.AddColumn(grid, nameof(CustomerManagementRow.UserId), "ID", 60);
         ManagementUi.AddColumn(grid, nameof(CustomerManagementRow.FullName), "Họ tên", 180);

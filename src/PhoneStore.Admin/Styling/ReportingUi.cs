@@ -808,6 +808,7 @@ public sealed class RevenueColumnChartControl : Control
     private IReadOnlyList<RevenueBucket> data = [];
     private string emptyMessage = "Không có doanh thu hoàn thành trong kỳ này.";
     private bool isError;
+    private bool isLoading;
     private int hoveredIndex = -1;
     private Rectangle cachedPlotRect = Rectangle.Empty;
 
@@ -827,6 +828,7 @@ public sealed class RevenueColumnChartControl : Control
     public void SetData(IReadOnlyList<RevenueBucket> buckets, string? emptyText = null)
     {
         isError = false;
+        isLoading = false;
         data = buckets ?? [];
         emptyMessage = !string.IsNullOrWhiteSpace(emptyText)
             ? emptyText
@@ -839,10 +841,22 @@ public sealed class RevenueColumnChartControl : Control
     public void SetError(string message = "Không thể tải dữ liệu doanh thu.")
     {
         isError = true;
+        isLoading = false;
         data = [];
         emptyMessage = string.IsNullOrWhiteSpace(message)
             ? "Không thể tải dữ liệu doanh thu."
             : message;
+        hoveredIndex = -1;
+        toolTip.SetToolTip(this, null);
+        Invalidate();
+    }
+
+    public void SetLoading(string message = "Đang tải dữ liệu doanh thu…")
+    {
+        isError = false;
+        isLoading = true;
+        data = [];
+        emptyMessage = message;
         hoveredIndex = -1;
         toolTip.SetToolTip(this, null);
         Invalidate();
@@ -984,7 +998,8 @@ public sealed class RevenueColumnChartControl : Control
                 if (bucket.Revenue > 0m)
                 {
                     var sidePad = cellWidth <= 4 ? 0 : Math.Max(1, Math.Min(8, (int)Math.Floor(cellWidth * 0.22)));
-                    var barWidth = Math.Max(2, cellWidth - sidePad * 2);
+                    var maxBarWidth = Math.Max(28, (int)Math.Round(44 * ((DeviceDpi > 0 ? DeviceDpi : 96) / 96.0)));
+                    var barWidth = Math.Min(maxBarWidth, Math.Max(2, cellWidth - sidePad * 2));
                     var barX = xStart + (cellWidth - barWidth) / 2;
                     var barH = Math.Max(4, (int)Math.Round((plotRect.Height - 2) * (double)(bucket.Revenue / yMax)));
                     var barRect = new Rectangle(barX, plotRect.Bottom - barH, barWidth, barH);
@@ -1100,9 +1115,11 @@ public sealed class RevenueColumnChartControl : Control
         var iconSize = Math.Max(24, Math.Min(32, Width / 12));
         using var mainFont = AdminTheme.CreateFont(9.5f, isError ? FontStyle.Bold : FontStyle.Regular);
         using var subFont = AdminTheme.CreateFont(8f);
-        var subText = isError
-            ? "Kiểm tra kết nối dữ liệu và nhấn Làm mới."
-            : "Chỉ tính đơn Hoàn thành · nhóm theo ngày đặt (OrderDate)";
+        var subText = isLoading
+            ? "Vui lòng chờ trong giây lát."
+            : isError
+                ? "Kiểm tra kết nối dữ liệu và nhấn Làm mới."
+                : "Chỉ tính đơn Hoàn thành · nhóm theo ngày đặt (OrderDate)";
 
         var availTextW = Math.Max(120, Width - 32);
         var mainSz = TextRenderer.MeasureText(g, emptyMessage, mainFont, new Size(availTextW, 0), TextFormatFlags.WordBreak);

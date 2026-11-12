@@ -18,7 +18,7 @@ public sealed class LookupManagementStore(PhoneStoreDbContext db)
             var query = db.Brands.AsNoTracking();
             if (!string.IsNullOrWhiteSpace(term))
                 query = query.Where(x => x.BrandName.Contains(term));
-            return await query.OrderBy(x => x.BrandName).ThenBy(x => x.BrandId)
+            return await query.OrderBy(x => x.BrandId)
                 .Select(x => new LookupRow(x.BrandId, x.BrandName, x.Description, x.IsActive, x.CreatedAt))
                 .ToListAsync(cancellationToken);
         }
@@ -28,7 +28,7 @@ public sealed class LookupManagementStore(PhoneStoreDbContext db)
         var categories = db.Categories.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(term))
             categories = categories.Where(x => x.CategoryName.Contains(term));
-        return await categories.OrderBy(x => x.CategoryName).ThenBy(x => x.CategoryId)
+        return await categories.OrderBy(x => x.CategoryId)
             .Select(x => new LookupRow(x.CategoryId, x.CategoryName, x.Description, x.IsActive, x.CreatedAt))
             .ToListAsync(cancellationToken);
     }
