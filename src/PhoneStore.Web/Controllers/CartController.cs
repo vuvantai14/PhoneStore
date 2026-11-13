@@ -83,11 +83,31 @@ public class CartController(SessionCart cart, CartPresenter presenter, IOrderSer
             }
             else
             {
-                items.RemoveAll(i => i.ProductId == id);
-                items.Add(new CartItem(id, (int)requested));
+                var replacement = new CartItem(id, (int)requested);
+                var existingIndex = items.FindIndex(i => i.ProductId == id);
+                if (existingIndex >= 0) items[existingIndex] = replacement;
+                else items.Add(replacement);
                 cart.Write(items);
                 var msg = add ? "Đã thêm vào giỏ hàng." : "Đã cập nhật giỏ hàng.";
-                if (isAjax) return Json(new { success = true, message = msg, cartCount = cart.Count });
+                if (isAjax)
+                {
+                    var snapshot = await presenter.GetAsync(ct);
+                    var line = snapshot.Items.Single(i => i.Item.ProductId == id);
+                    return Json(new
+                    {
+                        success = true,
+                        message = msg,
+                        productId = id,
+                        quantity = line.Item.Quantity,
+                        stockQuantity = line.Product?.StockQuantity ?? 0,
+                        unitPrice = line.Product?.Price ?? 0m,
+                        lineTotal = line.LineTotal,
+                        totalQuantity = snapshot.TotalQuantity,
+                        totalAmount = snapshot.TotalAmount,
+                        canCheckout = snapshot.CanCheckout,
+                        cartCount = snapshot.TotalQuantity
+                    });
+                }
                 TempData["CartMessage"] = "Đã cập nhật giỏ hàng.";
             }
         }

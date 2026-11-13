@@ -207,6 +207,8 @@ document.querySelectorAll('form[data-ui-submit]').forEach(form => {
         }
     }
 
+    window.PhoneStoreCartUi = { showToast: showCartToast, updateCount: updateCartCount };
+
     document.addEventListener('submit', async function (event) {
         const form = (event.target && event.target.matches && event.target.matches('form[data-cart-form], form[action="/cart/add"], form[action^="/cart/add"]'))
             ? event.target
@@ -370,6 +372,8 @@ document.querySelectorAll('form[data-ui-submit]').forEach(form => {
 
 // S29.9J — Compact Cart Stepper Controls (- / +)
 (function () {
+    const money = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 });
+
     function initCartSteppers() {
         document.querySelectorAll('[data-cart-update-form]').forEach(form => {
             if (form.dataset.stepperInitialized) return;
@@ -380,13 +384,64 @@ document.querySelectorAll('form[data-ui-submit]').forEach(form => {
             const plusBtn = form.querySelector('.qty-btn-plus');
             if (!input || !minusBtn || !plusBtn) return;
 
-            function submitUpdate() {
-                minusBtn.disabled = true;
-                plusBtn.disabled = true;
-                if (typeof form.requestSubmit === 'function') {
-                    form.requestSubmit();
-                } else {
-                    form.submit();
+            let requestVersion = 0;
+            let submitting = false;
+
+            function setBusy(value) {
+                submitting = value;
+                input.disabled = value;
+                minusBtn.disabled = value || Number(input.value) <= Number(input.min || 1);
+                plusBtn.disabled = value || Number(input.value) >= Number(input.max || 9999);
+                form.closest('[data-cart-line]')?.classList.toggle('is-updating', value);
+            }
+
+            function syncSnapshot(result) {
+                if (Number(result.productId) !== Number(form.dataset.productId)) {
+                    throw new Error('Cart response does not match the requested product.');
+                }
+                input.value = String(result.quantity);
+                input.defaultValue = String(result.quantity);
+                input.max = String(result.stockQuantity);
+                const line = form.closest('[data-cart-line]');
+                const lineTotal = line?.querySelector('[data-line-total]');
+                if (lineTotal) lineTotal.textContent = money.format(result.lineTotal) + ' ₫';
+                document.querySelectorAll('[data-cart-total-quantity]').forEach(el => {
+                    el.textContent = result.totalQuantity + ' sản phẩm';
+                });
+                document.querySelectorAll('[data-cart-total-amount], [data-cart-grand-total]').forEach(el => {
+                    el.textContent = money.format(result.totalAmount) + ' ₫';
+                });
+                window.PhoneStoreCartUi?.updateCount(result.totalQuantity);
+            }
+
+            async function submitUpdate(previousValue) {
+                if (submitting) return;
+                const version = ++requestVersion;
+                const payload = new FormData(form);
+                setBusy(true);
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: payload,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                        credentials: 'same-origin'
+                    });
+                    if (!response.ok) throw new Error('Cart request failed.');
+                    const result = await response.json();
+                    if (version !== requestVersion) return;
+                    if (!result?.success) {
+                        input.value = String(previousValue);
+                        window.PhoneStoreCartUi?.showToast(result?.message || 'Không thể cập nhật giỏ hàng.', 'error');
+                        if (typeof result?.cartCount === 'number') window.PhoneStoreCartUi?.updateCount(result.cartCount);
+                        return;
+                    }
+                    syncSnapshot(result);
+                } catch (error) {
+                    input.value = String(previousValue);
+                    window.PhoneStoreCartUi?.showToast('Không thể đồng bộ giỏ hàng. Trang sẽ được tải lại.', 'error');
+                    window.setTimeout(() => window.location.reload(), 700);
+                } finally {
+                    if (version === requestVersion) setBusy(false);
                 }
             }
 
@@ -396,7 +451,7 @@ document.querySelectorAll('form[data-ui-submit]').forEach(form => {
                 const min = parseInt(input.min, 10) || 1;
                 if (current > min) {
                     input.value = current - 1;
-                    submitUpdate();
+                    void submitUpdate(current);
                 }
             });
 
@@ -406,26 +461,29 @@ document.querySelectorAll('form[data-ui-submit]').forEach(form => {
                 const max = parseInt(input.max, 10) || 9999;
                 if (current < max) {
                     input.value = current + 1;
-                    submitUpdate();
+                    void submitUpdate(current);
                 }
             });
 
             input.addEventListener('change', function () {
+                const previous = Number(input.defaultValue) || 1;
                 let val = parseInt(input.value, 10);
                 const min = parseInt(input.min, 10) || 1;
                 const max = parseInt(input.max, 10) || 9999;
                 if (isNaN(val) || val < min) val = min;
                 if (val > max) val = max;
                 input.value = val;
-                submitUpdate();
+                void submitUpdate(previous);
             });
 
             input.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    input.blur();
+                    input.dispatchEvent(new Event('change'));
                 }
             });
+
+            form.addEventListener('submit', function (e) { e.preventDefault(); });
         });
     }
 

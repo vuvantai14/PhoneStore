@@ -1,5 +1,22 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-13 — S30.4E **READY FOR USER TEST** (Customer cart quantity + detail navigation):
+- Root cause: `CartController.Change` xóa dòng rồi `Add` lại nên sản phẩm vừa cập nhật bị đẩy cuối danh sách; form reload toàn trang làm dòng đổi vị trí và thiếu snapshot để đồng bộ đúng subtotal/total. Nay replace đúng index theo ProductId, giữ thứ tự; AJAX trả quantity/stock/unit price/line total/total quantity/total amount do server tính.
+- Stepper khóa từng dòng khi request, chặn double-click, đối chiếu ProductId response, cập nhật đúng row/summary/badge; lỗi/response không chắc chắn khôi phục input và reload để đồng bộ session. Cart có header 5 cột, link `Xem chi tiết` dùng route Product Detail hiện có và responsive/focus state.
+- Files: `CartController.cs`, `Views/Cart/Index.cshtml`, `wwwroot/js/site.js`, `wwwroot/css/site.css`, `CartControllerTests.cs`. Build **0 warnings/errors**; targeted Cart/Checkout/Commerce **35/35 PASS**; `node --check` PASS. Không DB DML/migration, không chạy/restart Web/Admin.
+- MANUAL PENDING: browser 375/768/1024/1440, click nhanh +/−, network failure/reload, focus/link detail và checkout smoke read-only. Không commit/push.
+
+Cập nhật 2026-11-13 — S30.4A.2 **READY FOR REVIEW** (SQL connection environment diagnosis):
+- Xác minh lỗi TLS chỉ xảy ra dưới token `codexsandboxoffline`; cùng `sqlcmd` ngoài sandbox kết nối `PhoneStoreDB` và SELECT read-only PASS. SQL Server 2022 `16.0.1000.6`, `ForceEncryption=0`, không certificate binding; không đổi config/bảo mật.
+- Live schema khớp EF/migrations: 8 bảng nghiệp vụ + migration history, 7 FK, 7 checks, unique/filter indexes; 2 migrations applied. Counts: Roles2/Users3/Brands8/Categories1/Products40/Images40/Orders7/Details13; bốn nhóm quan hệ 0 orphan.
+- Cập nhật `07-DATABASE-SCHEMA-INVENTORY.md`, tạo `08-SQL-CONNECTION-DIAGNOSIS.md`. Schema **READY cho ERD**; không DML/DDL, không chạy app/build/test, không commit/push.
+
+Cập nhật 2026-11-13 — S30.4A **READY FOR REVIEW** (full-system functional acceptance & workflow audit):
+- Tạo 7 tài liệu trong `docs/system-analysis/`: overview, inventory 45 chức năng, 5 workflow, test matrix, issues/gaps, manual checklist và schema inventory.
+- Chạy 15 nhóm test mục tiêu từ artifact S30.3D: **138/138 PASS**, 0 fail/skip; không chạy app, không DML/migration/seed và không sửa source.
+- Live SQL là **UNKNOWN**: `sqlcmd`/ODBC 17 lỗi encryption/SSL trước SELECT; không dùng số lịch sử để tuyên bố live PASS.
+- Kết luận **PARTIAL / READY FOR REVIEW**: core commerce/Admin có automated evidence tốt; cần WinForms acceptance S30.3A–D và live schema read-only trước Use Case → DFD → ERD.
+
 Cập nhật 2026-11-13 — S30.3D **READY FOR USER TEST** (Reports revenue chart & advanced filter UX):
 - Thay biểu đồ `RevenueBarsControl` cũ trên Reports bằng `RevenueColumnChartControl` dùng chung với Dashboard, có trục tiền tệ, tooltip thời gian/doanh thu/số đơn Completed, giới hạn bề rộng cột 44px logical để một điểm không kéo giãn toàn card, cùng loading/empty/error state riêng.
 - Card doanh thu mặc định tuần hiện tại UTC+7 (T2–CN), có thanh nhanh `Tuần | Tháng | Năm`, kỳ trước/sau, nhãn kỳ, tổng doanh thu/số đơn và panel `Bộ lọc` progressive disclosure. Draft chỉ được áp dụng khi nhấn `Áp dụng`; `Đặt lại` về tuần hiện tại; busy state khóa toàn bộ thao tác để tránh truy vấn chồng.

@@ -46,36 +46,35 @@
     {
         <div class="cart-layout-grid">
             <section class="cart-items-section" aria-label="Danh sách sản phẩm trong giỏ hàng">
+                <div class="cart-column-header" aria-hidden="true">
+                    <span>Sản phẩm</span><span>Đơn giá</span><span>Số lượng</span><span>Thành tiền</span><span>Thao tác</span>
+                </div>
                 <div class="cart-items-list">
                     @foreach (var line in Model.Items)
                     {
-                        <article class="cart-item-row @(!line.Available ? "is-unavailable" : "")">
-                            <a href="/products/@line.Item.ProductId" class="cart-item-thumb" title="@(line.Product?.ProductName ?? "Sản phẩm")">
-                                <img src="@ProductImageUrl.LocalOrPlaceholder(line.Product?.ImageUrl)"
-                                     alt="@(line.Product?.ProductName ?? "Sản phẩm không khả dụng")"
-                                     width="76"
-                                     height="76"
-                                     data-product-image />
-                            </a>
-
-                            <div class="cart-item-details">
-                                <h2 class="cart-item-name">
-                                    <a href="/products/@line.Item.ProductId">@(line.Product?.ProductName ?? "Sản phẩm không còn khả dụng")</a>
-                                </h2>
-                                @if (line.Product is not null)
-                                {
-                                    <div class="cart-item-price">
-                                        @line.Product.Price.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫
-                                    </div>
-                                }
-                                @if (!line.Available)
-                                {
-                                    <div class="cart-item-warning">Sản phẩm không khả dụng hoặc vượt tồn kho.</div>
-                                }
+                        <article class="cart-item-row @(!line.Available ? "is-unavailable" : "")" data-cart-line data-product-id="@line.Item.ProductId">
+                            <div class="cart-item-product">
+                                <a asp-controller="Products" asp-action="Detail" asp-route-id="@line.Item.ProductId" class="cart-item-thumb" title="@(line.Product?.ProductName ?? "Sản phẩm")">
+                                    <img src="@ProductImageUrl.LocalOrPlaceholder(line.Product?.ImageUrl)"
+                                         alt="@(line.Product?.ProductName ?? "Sản phẩm không khả dụng")"
+                                         width="76" height="76" data-product-image />
+                                </a>
+                                <div class="cart-item-details">
+                                    <h2 class="cart-item-name">
+                                        <a asp-controller="Products" asp-action="Detail" asp-route-id="@line.Item.ProductId">@(line.Product?.ProductName ?? "Sản phẩm không còn khả dụng")</a>
+                                    </h2>
+                                    <a asp-controller="Products" asp-action="Detail" asp-route-id="@line.Item.ProductId" class="cart-item-detail-link">Xem chi tiết</a>
+                                    @if (!line.Available)
+                                    {
+                                        <div class="cart-item-warning">Sản phẩm không khả dụng hoặc vượt tồn kho.</div>
+                                    }
+                                </div>
                             </div>
 
+                            <div class="cart-item-price">@((line.Product?.Price ?? 0m).ToString("N0", CultureInfo.GetCultureInfo("vi-VN"))) ₫</div>
+
                             <div class="cart-item-stepper">
-                                <form asp-controller="Cart" asp-action="Update" method="post" class="cart-stepper-form" data-cart-update-form>
+                                <form asp-controller="Cart" asp-action="Update" method="post" class="cart-stepper-form" data-cart-update-form data-product-id="@line.Item.ProductId">
                                     <input type="hidden" name="productId" value="@line.Item.ProductId" />
                                     <div class="stepper-box">
                                         <button type="button" class="stepper-btn qty-btn-minus" aria-label="Giảm số lượng" @(line.Item.Quantity <= 1 ? "disabled" : "")>−</button>
@@ -95,7 +94,7 @@
                             </div>
 
                             <div class="cart-item-subtotal">
-                                <strong class="subtotal-amount">@line.LineTotal.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫</strong>
+                                <strong class="subtotal-amount" data-line-total>@line.LineTotal.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫</strong>
                             </div>
 
                             <div class="cart-item-delete">
@@ -121,16 +120,16 @@
                     <div class="cart-summary-list">
                         <div class="cart-summary-item">
                             <span class="summary-item-label">Tổng số lượng</span>
-                            <span class="summary-item-val">@Model.TotalQuantity sản phẩm</span>
+                            <span class="summary-item-val" data-cart-total-quantity>@Model.TotalQuantity sản phẩm</span>
                         </div>
                         <div class="cart-summary-item">
                             <span class="summary-item-label">Tạm tính</span>
-                            <span class="summary-item-val">@Model.TotalAmount.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫</span>
+                            <span class="summary-item-val" data-cart-total-amount>@Model.TotalAmount.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫</span>
                         </div>
                         <div class="cart-summary-separator"></div>
                         <div class="cart-summary-item summary-item-total">
                             <span class="summary-total-label">Tổng cộng</span>
-                            <strong class="summary-total-val">@Model.TotalAmount.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫</strong>
+                            <strong class="summary-total-val" data-cart-grand-total>@Model.TotalAmount.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) ₫</strong>
                         </div>
                     </div>
 

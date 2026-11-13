@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
@@ -91,6 +92,91 @@ public sealed class CartControllerTests
         Assert.Empty(a.Cart.Read());
         Assert.False((await a.Presenter.GetAsync(default)).CanCheckout);
         Assert.Empty(await t.Db.Orders.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Updating_one_line_preserves_order_and_recalculates_only_the_target_line()
+    {
+        await using var t = await TestDatabase.CreateAsync();
+        var (_, first) = await t.SeedCatalogAsync();
+        var second = new PhoneStore.Models.Entities.Product
+        {
+            ProductName = "Second phone", Price = 3_000_000m, StockQuantity = 8,
+            BrandId = first.BrandId, CategoryId = first.CategoryId, IsActive = true
+        };
+        t.Db.Products.Add(second); await t.Db.SaveChangesAsync();
+        var s = Setup(t);
+        s.Cart.Write([new(first.ProductId, 2), new(second.ProductId, 3)]);
+
+        await s.Controller.Update(first.ProductId, 4, default);
+
+        Assert.Equal([first.ProductId, second.ProductId], s.Cart.Read().Select(x => x.ProductId));
+        Assert.Equal([4, 3], s.Cart.Read().Select(x => x.Quantity));
+        var presented = await s.Presenter.GetAsync(default);
+        Assert.Equal(first.Price * 4, presented.Items[0].LineTotal);
+        Assert.Equal(second.Price * 3, presented.Items[1].LineTotal);
+        Assert.Equal(first.Price * 4 + second.Price * 3, presented.TotalAmount);
+        Assert.Equal(7, presented.TotalQuantity);
+    }
+
+    [Fact]
+    public async Task Rapid_sequential_updates_keep_the_same_line_identity_and_latest_quantity()
+    {
+        await using var t = await TestDatabase.CreateAsync();
+        var (_, first) = await t.SeedCatalogAsync();
+        var second = new PhoneStore.Models.Entities.Product
+        {
+            ProductName = "Stable line", Price = 500_000m, StockQuantity = 10,
+            BrandId = first.BrandId, CategoryId = first.CategoryId, IsActive = true
+        };
+        t.Db.Products.Add(second); await t.Db.SaveChangesAsync();
+        var s = Setup(t);
+        s.Cart.Write([new(first.ProductId, 1), new(second.ProductId, 2)]);
+
+        await s.Controller.Update(first.ProductId, 2, default);
+        await s.Controller.Update(first.ProductId, 3, default);
+
+        Assert.Equal([first.ProductId, second.ProductId], s.Cart.Read().Select(x => x.ProductId));
+        Assert.Equal([3, 2], s.Cart.Read().Select(x => x.Quantity));
+    }
+
+    [Fact]
+    public async Task Ajax_update_returns_authoritative_snapshot_for_the_requested_product()
+    {
+        await using var t = await TestDatabase.CreateAsync();
+        var (_, product) = await t.SeedCatalogAsync();
+        var s = Setup(t);
+        s.Cart.Write([new(product.ProductId, 1)]);
+        s.Controller.Request.Headers.XRequestedWith = "XMLHttpRequest";
+
+        var result = Assert.IsType<JsonResult>(await s.Controller.Update(product.ProductId, 3, default));
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(result.Value));
+        var root = json.RootElement;
+
+        Assert.True(root.GetProperty("success").GetBoolean());
+        Assert.Equal(product.ProductId, root.GetProperty("productId").GetInt32());
+        Assert.Equal(3, root.GetProperty("quantity").GetInt32());
+        Assert.Equal(product.Price * 3, root.GetProperty("lineTotal").GetDecimal());
+        Assert.Equal(product.Price * 3, root.GetProperty("totalAmount").GetDecimal());
+        Assert.Equal(3, root.GetProperty("totalQuantity").GetInt64());
+    }
+
+    [Fact]
+    public void Cart_view_links_each_line_to_the_existing_product_detail_route()
+    {
+        var root = FindRepositoryRoot();
+        var view = File.ReadAllText(Path.Combine(root, "src/PhoneStore.Web/Views/Cart/Index.cshtml"));
+        Assert.Contains("asp-controller=\"Products\" asp-action=\"Detail\" asp-route-id=\"@line.Item.ProductId\"", view);
+        Assert.Contains("Xem chi tiết", view);
+        Assert.Contains("data-product-id=\"@line.Item.ProductId\"", view);
+    }
+
+    static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "PhoneStore.sln")))
+            directory = directory.Parent;
+        return directory?.FullName ?? throw new DirectoryNotFoundException("PhoneStore repository root not found.");
     }
 
     [Theory]
