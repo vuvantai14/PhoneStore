@@ -11,6 +11,8 @@ using PhoneStore.Web.Authentication;
 using PhoneStore.Web.Purchasing;
 using PhoneStore.Business.Purchasing;
 using PhoneStore.Data.Purchasing;
+using PhoneStore.Web.CatalogApi;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +48,20 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<PhoneStore.Data.Management.OrderManagementStore>();
 builder.Services.AddScoped<PhoneStore.Business.Management.IOrderManagementService, PhoneStore.Business.Management.OrderManagementService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddOptions<CatalogApiOptions>()
+    .Bind(builder.Configuration.GetSection(CatalogApiOptions.SectionName))
+    .Validate(options => Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var uri)
+        && uri.Scheme is "http" or "https", "CatalogApi:BaseUrl must be an absolute HTTP(S) URL.")
+    .Validate(options => options.TimeoutSeconds is >= 1 and <= 30,
+        "CatalogApi:TimeoutSeconds must be between 1 and 30.")
+    .ValidateOnStart();
+builder.Services.AddHttpClient<ICatalogApiClient, CatalogApiClient>((services, client) =>
+{
+    var options = services.GetRequiredService<IOptions<CatalogApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.BaseUrl, UriKind.Absolute);
+    client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+});
+builder.Services.AddScoped<IProductDetailResolver, ProductDetailResolver>();
 builder.Services.AddScoped<ProductCatalogReader>();
 builder.Services.AddScoped<AuthUserStore>();
 builder.Services.AddScoped<IAuthService, AuthService>();

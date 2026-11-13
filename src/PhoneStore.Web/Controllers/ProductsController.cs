@@ -3,11 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using PhoneStore.Business.Catalog;
 using PhoneStore.Models.Catalog;
 using PhoneStore.Web.Models;
+using PhoneStore.Web.CatalogApi;
 
 namespace PhoneStore.Web.Controllers;
 
 [Route("products")]
-public class ProductsController(IProductService products) : Controller
+public class ProductsController(IProductService products, IProductDetailResolver productDetails) : Controller
 {
     [HttpGet("{id}")]
     public async Task<IActionResult> Detail(string id, CancellationToken cancellationToken)
@@ -15,8 +16,11 @@ public class ProductsController(IProductService products) : Controller
         if (!int.TryParse(id, out var productId) || productId <= 0)
             return new ViewResult { ViewName = "NotFound", StatusCode = StatusCodes.Status404NotFound };
 
-        var product = await products.GetProductDetailAsync(productId, cancellationToken);
-        if (product is null)
+        var resolution = await productDetails.ResolveAsync(productId, cancellationToken);
+        if (resolution.Status == ProductDetailResolutionStatus.InvalidApiResponse)
+            return StatusCode(StatusCodes.Status502BadGateway);
+        var product = resolution.Product;
+        if (resolution.Status == ProductDetailResolutionStatus.NotFound || product is null)
             return new ViewResult { ViewName = "NotFound", StatusCode = StatusCodes.Status404NotFound };
 
         var related = await products.GetRelatedAsync(product, cancellationToken);

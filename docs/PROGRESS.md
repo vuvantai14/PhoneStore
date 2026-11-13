@@ -1,5 +1,18 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-13 — S31.3F **CUSTOMER WEB PRODUCT DETAIL API INTEGRATION PASS / GO FOR S31.3G**:
+- Tích hợp duy nhất Product Detail qua typed `ICatalogApiClient` + `IProductDetailResolver`; feature flag `CatalogApi` mặc định OFF, BaseUrl/timeout configurable và validate startup. Không đổi Razor/UI, route, Business/Data/Models/API/Admin hoặc các trang Web khác.
+- Policy: OFF không gọi API; ON 200 dùng API; 404 thành Web 404 không fallback; 400 thành 502; 429/5xx/network/timeout/invalid payload fallback local đúng một lần; client cancellation không fallback. DTO map đầy đủ và chỉ chấp nhận relative image URL an toàn trên Web origin.
+- Build solution **0 warnings/errors**; targeted integration + API/Web regression **53/53 PASS**. Runtime thật: OFF detail 200 với 0 API calls; ON API log xác nhận Web gọi `/api/v1/products/1`; HTML parity/ảnh/giá/stock/spec PASS; API stop an toàn thì local fallback 200; missing product 404; Home/List không ảnh hưởng.
+- SQL snapshot/migrations trước sau không đổi: Roles2/Users3/Brands8/Categories2/Products40/Images41/Orders11/Details26. Process task đã dừng, 5015/5025 trống. Báo cáo `docs/system-analysis/16-CUSTOMER-WEB-API-INTEGRATION.md`; không DML/DDL/migration/seed, commit/push. Người dùng xác nhận bổ sung S31.3E Admin manual FULL PASS trước khi bắt đầu task.
+
+Cập nhật 2026-11-13 — S31.3E **PARTIAL — ADMIN UI NOT VERIFIED / NO-GO FOR FULL S31.3F**:
+- Build solution **0 warnings/errors**; targeted regression **48/48 PASS** (API security/foundation/catalog 32, Web 2, Admin read-only isolated 14). Web runtime 5015 PASS Home/catalog/detail/search/filter/image; API runtime 5025 PASS 5 endpoint, pagination/filter/contract/Swagger; không lỗi log.
+- Web/API/Admin process chạy đồng thời không xung đột port; Web/API vẫn 200 khi Admin PID 22168 tồn tại. Admin executable/config đúng main `PhoneStoreDB` và process Responding, nhưng không có MainWindow/top-level window trong desktop context nên LoginForm/Dashboard/Products **NOT VERIFIED**, không tuyên bố UI PASS.
+- SQL live snapshot trước/sau và migrations không đổi: Roles2/Users3/Brands8/Categories2/Products40/Images41/Orders11/Details26. Đối chiếu SQL/API/Web ba sản phẩm IDs 1–3 khớp; Admin NOT COMPARABLE. Không DML/DDL/migration/seed.
+- Đã dừng không-force đúng ba PID task; 5015/5025 trống. Báo cáo: `docs/system-analysis/15-API-CONCURRENT-RUNTIME-ACCEPTANCE.md`. Cần người dùng mở Admin thủ công, login và kiểm tra Dashboard/Products read-only trước khi nâng FULL PASS; không sửa source, commit/push hay chuyển S31.3F.
+- HEAD thay đổi bên ngoài acceptance từ `4f53a0d` sang `9d18904` (commit S31.3D); tác vụ này không commit. Source sạch, chỉ `PROGRESS.md` và báo cáo S31.3E còn trong working tree.
+
 Cập nhật 2026-11-13 — S31.3D **API SECURITY HARDENING PASS / GO FOR S31.3E**:
 - Hardening 5 endpoint hiện có bằng query/request limits, fixed-window rate limit (catalog 60/phút, health 120/phút, không tin X-Forwarded-For), catalog timeout 10s/health 3s, cancellation propagation, validated correlation ID và structured request log không ghi query/body/secrets. Không bật CORS/JWT/Forwarded Headers; Swagger vẫn Development-only.
 - Problem Details an toàn cho 400/404/429/500/503/504; cấu hình `ApiOperational` fail-closed khi ngoài giới hạn. Build solution **0 warnings/errors**; targeted cuối **34/34 PASS** (`Security 8 + Foundation 6 + Catalog 18 + Web 2`).
