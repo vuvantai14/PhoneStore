@@ -1,5 +1,11 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-13 — S31.3D **API SECURITY HARDENING PASS / GO FOR S31.3E**:
+- Hardening 5 endpoint hiện có bằng query/request limits, fixed-window rate limit (catalog 60/phút, health 120/phút, không tin X-Forwarded-For), catalog timeout 10s/health 3s, cancellation propagation, validated correlation ID và structured request log không ghi query/body/secrets. Không bật CORS/JWT/Forwarded Headers; Swagger vẫn Development-only.
+- Problem Details an toàn cho 400/404/429/500/503/504; cấu hình `ApiOperational` fail-closed khi ngoài giới hạn. Build solution **0 warnings/errors**; targeted cuối **34/34 PASS** (`Security 8 + Foundation 6 + Catalog 18 + Web 2`).
+- Runtime thật: API 5025 đủ 5 route PASS, trace header/log PASS, Swagger 5 paths, SQL live chỉ SELECT; Web 5015 đồng thời Home/Products 200. Snapshot trước/sau không đổi: Roles2/Users3/Brands8/Categories2/Products40/Images41/Orders11/Details26. Hai process test đã dừng, 5015/5025 trống.
+- Giới hạn còn lại: limiter in-memory per-process; proxy phải cấu hình trusted proxy trước forwarded headers; cancellation token xuống EF không chứng minh SQL Server dừng tức thì. Báo cáo: `docs/system-analysis/14-API-SECURITY-HARDENING.md`. Không sửa Web/Admin/Business/Data/Models, không DML/DDL/migration/seed, không commit/push.
+
 Cập nhật 2026-11-13 — S31.3C **CATALOG REST API PASS / GO FOR S31.3D**:
 - Bổ sung read-only endpoints `/api/v1/products`, `/api/v1/products/{id}`, `/api/v1/brands`, `/api/v1/categories`; giữ `/api/health`. DTO độc lập, pagination/filter/sort validation, relative image URL an toàn, 400/404/503 Problem Details; tái sử dụng `IProductService`, không sửa Business/Data/Models/Web/Admin.
 - Runtime SQL Server thật trên `localhost:5025`: products 40 (default 10), brands active 8, categories active 1; detail/filter/invalid input/404 và Swagger 5 paths đều PASS. Web chạy đồng thời trên 5015, Home/Products 200. Admin source không đổi và không mở UI.

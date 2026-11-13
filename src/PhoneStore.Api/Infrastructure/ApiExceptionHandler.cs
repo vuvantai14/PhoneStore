@@ -14,6 +14,9 @@ public sealed class ApiExceptionHandler(
         Exception exception,
         CancellationToken cancellationToken)
     {
+        if (httpContext.RequestAborted.IsCancellationRequested)
+            return true;
+
         logger.LogError("Unhandled API exception of type {ExceptionType}. TraceId: {TraceId}",
             exception.GetType().Name, httpContext.TraceIdentifier);
         var unavailable = exception is DbException or DbUpdateException;

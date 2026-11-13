@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http.Timeouts;
+using Microsoft.AspNetCore.RateLimiting;
+using PhoneStore.Api.Infrastructure;
 using PhoneStore.Api.Contracts;
 using PhoneStore.Api.Mapping;
 using PhoneStore.Business.Catalog;
@@ -7,6 +10,8 @@ namespace PhoneStore.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/categories")]
+[EnableRateLimiting(ApiPolicies.CatalogRateLimit)]
+[RequestTimeout(ApiPolicies.CatalogTimeout)]
 public sealed class CategoriesController(IProductService products) : ControllerBase
 {
     [HttpGet]

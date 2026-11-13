@@ -42,6 +42,7 @@ public sealed class ApiFoundationTests
         var body = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
         Assert.Contains("unhealthy", body, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("localhost", body, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("PhoneStoreDB", body, StringComparison.OrdinalIgnoreCase);

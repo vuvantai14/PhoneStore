@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Http.Timeouts;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using PhoneStore.Api.Health;
 using PhoneStore.Api.Infrastructure;
 using PhoneStore.Business.Catalog;
@@ -26,14 +29,44 @@ public partial class Program
         var connection = builder.Configuration.GetConnectionString("PhoneStoreConnection");
         if (string.IsNullOrWhiteSpace(connection))
             throw new InvalidOperationException("PhoneStoreConnection configuration is required.");
+        var operational = builder.Configuration.GetSection("ApiOperational")
+            .Get<ApiOperationalOptions>() ?? new ApiOperationalOptions();
+        ValidateOperationalOptions(operational);
+        builder.WebHost.ConfigureKestrel(options =>
+            options.Limits.MaxRequestLineSize = operational.MaxRequestLineSize);
 
         builder.Services.AddControllers();
+        builder.Services.AddSingleton(operational);
         builder.Services.AddProblemDetails(options =>
         {
             options.CustomizeProblemDetails = context =>
                 context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
         });
         builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+        builder.Services.AddRequestTimeouts(options =>
+        {
+            options.AddPolicy(ApiPolicies.CatalogTimeout, CreateTimeoutPolicy(operational.CatalogTimeoutSeconds));
+            options.AddPolicy(ApiPolicies.HealthTimeout, CreateTimeoutPolicy(operational.HealthTimeoutSeconds));
+        });
+        builder.Services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.OnRejected = async (context, _) =>
+            {
+                var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var value)
+                    ? Math.Max(1, (int)Math.Ceiling(value.TotalSeconds))
+                    : (int?)null;
+                await RequestSafetyMiddleware.WriteProblemAsync(context.HttpContext,
+                    StatusCodes.Status429TooManyRequests,
+                    "Too many requests",
+                    "The request rate limit has been exceeded. Please try again later.",
+                    retryAfter);
+            };
+            options.AddPolicy(ApiPolicies.CatalogRateLimit, context =>
+                CreateFixedWindowPartition(context, operational.CatalogRequestsPerMinute));
+            options.AddPolicy(ApiPolicies.HealthRateLimit, context =>
+                CreateFixedWindowPartition(context, operational.HealthRequestsPerMinute));
+        });
         builder.Services.AddDbContext<PhoneStoreDbContext>(options => options.UseSqlServer(connection));
         builder.Services.AddScoped<ProductCatalogReader>();
         builder.Services.AddScoped<IProductService, ProductService>();
@@ -54,13 +87,53 @@ public partial class Program
         var app = builder.Build();
 
         app.UseExceptionHandler();
+        app.UseMiddleware<RequestSafetyMiddleware>();
         if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
             app.UseSwaggerUI();
         }
 
+        app.UseRouting();
+        app.UseRateLimiter();
+        app.UseRequestTimeouts();
         app.MapControllers();
         app.Run();
+    }
+
+    private static RequestTimeoutPolicy CreateTimeoutPolicy(int seconds) => new()
+    {
+        Timeout = TimeSpan.FromSeconds(seconds),
+        TimeoutStatusCode = StatusCodes.Status504GatewayTimeout,
+        WriteTimeoutResponse = context => RequestSafetyMiddleware.WriteProblemAsync(context,
+            StatusCodes.Status504GatewayTimeout,
+            "Request timed out",
+            "The request exceeded the allowed processing time.")
+    };
+
+    private static RateLimitPartition<string> CreateFixedWindowPartition(HttpContext context, int requestsPerMinute)
+    {
+        var key = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = requestsPerMinute,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        });
+    }
+
+    private static void ValidateOperationalOptions(ApiOperationalOptions options)
+    {
+        if (options.MaxQueryStringLength is < 256 or > 8192 ||
+            options.MaxRequestLineSize is < 1024 or > 16384 ||
+            options.MaxQueryStringLength >= options.MaxRequestLineSize ||
+            options.CatalogTimeoutSeconds is < 1 or > 120 ||
+            options.HealthTimeoutSeconds is < 1 or > 30 ||
+            options.CatalogRequestsPerMinute is < 1 or > 10000 ||
+            options.HealthRequestsPerMinute is < 1 or > 10000)
+        {
+            throw new InvalidOperationException("ApiOperational configuration is invalid.");
+        }
     }
 }
