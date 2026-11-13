@@ -1,5 +1,28 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-13 — S31.3C **CATALOG REST API PASS / GO FOR S31.3D**:
+- Bổ sung read-only endpoints `/api/v1/products`, `/api/v1/products/{id}`, `/api/v1/brands`, `/api/v1/categories`; giữ `/api/health`. DTO độc lập, pagination/filter/sort validation, relative image URL an toàn, 400/404/503 Problem Details; tái sử dụng `IProductService`, không sửa Business/Data/Models/Web/Admin.
+- Runtime SQL Server thật trên `localhost:5025`: products 40 (default 10), brands active 8, categories active 1; detail/filter/invalid input/404 và Swagger 5 paths đều PASS. Web chạy đồng thời trên 5015, Home/Products 200. Admin source không đổi và không mở UI.
+- Restore PASS; solution build **0 warnings/errors**; `CatalogApiTests` **18/18**, `ApiFoundationTests` **6/6**, `HomePresentationTests` **2/2 PASS**. Snapshot `PhoneStoreDB` trước/sau khớp: Roles2/Users3/Brands8/Categories2/Products40/Images41/Orders11/Details26; không DML/DDL/migration/seed.
+- Báo cáo: `docs/system-analysis/13-CATALOG-API-IMPLEMENTATION.md`. Ctrl+C chưa dừng được hai executable thử nghiệm Web/API; không force-kill. Không commit/push và chưa chuyển S31.3D.
+
+Cập nhật 2026-11-13 — S31.3B **API FOUNDATION PASS / READY FOR S31.3C**:
+- Thêm project `PhoneStore.Api` .NET 8 vào solution, reference Business/Data/Models; DI scoped cho DbContext/catalog reader/product service, Problem Details + centralized safe exception handler, standard health check và Swagger 6.6.2 chỉ trong Development. Chưa có catalog/write endpoint, CORS hay auth API.
+- `GET /api/health` runtime thật trên `localhost:5025` trả **200 healthy**; SQL live verified read-only bằng EF `SELECT 1`. Swagger JSON/UI đều 200, OpenAPI 3.0.1 chỉ có `/api/health`; Web `5015` và API `5025` chạy đồng thời đều 200, không xung đột. Đã dừng toàn bộ process test.
+- Restore PASS; solution build **0 warnings/errors**; `ApiFoundationTests` **6/6 PASS**, `HomePresentationTests` regression **2/2 PASS**. Tests bao phủ 200/503, response không lộ hạ tầng, Swagger dev/prod, DI lifetime và safe Problem Details 500.
+- Không migration/seed/DML/DDL, không sửa source Web/Admin/Business/Data/Models và không commit/push. Báo cáo: `docs/system-analysis/12-API-FOUNDATION-IMPLEMENTATION.md`. Snapshot live hiện tại khác count lịch sử S31.1 do hoạt động ngoài phạm vi chưa xác định; task chỉ chạy health `SELECT 1` và Web GET read-only.
+
+Cập nhật 2026-11-13 — S31.2 **ARCHITECTURE AUDIT VERIFIED / READY FOR CHAPTER 4 DRAFT**:
+- Xác minh solution 7 project và dependency thực tế: hai presentation process `PhoneStore.Web` (MVC/Razor) + `PhoneStore.Admin` (WinForms) dùng chung `Business -> Data -> Models`, cùng EF Core kết nối `PhoneStoreDB`; không có REST API, microservice hoặc message queue giữa Web/Admin.
+- Tạo `docs/system-analysis/10-ARCHITECTURE-AUDIT.md`: architecture overview, project dependency graph, C4 Level 1–4 proposal, sequence checkout/Admin order status, auth/authorization, logging/error handling và bố cục Chương 4.
+- Kết luận layered modular monolith thực dụng, không phải Clean Architecture thuần do `Business` tham chiếu `Data`. Logging/observability còn hạn chế; deployment topology, production sink và fresh-check→commit race được ghi UNKNOWN/known limitation đúng bằng chứng.
+- Chỉ đọc source/config đã che bí mật; không build/test, không chạy app/SQL, không sửa source/database/migration và không commit/push. Bảo toàn diff S31.1 hiện có.
+
+Cập nhật 2026-11-13 — S31.1 **DATABASE DESIGN AUDIT VERIFIED**:
+- Đối chiếu read-only toàn bộ 8 Entity/DbSet, Fluent API, 2 migrations và SQL Server live `PhoneStoreDB`; không phát hiện drift về table/column/type/null/default/identity/PK/FK/check/index.
+- Tạo `docs/system-analysis/09-DATABASE-DESIGN-AUDIT.md`: overview, data dictionary 58 cột, 7 quan hệ, constraints/indexes, design observations và đề xuất ERD + 10 sheet Excel.
+- SQL metadata xác minh ngoài sandbox bằng exception hẹp; không đọc PII, không DML/DDL/migration/seed, không build/test, không sửa source và không commit/push.
+
 Cập nhật 2026-11-13 — S30.4E **READY FOR USER TEST** (Customer cart quantity + detail navigation):
 - Root cause: `CartController.Change` xóa dòng rồi `Add` lại nên sản phẩm vừa cập nhật bị đẩy cuối danh sách; form reload toàn trang làm dòng đổi vị trí và thiếu snapshot để đồng bộ đúng subtotal/total. Nay replace đúng index theo ProductId, giữ thứ tự; AJAX trả quantity/stock/unit price/line total/total quantity/total amount do server tính.
 - Stepper khóa từng dòng khi request, chặn double-click, đối chiếu ProductId response, cập nhật đúng row/summary/badge; lỗi/response không chắc chắn khôi phục input và reload để đồng bộ session. Cart có header 5 cột, link `Xem chi tiết` dùng route Product Detail hiện có và responsive/focus state.

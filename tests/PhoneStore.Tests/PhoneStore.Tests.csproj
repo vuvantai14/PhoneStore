@@ -19,6 +19,7 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="../../src/PhoneStore.Business/PhoneStore.Business.csproj" />
+    <ProjectReference Include="../../src/PhoneStore.Api/PhoneStore.Api.csproj" />
     <ProjectReference Include="../../src/PhoneStore.Web/PhoneStore.Web.csproj" />
     <ProjectReference Include="../../tools/PhoneStore.AdminBootstrap/PhoneStore.AdminBootstrap.csproj" />
   </ItemGroup>
