@@ -1,5 +1,100 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-14 — S31.5G **READY FOR USER TEST, ADMIN WINDOWS → DOCKER SQL**:
+- Không sửa source/UI/business: Admin đã hỗ trợ `ConnectionStrings__PhoneStoreConnection` qua environment override sau appsettings; DbContext/DI giữ nguyên. Mặc định Windows Authentication vẫn nguyên, xóa override là rollback cấu hình.
+- Host read-only PASS qua `127.0.0.1,14334` (localhost ODBC17 timeout): Docker SQL healthy, PhoneStoreDB/SQL16.0.4315.2, Products40/Orders12/1activeAdmin. TLS giữ Encrypt=True+TrustServerCertificate=True; secret chỉ ở `.env` ignored/process env, không in/log. Admin/Docker uploads canonical path khớp,42files.
+- Admin targeted build ra scratch PASS 0warnings/0errors; không chạy Admin, không DML/migration/seed/commit/push. Runbook thêm README/LOCAL; báo cáo `docs/system-analysis/31-ADMIN-DOCKER-SQL-CONNECTION.md`. Chờ user login và kiểm Dashboard/Products/Orders read-only.
+
+Cập nhật 2026-11-14 — S31.5F **DOCKER RUNTIME PASS / READY FOR DEMO**:
+- Phê duyệt trực tiếp nhận được; guard PASS (SQL healthy, RAM3.03GiB, DB/file target absent). Restore đúng1 lần backup verified vào Docker `PhoneStoreDB` bằng WITH MOVE+CHECKSUM, không REPLACE; 809 pages, ONLINE/compat160, 2 migrations. Counts Docker và Windows source đều giữ2/3/8/2/40/41/12/28; không migration/seed/DML hoặc ghi Windows DB.
+- Start API rồi Web từ images hiện có, không rebuild: 3 services healthy/OOMfalse/restart0. HTTP API health/Home/Products/Detail đều200; API catalog40; 41/41 image URLs200. API/Web logs không fatal/500. Memory SQL~1.05GiB/API~91MiB/Web~99MiB; RAM cuối2.73GiB.
+- Cập nhật README, LOCAL_DEVELOPMENT và `docs/system-analysis/30-DOCKER-FINAL-COMPLETION.md`. UI UX Pro Max dùng checklist nhưng không sửa UI. Stack đang chạy ports5015/5025/14334. Không commit/push; chưa thử stop/start persistence do RAM thấp.
+
+Cập nhật 2026-11-14 — S31.5F **PREFLIGHT PASS / RESTORE AWAITING DIRECT CHAT APPROVAL**:
+- Dùng UI UX Pro Max theo yêu cầu, không sửa UI. RAM pre-start6.89GiB; backup732160/hash D806...D4E2, mountRO, ports/config/volume isolation PASS. Compose recreate duy nhất target db để áp dụng memory2304MiB + SQL1536MB; healthy/OOMfalse/restart0, dùng~1.01GiB.
+- Post-start RAM3.04GiB đạt sát gate3GiB. SQL guard xác nhận target PhoneStoreDB NULL/system DB only. Restore command bị cổng an toàn từ chối trước khi chạy vì phê duyệt chỉ có trong attachment; không restore/migration/seed/DML. Target db container hiện running healthy; cần user phê duyệt restore trực tiếp trong chat rồi recheck RAM≥3 trước đúng một restore WITH MOVE/CHECKSUM, không REPLACE.
+
+Cập nhật 2026-11-14 — S31.5 **PARTIAL / FINAL COMPOSE ARTIFACTS READY, RUNTIME BLOCKED BEFORE RESTORE**:
+- Compose 3 service, secret/env isolation, read-only uploads, pinned SQL image/backup mount, target volume/network và Web/API images đã sẵn sàng. Thêm giới hạn SQL được hỗ trợ `MSSQL_MEMORY_LIMIT_MB=1536`, cgroup `2304m`, giữ `stop_grace_period=60s`; static config PASS. Web/API image build PASS.
+- Backup copy732160 bytes/SHA256 `D806...D4E2`; container HEADER/FILELIST/VERIFYONLY CHECKSUM lịch sử PASS. Chưa RESTORE DATABASE, migration, seed hoặc DML. Windows DB/old volume/target volume giữ nguyên.
+- Hậu kiểm: Docker29.9.2 Linux/12CPU/~7.64GiB; ports5015/5025/14334 trống; target SQL Exited137/OOMKilled=false; RAM host3.86/15.77GiB, chưa đạt pre-start gate5GiB. Không start/restore. Cần user giải phóng RAM rồi phê duyệt riêng một guarded restore không REPLACE.
+- Cập nhật `README.md`, `docs/LOCAL_DEVELOPMENT.md`; báo cáo `docs/system-analysis/30-DOCKER-FINAL-COMPLETION.md`. Không commit/push.
+
+Cập nhật 2026-11-14 — S31.5C2D1.2 **FAIL RUNTIME SAFETY GATE / D2 NO-GO**:
+- Pre-start RAM5.52GB PASS; port14334/hash/config/old-object isolation PASS. Approved recreate duy nhất target db, volume/network giữ nguyên; healthy first poll, StopTimeout runtime60, pinned SQL16.0.4315.2, backup RO mount, target PhoneStoreDB absent. Web/API không start.
+- Post-start target1.152GiB, host free1.94GB <3 gate. Safe-stop initiated; container final Exited137, OOMKilled=false, restart0, no graceful shutdown log, volume/network preserved. StopTimeout60 confirmed nhưng không đạt graceful exit; nguyên nhân chưa xác định.
+- RAM sau stop2.17GB; Windows PhoneStoreDB ONLINE. D2 hard NO-GO: không RESTORE. Cần giải phóng thêm RAM và chẩn đoán container signal/shutdown trước retry; không tự tắt apps/change Docker memory/DB/commit/push.
+- Báo cáo `docs/system-analysis/29-DOCKER-SQL-RUNTIME-SAFETY-GATE.md`.
+
+Cập nhật 2026-11-14 — S31.5C2D1.1 **CONFIG PASS / D2 RESOURCE GO PENDING USER MEMORY CLEANUP**:
+- Chỉ sửa `docker-compose.restore.yml`: thêm `db.stop_grace_period: 60s`; merged config PASS (`1m0s`), image digest/port14334/data volume/backup RO mount/project giữ nguyên. Existing stopped container chưa nhận config mới; D2 cần approved Compose recreate container, giữ target volume.
+- Host free4.06GB. Top working sets: vmmemWSL948MB (Docker, giữ), Chrome nhiều process (~529/452/225/224MB), VS Code nhiều process (~513/393/324/223MB), Defender364MB. Không tự đóng app. Đề xuất user đóng Chrome tabs/windows và VS Code windows không cần; không dừng Docker/Windows SQL/Defender.
+- Exit137 evidence: OOMKilled=false, restart0, no shutdown/error log; code137 means SIGKILL-compatible termination, consistent with stop grace exceeded but không chứng minh daemon timing/cause. Longer grace giảm risk, phải runtime-test graceful exit later.
+- Target container Exited137, volume/network tồn tại, running0; Windows PhoneStoreDB ONLINE. D2 NO-GO đến khi pre-start RAM≥5GB và post-start≥3GB (dựa observed drop4.00→1.71); không start/stop/restore/DB change/commit/push.
+- Báo cáo `docs/system-analysis/28-DOCKER-SQL-RESOURCE-SHUTDOWN-SAFETY.md`.
+
+Cập nhật 2026-11-14 — S31.5C2D1 **PARTIAL / BACKUP PRE-RESTORE VERIFICATION PASS, D2 BLOCKED**:
+- Preflight PASS RAM4.00GB/disk305.62GB/port14334 free/hash correct/project+volume absent. Start duy nhất `db` project `phonestore-restore-c2`; created isolated network/volume/container, Web/API không start/create.
+- Target SQL healthy 16.0.4315.2, pinned image; data volume RW riêng, backup bind RW=false. Container đọc file732,160 bytes/SHA256 match. Target chưa có PhoneStoreDB.
+- Target HEADERONLY/FILELISTONLY/VERIFYONLY CHECKSUM đều PASS: FULL PhoneStoreDB, COPY_ONLY/checksum/compressed/not damaged/compat160/source16.0.1000; logical files PhoneStoreDB + PhoneStoreDB_log. Không RESTORE DATABASE.
+- Resource after start: DB1.201GiB, host free1.71GB. Stop target vì dưới gate3GB; Exited137/OOMKilled=false, volume/network/container giữ nguyên, RAM hồi2.37GB. Source Windows DB ONLINE, counts2/3/8/2/40/41/12/28 unchanged; old objects unchanged.
+- Báo cáo `docs/system-analysis/27-DOCKER-SQL-PRERESTORE-VERIFICATION.md`. D2 NO-GO tới khi RAM≥3GB (prefer4) và tăng SQL stop grace (đề xuất60s) được duyệt; không commit/push.
+
+Cập nhật 2026-11-14 — S31.5C2C.1 **PARTIAL / COPY INTEGRITY PASS, WINDOWS SQL VERIFY BLOCKED**:
+- Source backup qua SQL: exists, đúng1 set,730,566 bytes,COPY_ONLY+CHECKSUM; PhoneStoreDB ONLINE; old containers Exited; disk305.66GB. Destination `C:\PhoneStoreDockerTransfer\backup\<same-name>.bak` ngoài repo, directory/file chưa tồn tại.
+- Người dùng đã manual elevated copy đúng1 file. Destination exists/readable, physical732,160 bytes; SHA256 `D806D221FD49FEFB9187C51D6EF0781F653312FF3606726309055F60B007D4E2` khớp nguồn. Chênh1,594 bytes so SQL compressed payload730,566 là media/header/block-padding overhead bình thường.
+- Windows SQL VERIFYONLY copy bị OS error5 do restricted ACL; không đổi ACL. Source artifact đã VERIFYONLY PASS và byte/hash copy match; target container phải VERIFYONLY/HEADER/FILELIST trước RESTORE.
+- Thêm `docker-compose.restore.yml`: pinned SQL digest, backup directory bind read-only. Static config PASS, isolated project/volume/port14334, target objects chưa tồn tại. RAM3.19GB (minimum3, preferred4), sequential gate. Báo cáo `docs/system-analysis/26-DOCKER-BACKUP-TRANSFER.md`; không start/restore/commit/push.
+
+Cập nhật 2026-11-14 — S31.5C2C **PARTIAL / ENVIRONMENT READY, AWAITING BACKUP COPY APPROVAL**:
+- Preflight PASS: backup C2A tồn tại/1 set/730,566 bytes; RAM4.69GB, disk305.71GB, port14334 free; old Web/DB vẫn Exited, old volume giữ nguyên. Không start/restart/create/delete Docker object.
+- Đã cập nhật chỉ nonsecret keys trong ignored `.env`: project `phonestore-restore-c2`, ports5015/5025/14334, DB PhoneStoreDB, actual uploads path, Catalog flag/timeout; giữ nguyên password để người dùng tự rotate. `.env.example` chỉ sửa mô tả port.
+- Compose config với ephemeral validation secret PASS: db/api/web, health/dependencies đúng, uploads bind read-only/path exists, target volume dự kiến chưa tồn tại. Không build/up.
+- Người dùng đã nhập trực tiếp credential mới; boolean verification PASS: set, complexity≥16 và khác historical default. Compose config bằng `.env` thực PASS, services api/db/web; target container/volume chưa tồn tại, old containers vẫn Exited. Secret không được in/log.
+- Backup copy chưa được phê duyệt/thực hiện; kế hoạch transfer restricted outside repo + size/hash + read-only mount. Restore/start vẫn cần phê duyệt riêng.
+- Báo cáo pending `docs/system-analysis/25-DOCKER-ENVIRONMENT-AND-BACKUP-TRANSFER.md`; không DB/source backup mutation, restore, migration/seed, commit/push.
+- Recheck cuối: project/ports/DB/uploads đều khớp, 42-file directory tồn tại, `.env` ignored/untracked; credential mới PASS redacted và static validation exit0. Không copy/start/restore/DB mutation, không commit/push.
+
+Cập nhật 2026-11-14 — S31.5C2B **READINESS PASS / RESTORE EXECUTION BLOCKED**:
+- Read-only xác nhận backup C2A tồn tại, đúng1 set, COPY_ONLY+CHECKSUM, compressed730,566 bytes; Windows SQL đọc/VERIFY được. Không copy artifact, không restore/start/restart container.
+- Host RAM free4.68GB, Docker allocation7.64GB, disk305.72GB, port14334 free; mọi containers đều Exited. SQL2022 image digest đã ghi nhận, target project render `phonestore-restore-c2`, ports5015/5025/14334, target volume dự kiến chưa tồn tại.
+- `.env` không ready: thiếu project/API/uploads; Web/SQL ports và DB name không khớp isolated plan; password đạt complexity nhưng trùng historical default. Người dùng phải tự rotate/chốt vars, không gửi secret/chat; task không sửa `.env`.
+- Backup nằm dưới SQL default directory mà Codex/Docker chưa đọc trực tiếp. Đề xuất copy được phê duyệt riêng bằng Windows elevated/manual vào restricted transfer directory ngoài repo, không đổi ACL nguồn; mount directory read-only qua restore override, không bake image/Git.
+- Báo cáo `docs/system-analysis/24-DOCKER-RESTORE-READINESS.md`. Kết luận BLOCKED tới khi secret rotated, env hoàn chỉnh, artifact copy approved/readable và restore được phê duyệt riêng; không commit/push.
+
+Cập nhật 2026-11-14 — S31.5C2A **BACKUP + VERIFICATION PASS**:
+- Sau phê duyệt riêng, tạo đúng1 FULL backup `PhoneStoreDB` bằng COPY_ONLY,CHECKSUM,COMPRESSION vào file timestamp+GUID mới; 809 pages, đúng1 matching backup set, backup6,701,056 bytes/compressed730,566 bytes, finish08:44:18 local. Không overwrite/retry.
+- `RESTORE VERIFYONLY WITH CHECKSUM` PASS; HEADERONLY xác nhận FULL/compressed/COPY_ONLY/checksum/not damaged/SQL16.0.1000; FILELISTONLY xác nhận logical files `PhoneStoreDB` + `PhoneStoreDB_log`. Không RESTORE DATABASE.
+- Hậu kiểm source: MSSQLSERVER Running, DB ONLINE, 2 migrations và counts Roles2/Users3/Brands8/Categories2/Products40/Images41/Orders12/Details28 không đổi; active backup/restore0. Docker Web/DB vẫn Exited, `.env` không đổi.
+- Direct file read/SHA-256 bị ACL OS error5 nên hash UNKNOWN; không đổi ACL/thử bypass. Verification SQL PASS vẫn đủ tiêu chí C2A. Báo cáo `docs/system-analysis/23-DATABASE-BACKUP-VERIFICATION.md`; không commit/push.
+
+Cập nhật 2026-11-14 — S31.5C1.1 **PARTIAL / CONTAINERS STOPPED, C2 RESTORE STILL BLOCKED**:
+- Preflight xác minh đúng IDs/names/mount: Web không mount; DB dùng volume `phonestore_mssql_data`. Docker SQL có 0 user DB requests và 0 logged user transactions trước stop. Chạy đúng `docker stop phonestore-web phonestore-db`; không rm/down/prune/delete volume/process khác.
+- Sau stop: Web Exited(0), DB Exited(137), OOMKilled=false; volume vẫn tồn tại, restart count0. DB không ghi graceful shutdown trước timeout nên consistency của old Docker volume chưa runtime-verify (không restart theo giới hạn). Windows MSSQLSERVER vẫn Running và PhoneStoreDB ONLINE.
+- RAM host free 1.24→2.16GB; ports5015/5025/14334/14333 đều free. Mức2.16GB vẫn thấp để chạy thêm SQL Linux an toàn; C2 restore NO-GO đến khi recheck đạt headroom tối thiểu đề xuất3–4GB.
+- `.env` tồn tại nhưng thiếu project/API port/uploads; secret chỉ ghi SET, không đọc. 42/42 uploads đọc được. Compose config với vars tạm isolated PASS, services db/api/web; không up/build/migration/seed.
+- SQL backup path tồn tại, disk305.96GB, source ONLINE; ACL bị access denied với agent nhưng history chứng minh service từng backup. Báo cáo `docs/system-analysis/22-DOCKER-RESOURCE-READINESS.md`; không backup/restore/DB write, không commit/push.
+
+Cập nhật 2026-11-14 — S31.5C1 **READ-ONLY PREFLIGHT PASS / C2 BLOCKED BY RESOURCES AND ENV**:
+- Giữ nguyên Git/containers/database; chỉ SELECT/CIM/Docker inspect. SQL Windows `MSSQLSERVER`/SQL2022 Developer16.0.1000.6, `PhoneStoreDB` ONLINE/compat160/FULL/16MB, 2 migrations; counts Roles2/Users3/Brands8/Categories2/Products40/Images41/Orders12/Details28. Backup mới nhất02/11 COPY_ONLY+CHECKSUM, đã cũ.
+- Backup plan: file timestamp+GUID mới trong SQL default backup directory, `COPY_ONLY,CHECKSUM,COMPRESSION`, sau đó `RESTORE VERIFYONLY ... WITH CHECKSUM`; không backup ở C1. SQL service account đã xác định nhưng ACL trực tiếp bị sandbox từ chối; lịch sử backup chứng minh đường dẫn từng ghi được, quyền hiện tại phải recheck ngay C2.
+- Docker cũ vẫn running (`phonestore-web`, `phonestore-db` healthy); 5015/5025/14334 free, 14333 occupied. Host chỉ1.08GB RAM free; Docker SQL dùng~1.39GB nên NO-GO chạy thêm SQL container cho tới khi có đủ headroom. Disk C còn305.96GB.
+- 41 DB image references/41 unique đều có file; disk42, missing0, orphan1 giữ nguyên. `.env` tồn tại nhưng thiếu uploads path/API port/project name; secret set nhưng không đọc/ghi. Current config không default credential; Git history còn1 matching commit.
+- Báo cáo `docs/system-analysis/21-DATABASE-MIGRATION-READINESS.md`. Không backup/restore/migration/seed/DML, không start/stop container, không commit/push.
+
+Cập nhật 2026-11-14 — S31.5B **STATIC PASS / BUILD PASS / RUNTIME NOT TESTED**:
+- Chuẩn hóa Compose cách ly gồm `web/api/db`: Web5015, API5025, SQL port cấu hình (đề xuất14334), service DNS nội bộ, dependency/healthchecks và named volume; không start/restart/delete stack hiện hữu.
+- Thêm multi-stage `src/PhoneStore.Api/Dockerfile`; Web/API dùng .NET8/port8080. Runtime uploads bị loại khỏi image và bind-mount read-only từ host để có thể dùng chung với Admin Windows.
+- Xóa credential mặc định khỏi Compose, `.env.example` và Docker guide; `.env`/secret vẫn ngoài Git. Credential cũ còn trong Git history và local ignored `.env` cần người dùng đánh giá/rotate, không rewrite/rotate trong task.
+- `docker compose config`: thiếu biến bắt buộc FAIL đúng thiết kế; biến kiểm thử PASS, đủ3 services/dependencies/healthchecks. Targeted Release build Web + API đều 0 warnings/errors. Không Docker image build do giới hạn RAM; không test runtime/health thực.
+- Báo cáo `docs/system-analysis/20-DOCKER-COMPOSE-HARDENING.md`. S31.5C chỉ GO có điều kiện sau khi đổi local secret, chốt uploads path/ports và phê duyệt backup/restore riêng; không commit/push.
+
+Cập nhật 2026-11-14 — S31.5A **DOCKER COMPOSE PREFLIGHT PASS / CONDITIONAL GO FOR S31.5B**:
+- Docker Desktop/Engine/Compose đã cài và chạy Linux containers (Engine29.9.2, Composev5.6.1, 12CPU/7.6GB). Hai container ngoài task đang chạy: Web8080 HTTP200 và SQL2022 healthy trên14333; task không start/stop/restart. Compose hiện chỉ có Web+DB, không API, Web không healthcheck/feature config nội bộ.
+- SQL nguồn read-only: SQL2022 RTM, PhoneStoreDB16MB/compat160/FULL, Roles2/Users3/Brands8/Categories2/Products40/Images41/Orders12/Details28, 2 migrations. Container target SQL2022 mới hơn; DockerDB có schema/migrations nhưng0 business rows. Backup gần nhất02/11 đã cũ; không backup/restore/migration/seed.
+- Blockers: default SA credential tracked/history; API Dockerfile/service thiếu; 0 uploads được Git track dù DB tham chiếu41 file (disk42,1orphan), Docker build local không reproducible; port14333/volume hiện dùng; host chỉ~1GB RAM free. Đề xuất isolated project/ports/volume, mandatory secrets, API service DNS `http://api:8080/`, secure uploads bind mount và backup/restore rehearsal riêng.
+- Báo cáo `docs/system-analysis/19-DOCKER-COMPOSE-PREFLIGHT.md`. Chỉ tài liệu; không sửa Docker/source/database, không build/test, không commit/push. Conditional GO chỉ cho S31.5B implementation hardening, NO-GO deployment hiện tại.
+
 Cập nhật 2026-11-14 — S31.4 **DOCUMENTATION STANDARDIZED / SECURITY REVIEW REQUIRED**:
 - Viết lại `README.md` theo source thực tế và thêm `docs/LOCAL_DEVELOPMENT.md`: chức năng Web/Admin/API, kiến trúc phân lớp, project/dependency, SQL setup, ports, feature flag, API reference, test evidence, troubleshooting và giới hạn; toàn bộ link repository dùng đường dẫn tương đối.
 - Restore PASS; solution build cách ly **0 warnings/errors**; full regression **232/232 PASS**, 0 fail/skip. Không sửa application source/database, không migration/seed, không commit/push.
@@ -755,7 +850,7 @@ Cập nhật 2026-11-12 — S29.9I **READY FOR USER TEST, tối ưu UI/UX trang 
 
 Cập nhật 2026-11-11 — S29.10A.1 **READY FOR USER RUN, tinh chỉnh Docker Compose theo chuẩn v2**:
 - Đã xóa bỏ thuộc tính `version: '3.8'` đã lỗi thời trong Compose specification v2.x.
-- Chuẩn hóa healthcheck SQL Server: Sử dụng biến môi trường `${MSSQL_SA_PASSWORD:-PhoneStore@2026!}` đồng bộ từ `.env`, bọc trong dấu nháy đơn trong shell command tránh lỗi ký tự đặc biệt, hỗ trợ đường dẫn `tools18` kèm cờ `-C` (TrustServerCertificate) và fallback `tools`.
+- Chuẩn hóa healthcheck SQL Server theo biến môi trường trong `.env`, hỗ trợ đường dẫn `tools18` kèm cờ `-C` và fallback `tools` (credential mặc định cũ đã được loại khỏi working tree ở S31.5B).
 - Đồng bộ thông tin kết nối giữa `db` và `web`: Host `db`, cổng 1433, CSDL `PhoneStoreDockerDB`, tài khoản `sa` với cùng mật khẩu từ `${MSSQL_SA_PASSWORD}`, ánh xạ cổng host giữ nguyên Web 8080 và SQL 14333.
 - Files đã cập nhật: `docker-compose.yml`, `docs/PROGRESS.md`. Không tự chạy Docker/migration/test, không commit/push.
 

@@ -108,6 +108,34 @@ dotnet run --project src/PhoneStore.Admin/PhoneStore.Admin.csproj
 
 Admin chỉ chạy trên Windows và kết nối Business/Data trực tiếp, không gọi REST API. Nếu build báo DLL bị khóa, đóng đúng instance Admin do bạn đang sử dụng rồi thử lại; không force-kill process không xác định.
 
+### Chạy Admin với SQL Server Docker
+
+Admin nạp `appsettings.json` rồi environment variables, vì vậy không cần sửa source hoặc config được track. Stack S31.5F mở SQL Docker tại `127.0.0.1,14334`; dùng loopback IPv4 vì `localhost` bị ODBC 17 timeout trên máy nghiệm thu. TLS giữ nguyên `Encrypt=True;TrustServerCertificate=True` như Web/API Docker.
+
+Trong PowerShell tại repository, đọc secret từ `.env` ignored và chỉ giữ connection string trong environment của process Admin:
+
+```powershell
+$line = Get-Content .env | Where-Object { $_ -match '^MSSQL_SA_PASSWORD=' } | Select-Object -First 1
+$saPassword = $line.Substring($line.IndexOf('=') + 1).Trim('"', "'")
+$escapedPassword = $saPassword.Replace('"', '""')
+
+try {
+    $env:ConnectionStrings__PhoneStoreConnection =
+        "Server=127.0.0.1,14334;Database=PhoneStoreDB;User Id=sa;Password=`"$escapedPassword`";Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true;"
+    dotnet run --project src/PhoneStore.Admin/PhoneStore.Admin.csproj
+}
+finally {
+    Remove-Item Env:ConnectionStrings__PhoneStoreConnection -ErrorAction SilentlyContinue
+    $saPassword = $null
+    $escapedPassword = $null
+    $line = $null
+}
+```
+
+Không echo connection string hoặc password. Để quay lại SQL Server Windows, mở PowerShell mới (hoặc xóa biến override) rồi chạy lệnh Admin thông thường ở trên; `appsettings.json` mặc định vẫn dùng Windows Authentication.
+
+Admin và Docker Web dùng chung thư mục ảnh `src/PhoneStore.Web/wwwroot/uploads/products`; không cần đổi `ProductImages:UploadsDirectory`.
+
 ### Tạo Admin đầu tiên khi cần
 
 Dry-run chỉ đọc:
@@ -191,11 +219,64 @@ Với 429/5xx/network/timeout/invalid payload, resolver fallback local một l�
 - Kiểm tra chỉ có một instance mong muốn.
 - Không reset credential hoặc thay database để xử lý lỗi hiển thị.
 
-## 10. Docker development
+## 10. Docker Compose cách ly
 
-Docker Compose hiện chỉ dành cho development. Cấu hình đang track một default SA credential trong `.env.example`, `docker-compose.yml` và Docker guide; phải harden và rotate nếu từng dùng trước khi sử dụng trong môi trường chia sẻ/production. Không coi `.env` ignored là đủ nếu giá trị mặc định vẫn tồn tại trong Git history.
+Stack gồm `web`, `api`, `db`; Admin WinForms tiếp tục chạy trên Windows. Cấu hình restore dùng project `phonestore-restore-c2`, volume SQL riêng, SQL host port `14334`, backup mount read-only và SQL Server image đã pin digest.
 
-Xem [`DOCKER_AND_CI_GUIDE.md`](DOCKER_AND_CI_GUIDE.md), nhưng không dùng credential mặc định cho môi trường thật.
+### Chuẩn bị
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Trong `.env`, đặt credential SA mới đủ mạnh và đường dẫn tuyệt đối `PRODUCT_UPLOADS_PATH` tới thư mục ảnh sản phẩm. Không commit `.env`, backup `.bak`, uploads chứa dữ liệu thật hoặc secret. Web/API trong Compose phải dùng DNS service `db` và `api`, không dùng `localhost`.
+
+Kiểm tra cấu hình mà không khởi động container:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.restore.yml config --quiet
+```
+
+### Chuẩn bị database Docker từ backup trên máy mới
+
+1. Nhận backup demo đã được loại bỏ dữ liệu nhạy cảm qua kênh riêng; không đặt `.bak` trong repository.
+2. Copy backup vào thư mục transfer ngoài repository đang được bind read-only trong `docker-compose.restore.yml`.
+3. Xác minh kích thước/SHA-256, rồi khởi động riêng `db` và chờ healthy.
+4. Chạy `RESTORE HEADERONLY`, `FILELISTONLY` và `VERIFYONLY WITH CHECKSUM` trong container.
+5. Chỉ khi `PhoneStoreDB` chưa tồn tại, restore đúng một lần bằng `WITH MOVE` tới `/var/opt/mssql/data/PhoneStoreDB.mdf` và `/var/opt/mssql/data/PhoneStoreDB_log.ldf`, kèm `CHECKSUM`; không dùng `REPLACE`.
+6. SELECT xác minh database ONLINE, migrations và row counts trước khi mở API/Web.
+
+Trên máy đã hoàn tất S31.5F, named volume `phonestore-restore-c2_mssql_data` đã có database hợp lệ; bỏ qua toàn bộ bước restore. Không chạy lại restore để “làm mới” dữ liệu.
+
+### Khởi động sau khi database Docker đã sẵn sàng
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.restore.yml up -d db
+docker compose -f docker-compose.yml -f docker-compose.restore.yml ps
+
+# Chỉ chạy sau khi PhoneStoreDB đã được restore/kiểm tra trong target volume.
+docker compose -f docker-compose.yml -f docker-compose.restore.yml up -d --build api web
+docker compose -f docker-compose.yml -f docker-compose.restore.yml ps
+```
+
+Kiểm tra:
+
+```powershell
+Invoke-WebRequest http://localhost:5025/api/health -UseBasicParsing
+Invoke-WebRequest http://localhost:5015/ -UseBasicParsing
+Invoke-WebRequest http://localhost:5015/products -UseBasicParsing
+docker compose -f docker-compose.yml -f docker-compose.restore.yml logs --tail 100 db api web
+```
+
+Ports mặc định: Web `5015`, API `5025`, SQL `14334`. Dừng an toàn:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.restore.yml stop
+```
+
+Không dùng `down -v` vì sẽ xóa volume dữ liệu. Không restore với `REPLACE`, không migration/seed tự động và không trỏ Admin Windows vào SQL Docker khi chưa cấu hình/kiểm tra riêng.
+
+SQL container được giới hạn bằng cơ chế hỗ trợ của SQL Server (`MSSQL_MEMORY_LIMIT_MB`) cùng cgroup memory limit trong restore override. Không bỏ các giới hạn này trên máy ít RAM. Xem [`DOCKER_AND_CI_GUIDE.md`](DOCKER_AND_CI_GUIDE.md) và [`system-analysis/30-DOCKER-FINAL-COMPLETION.md`](system-analysis/30-DOCKER-FINAL-COMPLETION.md).
 
 ## 11. Tài liệu tham khảo
 

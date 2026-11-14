@@ -17,6 +17,10 @@
 **/TestResults/
 **/*.log
 
+# Runtime-managed product images are deployment data, not image layers.
+**/wwwroot/uploads/products/
+**/wwwroot/uploads/products/**
+
 # Project-specific non-Web folders & docs
 .agents/
 .codex/
@@ -26,6 +30,8 @@ database/
 docs/
 tests/
 tools/
+src/PhoneStore.Admin/
+src/PhoneStore.AdminBootstrap/
 
 # Docker & local environment
 .dockerignore

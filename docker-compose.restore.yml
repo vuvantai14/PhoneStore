@@ -1,0 +1,12 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server@sha256:11927f5edc5122658e90b3a80ee36e8aef779310bf771415c1d89271859c73fd
+    mem_limit: 2304m
+    stop_grace_period: 60s
+    environment:
+      MSSQL_MEMORY_LIMIT_MB: "1536"
+    volumes:
+      - type: bind
+        source: C:/PhoneStoreDockerTransfer/backup
+        target: /var/opt/mssql/backup
+        read_only: true

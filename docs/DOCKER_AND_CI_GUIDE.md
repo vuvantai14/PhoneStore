@@ -1,158 +1,87 @@
-# Hướng dẫn Docker Compose & GitHub Actions CI cho PhoneStore
+# PhoneStore Docker Compose & CI
 
-Tài liệu này hướng dẫn cách chạy PhoneStore.Web cùng SQL Server trên Docker và cách thức hoạt động của luồng kiểm thử tự động (CI) trên GitHub Actions phục vụ báo cáo môn học.
+Compose đóng gói ba dịch vụ Linux `web`, `api`, `db`; Admin WinForms tiếp tục chạy trực tiếp trên Windows. Cấu hình không tự migrate, seed hoặc restore database.
 
----
+## 1. Chuẩn bị an toàn
 
-## 1. Yêu cầu môi trường & Cài đặt
+Yêu cầu Docker Desktop (Linux containers), Docker Compose và đủ tài nguyên cho SQL Server 2022. Sao chép cấu hình mẫu:
 
-1. **Docker Desktop:**
-   - Cài đặt [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/).
-   - Trong quá trình cài đặt, chọn kích hoạt **WSL 2 backend** (Windows Subsystem for Linux).
-   - Khởi động Docker Desktop và đảm bảo biểu tượng Docker ở thanh taskbar hiển thị trạng thái `Engine running`.
-2. **Git & .NET 8 SDK:** Đã có sẵn trên máy phát triển.
-
----
-
-## 2. Cấu hình biến môi trường `.env`
-
-Để đảm bảo tính bảo mật (không đưa mật khẩu lên Git) và tránh xung đột cổng với các ứng dụng đang chạy trên Windows:
-
-1. Mở PowerShell hoặc CMD tại thư mục gốc dự án `C:\PhoneStore\PhoneStore`:
-   ```powershell
-   Copy-Item .env.example .env
-   ```
-2. Mở file `.env` vừa tạo để kiểm tra các cấu hình mặc định:
-   ```env
-   # Cổng truy cập Web từ trình duyệt (mặc định 8080 để tránh đụng độ cổng 5015 trên máy host)
-   WEB_PORT=8080
-
-   # Cổng kết nối SQL Server từ máy host (mặc định 14333 để tránh đụng độ cổng 1433 của Windows SQL Server)
-   SQL_PORT=14333
-
-   # Mật khẩu quản trị sa của SQL Server trong container
-   MSSQL_SA_PASSWORD=PhoneStore@2026!
-
-   # Tên CSDL riêng trong Docker (hoàn toàn cách ly với PhoneStoreDB chính trên Windows)
-   DB_NAME=PhoneStoreDockerDB
-
-   # Môi trường chạy
-   ASPNETCORE_ENVIRONMENT=Development
-   ```
-   > [!NOTE]
-   > File `.env` đã được liệt kê trong `.gitignore` nên tuyệt đối an toàn, không bị commit lên GitHub.
-
----
-
-## 3. Khởi chạy ứng dụng bằng Docker Compose
-
-### A. Lệnh khởi chạy
-Tại thư mục gốc `C:\PhoneStore\PhoneStore`, thực thi lệnh:
-```bash
-docker compose up -d --build
+```powershell
+Copy-Item .env.example .env
 ```
-- `--build`: Build lại Dockerfile của PhoneStore.Web theo mã nguồn mới nhất.
-- `-d`: Chạy ngầm trong nền (detached mode).
 
-### B. Kiểm tra trạng thái các container
-```bash
+Trong `.env`, bắt buộc:
+
+- tự đặt `MSSQL_SA_PASSWORD` mạnh, duy nhất; không dùng giá trị ví dụ hoặc commit file này;
+- đặt `PRODUCT_UPLOADS_PATH` thành đường dẫn tuyệt đối tới thư mục ảnh runtime mà Admin Windows cũng quản lý;
+- chọn `SQL_PORT` còn trống (mặc định đề xuất 14334, vì 14333 có thể thuộc stack cũ);
+- giữ `COMPOSE_PROJECT_NAME` riêng để không tác động stack/volume cũ.
+
+`.env` đã được `.gitignore` loại trừ. Tuy vậy, người có quyền Docker vẫn có thể xem environment của container; production cần secret manager phù hợp. Credential Docker cũ từng xuất hiện trong Git history, nên phải được đánh giá/rotate trước khi công khai repository; tài liệu này không hướng dẫn rewrite history.
+
+Kiểm cấu hình mà không khởi động container:
+
+```powershell
+docker compose config --quiet
+```
+
+Lệnh phải dừng ngay nếu thiếu password hoặc đường dẫn uploads.
+
+## 2. Kiến trúc Compose
+
+| Service | Host mặc định | Container | Vai trò |
+|---|---:|---:|---|
+| `web` | `127.0.0.1:5015` | `8080` | Customer Web; gọi `http://api:8080/` khi feature flag bật |
+| `api` | `127.0.0.1:5025` | `8080` | REST API read-only; health tại `/api/health` |
+| `db` | `127.0.0.1:14334` | `1433` | SQL Server 2022, dữ liệu ở named volume riêng |
+
+Web và API dùng service hostname `db`, không dùng `localhost`. `CatalogApi__BaseUrl` trong Web dùng service hostname `api`. Web/API chỉ khởi động sau khi dependencies healthy.
+
+Ảnh runtime không nằm trong image hoặc Git. Compose bind-mount `PRODUCT_UPLOADS_PATH` read-only vào `/app/wwwroot/uploads/products`; Admin WinForms cần được cấu hình riêng để ghi vào cùng host directory. Không xóa orphan hoặc đổi tên ảnh khi chưa đối chiếu database.
+
+## 3. Build và chạy có kiểm soát
+
+S31.5B chỉ validate/build, **không chạy** các lệnh dưới đây. Khi đã có phê duyệt deployment và đã kiểm tra ports/project name:
+
+```powershell
+docker compose build
+docker compose up -d
 docker compose ps
 ```
-Kết quả hiển thị tương tự:
+
+Truy cập Web tại `http://localhost:5015`, API health tại `http://localhost:5025/api/health`. Xem log theo service, không in `.env`:
+
+```powershell
+docker compose logs -f web
+docker compose logs -f api
+docker compose logs -f db
 ```
-NAME              IMAGE                                     COMMAND                  SERVICE   CREATED          STATUS                    PORTS
-phonestore-db     mcr.microsoft.com/mssql/server:2022-latest "/opt/mssql/bin/sqls…"   db        30 seconds ago   Up 30 seconds (healthy)   0.0.0.0:14333->1433/tcp
-phonestore-web    phonestore-web                           "dotnet PhoneStore.W…"   web       10 seconds ago   Up 10 seconds             0.0.0.0:8080->8080/tcp
+
+Dừng stack nhưng giữ named volume:
+
+```powershell
+docker compose down
 ```
-> [!IMPORTANT]
-> Dịch vụ `web` được cấu hình `depends_on: { db: { condition: service_healthy } }`. Do đó, `web` sẽ tự động chờ dịch vụ `db` khởi động hoàn tất và phản hồi truy vấn `SELECT 1` thành công trước khi bắt đầu phục vụ.
 
-### C. Xem nhật ký (Logs)
-- Xem log tổng hợp:
-  ```bash
-  docker compose logs -f
-  ```
-- Xem log riêng của Web:
-  ```bash
-  docker compose logs -f web
-  ```
-- Xem log riêng của Database:
-  ```bash
-  docker compose logs -f db
-  ```
-*(Nhấn `Ctrl + C` để thoát màn hình xem log).*
+Không dùng `down -v`, không xóa volume và không restore/migrate/seed nếu chưa được phê duyệt riêng. Database nguồn có dữ liệu cá nhân; backup phải nằm ngoài Git và cần quy trình S31.5C.
 
----
+## 4. Admin WinForms
 
-## 4. Truy cập ứng dụng & Khởi tạo dữ liệu Docker
+S31.5B không đổi cấu hình Admin. Ở bước nghiệm thu sau, Admin Windows có thể dùng cấu hình tạm trỏ tới `localhost,<SQL_PORT>` và cùng `PRODUCT_UPLOADS_PATH`; không ghi đè cấu hình kết nối PhoneStoreDB chính.
 
-### A. Truy cập Web
-Mở trình duyệt truy cập:
-```
-http://localhost:8080
-```
-*(Nếu bạn đổi `WEB_PORT` trong `.env` thành cổng khác, hãy truy cập theo cổng đó).*
+## 5. CI
 
-### B. Khởi tạo Database cho môi trường Docker (Nếu cần)
-Vì Docker sử dụng CSDL cách ly (`PhoneStoreDockerDB`) và không tự ý migrate tự động, khi cần chạy migration lần đầu trên môi trường Docker, bạn có thể thực thi từ máy host:
-```bash
-dotnet ef database update --project src/PhoneStore.Data --startup-project src/PhoneStore.Web --connection "Server=localhost,14333;Database=PhoneStoreDockerDB;User Id=sa;Password=PhoneStore@2026!;TrustServerCertificate=True;MultipleActiveResultSets=true;"
-```
-*(Dữ liệu SQL Server trong Docker được lưu bền vững qua Docker volume `phonestore_mssql_data`, không bị mất khi restart container).*
+Workflow `.github/workflows/ci.yml`:
 
----
+1. restore/build/test solution trên Windows;
+2. build riêng Web image và API image trên Linux;
+3. tạo credential kiểm tra tạm thời trong runner rồi chạy `docker compose config --quiet`.
 
-## 5. Dừng và dọn dẹp Container
+CI không push image, không chạy Compose và không chứa credential dùng lại được.
 
-- **Dừng các container (giữ nguyên dữ liệu database):**
-  ```bash
-  docker compose down
-  ```
-- **Dừng và xóa toàn bộ dữ liệu database volume (nếu muốn làm sạch hoàn toàn):**
-  ```bash
-  docker compose down -v
-  ```
+## 6. Giới hạn còn lại
 
----
-
-## 6. GitHub Actions CI (Tích hợp liên tục)
-
-Quy trình CI được cấu hình tại `.github/workflows/ci.yml` và tự động kích hoạt khi có `push` hoặc `pull_request` vào nhánh `main`, hoặc chạy thủ công qua `workflow_dispatch`.
-
-Quy trình gồm 2 Jobs chạy song song:
-1. **Job 1: `build-and-test-windows` (Runner: `windows-latest`):**
-   - Tải source code và cấu hình .NET 8 SDK.
-   - Chạy `dotnet restore PhoneStore.sln` kèm caching NuGet packages.
-   - Build toàn bộ Solution Release: `dotnet build PhoneStore.sln` (bao gồm cả WinForms Admin trên môi trường Windows).
-   - Chạy toàn bộ 162+ ca kiểm thử đơn vị và cách ly SQLite in-memory: `dotnet test tests/PhoneStore.Tests/PhoneStore.Tests.csproj`.
-2. **Job 2: `build-docker-ubuntu` (Runner: `ubuntu-latest`):**
-   - Thiết lập Docker Buildx trên môi trường Linux.
-   - Thực thi build Dockerfile đa tầng của `PhoneStore.Web` để kiểm tra khả năng đóng gói container độc lập mà không cần đẩy (push) lên Docker Hub.
-
-### Cách kiểm tra trạng thái CI trên GitHub:
-1. Đẩy code lên GitHub repository của bạn.
-2. Vào tab **Actions** trên giao diện GitHub.
-3. Chọn workflow **PhoneStore CI** mới nhất:
-   - Cả 2 job `Build Solution & Test (Windows)` và `Build Docker Image (Ubuntu)` đều hiển thị biểu tượng **dấu tick xanh lá** (Success).
-
----
-
-## 7. Mẫu trình bày minh chứng cho Giảng viên
-
-Khi báo cáo hoặc chụp ảnh minh chứng cho đồ án môn học, bạn chuẩn bị 3 ảnh chụp màn hình sau:
-
-1. **Minh chứng 1 — Docker Containers đang chạy:**
-   - Mở PowerShell / CMD chạy lệnh:
-     ```bash
-     docker compose ps
-     ```
-   - Chụp màn hình thấy rõ 2 container `phonestore-db` (healthy) và `phonestore-web` (Up) cùng các cổng `8080` và `14333`.
-   - Hoặc chụp giao diện ứng dụng **Docker Desktop**, tab *Containers*, hiển thị nhóm `phonestore` màu xanh lá đang chạy.
-2. **Minh chứng 2 — Giao diện Web chạy từ Docker:**
-   - Mở trình duyệt Chrome/Edge truy cập `http://localhost:8080`.
-   - Chụp toàn màn hình gồm cả thanh địa chỉ URL `localhost:8080` và giao diện trang chủ / danh sách sản phẩm của PhoneStore.
-3. **Minh chứng 3 — GitHub Actions CI báo xanh:**
-   - Mở trình duyệt vào trang GitHub repository -> Tab **Actions**.
-   - Chụp màn hình workflow run có trạng thái **Success** kèm 2 jobs màu xanh:
-     - `Build Solution & Test (Windows)`
-     - `Build Docker Image (Ubuntu)`
+- Ứng dụng vẫn dùng tài khoản `sa`; least-privilege SQL login cần thay đổi database được phê duyệt riêng.
+- SQL image còn dùng tag `2022-latest`; cần pin bản đã nghiệm thu trước production.
+- Healthcheck HTTP dùng Bash TCP có sẵn theo giả định của base image và cần runtime acceptance ở S31.5C/D.
+- Không có dữ liệu/ảnh trong Git checkout; backup/restore và asset transfer phải được nghiệm thu riêng.

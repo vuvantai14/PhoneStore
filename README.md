@@ -135,6 +135,28 @@ dotnet run --project src/PhoneStore.Admin/PhoneStore.Admin.csproj
 
 Không ghi tài khoản/mật khẩu Admin vào source hoặc tài liệu. Quy trình bootstrap Admin đầu tiên được mô tả trong [hướng dẫn local](docs/LOCAL_DEVELOPMENT.md#tạo-admin-đầu-tiên-khi-cần).
 
+Để chạy Admin Windows với SQL Docker trên `127.0.0.1,14334`, dùng environment override lấy secret từ `.env` ignored theo [hướng dẫn Admin ↔ Docker SQL](docs/LOCAL_DEVELOPMENT.md#chạy-admin-với-sql-server-docker). Không sửa `appsettings.json` hoặc hardcode credential.
+
+### Chạy bằng Docker Compose
+
+Docker Compose đóng gói Customer Web, REST API và SQL Server; Admin WinForms vẫn chạy trực tiếp trên Windows.
+
+```powershell
+Copy-Item .env.example .env
+# Điền MSSQL_SA_PASSWORD mạnh và PRODUCT_UPLOADS_PATH tuyệt đối trong .env (không commit file này).
+docker compose -f docker-compose.yml -f docker-compose.restore.yml config --quiet
+docker compose -f docker-compose.yml -f docker-compose.restore.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.restore.yml ps
+```
+
+Các cổng mặc định của cấu hình cách ly: Web `5015`, API `5025`, SQL Server `14334`. Trong container, Web gọi API qua `http://api:8080/` và Web/API gọi SQL qua service `db:1433`; không dùng `localhost` cho giao tiếp nội bộ.
+
+> Database Docker phải được restore hoặc khởi tạo theo quy trình đã phê duyệt trước khi khởi động toàn stack. Không chạy migration/seed tự động và không dùng `RESTORE ... WITH REPLACE`. Backup `.bak`, `.env` và dữ liệu người dùng không được đưa lên GitHub.
+
+Chi tiết vận hành và trạng thái nghiệm thu: [Local Development](docs/LOCAL_DEVELOPMENT.md#10-docker-compose-cách-ly) và [Docker final completion](docs/system-analysis/30-DOCKER-FINAL-COMPLETION.md).
+
+S31.5F đã nghiệm thu runtime trên project cách ly: SQL/API/Web healthy, API health và các trang Web chính HTTP 200, catalog 40 sản phẩm và 41/41 ảnh được phục vụ thành công. Named volume trên máy đã nghiệm thu đã chứa database; không restore lại khi chỉ khởi động lại stack.
+
 ### Chạy tests
 
 ```powershell
@@ -168,6 +190,7 @@ Không chạy migration, seed, restore hoặc bootstrap Admin trên database qua
 
 ## Testing và nghiệm thu
 
+- S31.5F: Docker Compose ba service runtime PASS; database restore có kiểm soát, Web/API/SQL healthy và smoke test read-only PASS.
 - S31.3G: solution build cách ly `0 warnings / 0 errors`; **232/232 tests PASS**, không skip.
 - S31.3E–F: API, Web, SQL Server và feature flag/fallback có bằng chứng live runtime.
 - Admin WinForms đã được người dùng nghiệm thu thủ công; tài liệu phân biệt rõ manual evidence với automated evidence.
@@ -182,7 +205,7 @@ Tiến độ hiện tại: [`docs/PROGRESS.md`](docs/PROGRESS.md).
 - Rate limiter lưu trong memory của từng process, chưa hỗ trợ multi-instance distributed state.
 - SQL principal cho API chưa tách thành account read-only least privilege.
 - Chưa production deployment và chưa load/stress test đầy đủ.
-- Docker Compose hiện chỉ dành cho development; cấu hình Docker đang có default SA credential được track và phải được harden/rotate trước khi dùng trong môi trường chia sẻ hoặc production.
+- Docker Compose hiện dành cho development/nghiệm thu cục bộ. Credential bắt buộc lấy từ `.env` ignored; lịch sử Git từng chứa credential cũ nên credential đó không được tái sử dụng.
 
 ## Tài liệu
 

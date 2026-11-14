@@ -56,3 +56,18 @@ jobs:
           file: ./Dockerfile
           push: false
           tags: phonestore-web:ci
+
+      - name: Build PhoneStore.Api Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./src/PhoneStore.Api/Dockerfile
+          push: false
+          tags: phonestore-api:ci
+
+      - name: Validate Docker Compose configuration
+        shell: bash
+        run: |
+          export MSSQL_SA_PASSWORD="$(openssl rand -base64 36)Aa1!"
+          export PRODUCT_UPLOADS_PATH=/tmp/phonestore-products
+          docker compose config --quiet
