@@ -110,29 +110,23 @@ Admin chỉ chạy trên Windows và kết nối Business/Data trực tiếp, kh
 
 ### Chạy Admin với SQL Server Docker
 
-Admin nạp `appsettings.json` rồi environment variables, vì vậy không cần sửa source hoặc config được track. Stack S31.5F mở SQL Docker tại `127.0.0.1,14334`; dùng loopback IPv4 vì `localhost` bị ODBC 17 timeout trên máy nghiệm thu. TLS giữ nguyên `Encrypt=True;TrustServerCertificate=True` như Web/API Docker.
+Admin nạp `appsettings.json` rồi environment variables, nên `ConnectionStrings__PhoneStoreConnection` chỉ override cấu hình cho process được khởi chạy. Stack Docker mở SQL tại `127.0.0.1,14334`; dùng loopback IPv4 vì `localhost` từng bị ODBC 17 timeout trên máy nghiệm thu. TLS giữ nguyên `Encrypt=True;TrustServerCertificate=True` như Web/API Docker.
 
-Trong PowerShell tại repository, đọc secret từ `.env` ignored và chỉ giữ connection string trong environment của process Admin:
+Đảm bảo `.env` local (đã được Git ignore) có `MSSQL_SA_PASSWORD`, `SQL_PORT=14334` và `DB_NAME=PhoneStoreDB`. Sau đó chạy một lệnh tại repository:
 
 ```powershell
-$line = Get-Content .env | Where-Object { $_ -match '^MSSQL_SA_PASSWORD=' } | Select-Object -First 1
-$saPassword = $line.Substring($line.IndexOf('=') + 1).Trim('"', "'")
-$escapedPassword = $saPassword.Replace('"', '""')
-
-try {
-    $env:ConnectionStrings__PhoneStoreConnection =
-        "Server=127.0.0.1,14334;Database=PhoneStoreDB;User Id=sa;Password=`"$escapedPassword`";Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true;"
-    dotnet run --project src/PhoneStore.Admin/PhoneStore.Admin.csproj
-}
-finally {
-    Remove-Item Env:ConnectionStrings__PhoneStoreConnection -ErrorAction SilentlyContinue
-    $saPassword = $null
-    $escapedPassword = $null
-    $line = $null
-}
+.\scripts\run-admin-docker.ps1
 ```
 
-Không echo connection string hoặc password. Để quay lại SQL Server Windows, mở PowerShell mới (hoặc xóa biến override) rồi chạy lệnh Admin thông thường ở trên; `appsettings.json` mặc định vẫn dùng Windows Authentication.
+Launcher thực hiện một truy vấn `SELECT` nhẹ bằng `sqlcmd`, không đưa password lên command line/log, rồi truyền connection string qua environment chỉ cho tiến trình Admin. Launcher không khởi động hoặc restart Docker. Nếu chỉ muốn kiểm tra cấu hình và kết nối:
+
+```powershell
+.\scripts\run-admin-docker.ps1 -CheckOnly
+```
+
+Nếu Admin đang mở, launcher dừng với thông báo để tránh chạy hai instance. Hãy đóng Admin hiện tại theo cách bình thường rồi chạy lại. Để quay về SQL Server Windows, chạy lệnh Admin thông thường ở đầu mục 6; `appsettings.json` mặc định vẫn dùng Windows Authentication và launcher không thay đổi environment cấp hệ thống.
+
+Sau khi đăng nhập, mở **Quản lý đơn hàng**, chọn **Tất cả trạng thái** và nhấn **Tải lại**. Nếu dữ liệu vẫn cũ, chạy `-CheckOnly` và xác nhận dòng PASS hiển thị `127.0.0.1,14334` cùng `PhoneStoreDB`; không sao chép connection string hoặc password vào tài liệu/log.
 
 Admin và Docker Web dùng chung thư mục ảnh `src/PhoneStore.Web/wwwroot/uploads/products`; không cần đổi `ProductImages:UploadsDirectory`.
 

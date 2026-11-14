@@ -1,5 +1,15 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-14 — S31.5H **READY FOR USER TEST — ADMIN LAUNCHER FOR DOCKER SQL**:
+- Thêm `scripts/run-admin-docker.ps1`: đọc `MSSQL_SA_PASSWORD`, `SQL_PORT`, `DB_NAME` từ `.env` ignored; dùng `SQLCMDPASSWORD` và một `SELECT` để preflight; chỉ truyền connection string qua environment của process Admin và dọn biến sau khi đóng. Không log/in secret, không khởi động Docker, không chạy song song khi Admin đã mở.
+- Chuẩn hóa fallback Compose và `.env.example` về `PhoneStoreDB`; cập nhật README/LOCAL với lệnh một bước và cách quay lại SQL Server Windows. UI/business/appsettings không đổi.
+- PowerShell parse PASS; `.env` ignore PASS; Compose config PASS; `-CheckOnly` PASS tại `127.0.0.1,14334/PhoneStoreDB` với 13 orders; Admin build scratch PASS 0 warnings/0 errors. Admin process đã được người dùng thay đổi bên ngoài trong lúc kiểm tra (PID mới nhất 19604) nhưng chưa có SQL session để chứng minh target; cần đóng instance hiện tại bình thường, chạy launcher và đăng nhập/kiểm danh sách đơn.
+
+Cập nhật 2026-11-14 — S31 **C4 DIAGRAMS READY**:
+- Đã đối chiếu solution/project references, DI của Web/API/Admin, EF Core, luồng checkout/order, Catalog API và Docker Compose từ source hiện tại; xác nhận Admin WinForms kết nối SQL Server trực tiếp qua EF Core.
+- Tạo bốn sơ đồ PlantUML đơn sắc A4 tại `docs/report/chapter-4/c4-diagrams/`: System Context, Container, Component luồng mua hàng và Code diagram nghiệp vụ checkout; kèm `C4-SOURCE-VERIFICATION.md`.
+- UI UX Pro Max được áp dụng cho phân cấp, nhãn quan hệ, bố cục và khả năng đọc. Không sửa ứng dụng/DB/Docker; không chạy build/test. Máy chưa có PlantUML/Java nên chưa xuất PNG/SVG; đã ghi lệnh xuất hình.
+
 Cập nhật 2026-11-14 — S31.5G **READY FOR USER TEST, ADMIN WINDOWS → DOCKER SQL**:
 - Không sửa source/UI/business: Admin đã hỗ trợ `ConnectionStrings__PhoneStoreConnection` qua environment override sau appsettings; DbContext/DI giữ nguyên. Mặc định Windows Authentication vẫn nguyên, xóa override là rollback cấu hình.
 - Host read-only PASS qua `127.0.0.1,14334` (localhost ODBC17 timeout): Docker SQL healthy, PhoneStoreDB/SQL16.0.4315.2, Products40/Orders12/1activeAdmin. TLS giữ Encrypt=True+TrustServerCertificate=True; secret chỉ ở `.env` ignored/process env, không in/log. Admin/Docker uploads canonical path khớp,42files.

@@ -1,92 +1,144 @@
 # PhoneStore
 
-PhoneStore là đồ án quản lý và bán điện thoại được xây dựng trên .NET 8. Hệ thống gồm website mua hàng cho khách, ứng dụng quản trị Windows Forms, REST API catalog đọc và các thư viện nghiệp vụ/dữ liệu dùng chung.
+PhoneStore là hệ thống quản lý và bán điện thoại xây dựng trên .NET 8. Dự án phục vụ hai nhóm người dùng:
 
-> Trạng thái hiện tại: build và full regression gần nhất đạt **232/232 tests** (S31.3G, ngày 14/11/2026). API/Web đã có bằng chứng runtime với SQL Server ở S31.3E–F; lần kiểm tra live mới nhất từ môi trường Codex bị giới hạn TLS và không được ghi nhận là một lần live PASS mới.
+- **Khách hàng** sử dụng website để tìm sản phẩm, quản lý giỏ hàng và đặt hàng.
+- **Quản trị viên** sử dụng ứng dụng Windows Forms để quản lý dữ liệu và theo dõi hoạt động cửa hàng.
+
+Hệ thống gồm Customer Web, REST API danh mục , Admin WinForms và các thư viện nghiệp vụ/truy cập dữ liệu dùng chung. Web, API và SQL Server có thể chạy bằng Docker Compose; Admin tiếp tục chạy trực tiếp trên Windows.
+
+## Mục lục
+
+- [Công nghệ](#công-nghệ)
+- [Chức năng chính](#chức-năng-chính)
+- [Hình ảnh giao diện](#hình-ảnh-giao-diện)
+- [Kiến trúc hệ thống](#kiến-trúc-hệ-thống)
+- [Cấu trúc repository](#cấu-trúc-repository)
+- [Cài đặt và chạy dự án](#cài-đặt-và-chạy-dự-án)
+- [Cấu hình môi trường](#cấu-hình-môi-trường)
+- [API Reference](#api-reference)
+- [Kiểm thử](#kiểm-thử)
+- [Giới hạn và hướng phát triển](#giới-hạn-và-hướng-phát-triển)
+- [Tài liệu](#tài-liệu)
+
+## Công nghệ
+
+| Thành phần | Công nghệ đã xác minh |
+|---|---|
+| Ngôn ngữ và runtime | C#, .NET 8; SDK `8.0.427` theo `global.json` |
+| Customer Web | ASP.NET Core MVC/Razor, HTML, CSS, JavaScript |
+| REST API | ASP.NET Core Web API, Swagger/OpenAPI |
+| Admin Desktop | Windows Forms, `net8.0-windows` |
+| Truy cập dữ liệu | Entity Framework Core `8.0.28`, SQL Server provider |
+| Cơ sở dữ liệu | Microsoft SQL Server 2022 |
+| Container | Docker, Docker Compose, Linux containers |
+| Kiểm thử | xUnit, ASP.NET Core TestServer, EF Core SQLite |
+| Quản lý mã nguồn | Git, GitHub |
 
 ## Chức năng chính
 
 ### Customer Web
 
+- Đăng ký, đăng nhập, đăng xuất và cập nhật hồ sơ khách hàng.
 - Xem trang chủ, danh sách và chi tiết sản phẩm.
-- Tìm kiếm, lọc theo thương hiệu/danh mục và sắp xếp catalog.
-- Đăng ký, đăng nhập, đăng xuất và cập nhật hồ sơ cá nhân.
-- Quản lý giỏ hàng, kiểm tra giá/tồn kho phía server và đặt hàng.
-- Xem lịch sử, chi tiết, trạng thái và hủy đơn khi nghiệp vụ cho phép.
-- Giao diện responsive, validation và bảo vệ route theo tài khoản Customer.
+- Tìm kiếm, lọc theo thương hiệu/danh mục và sắp xếp sản phẩm.
+- Thêm, cập nhật số lượng và xóa sản phẩm trong giỏ hàng.
+- Đặt hàng với giá và tồn kho được kiểm tra phía máy chủ.
+- Xem lịch sử, chi tiết và trạng thái đơn hàng.
+- Hủy đơn khi trạng thái nghiệp vụ cho phép; tồn kho được hoàn trong transaction.
+- Bảo vệ các trang tài khoản/đơn hàng bằng cookie authentication và quyền Customer.
 
 ### Admin WinForms
 
 - Đăng nhập và kiểm tra quyền quản trị.
-- Dashboard KPI, biểu đồ trạng thái và doanh thu.
-- Quản lý sản phẩm, ảnh, thương hiệu và danh mục.
-- Quản lý khách hàng và đơn hàng.
-- Báo cáo, thống kê, bộ lọc thời gian và cảnh báo tồn kho.
-- Fresh authorization check trước thao tác ghi quan trọng.
+- Dashboard KPI, biểu đồ trạng thái đơn hàng và doanh thu.
+- Quản lý thương hiệu, danh mục, sản phẩm và ảnh sản phẩm.
+- Quản lý khách hàng.
+- Xem chi tiết và cập nhật trạng thái đơn hàng theo luồng cho phép.
+- Báo cáo doanh thu, sản phẩm bán chạy và cảnh báo tồn kho.
 
-### REST API V1
+### Web API
 
-- Health/readiness của SQL Server.
-- Danh sách và chi tiết sản phẩm active.
+Project thực tế là `PhoneStore.Api`. API V1 hiện chỉ đọc và cung cấp:
+
+- Health/readiness của dịch vụ và SQL Server.
+- Danh sách, tìm kiếm, lọc, sắp xếp và phân trang sản phẩm active.
+- Chi tiết sản phẩm active.
 - Danh sách thương hiệu và danh mục active.
-- Pagination, search, filter, sort và validation.
-- Problem Details, correlation ID, structured logging an toàn.
-- Rate limiting, request limits, timeout và cancellation.
-- Swagger/OpenAPI chỉ trong môi trường Development.
-- Product Detail của Web gọi API qua typed `HttpClient` khi feature flag bật; có fallback đọc local theo policy đã kiểm thử.
+- Problem Details, trace ID, rate limiting và request timeout.
 
-API V1 hiện chỉ đọc và không cung cấp endpoint cho tài khoản, giỏ hàng hay đơn hàng.
+API không xử lý tài khoản, giỏ hàng, checkout hoặc đơn hàng. Customer Web chỉ gọi API cho chi tiết sản phẩm khi `CatalogApi:Enabled=true`; các nghiệp vụ còn lại sử dụng trực tiếp tầng Business/Data.
 
-## Công nghệ
+## Hình ảnh giao diện
 
-| Thành phần | Công nghệ |
-|---|---|
-| Customer Web | ASP.NET Core MVC/Razor, .NET 8, HTML/CSS/JavaScript |
-| Admin | Windows Forms, .NET 8 Windows |
-| REST API | ASP.NET Core Web API, Swagger/OpenAPI |
-| Business/Data | C#, Entity Framework Core 8, SQL Server |
-| Authentication | ASP.NET Core cookie authentication, `PasswordHasher<TUser>` |
-| Tests | xUnit, ASP.NET Core TestServer, EF Core SQLite |
+### Customer Web
 
-SDK được khóa tại .NET `8.0.427` với `latestPatch` trong [`global.json`](global.json).
+Giao diện dành cho khách hàng tìm kiếm sản phẩm, quản lý giỏ hàng và đặt hàng.
 
-## Kiến trúc
+![Giao diện Customer Web](docs/images/customer-web.png)
 
-```text
-Customer Web ───────────────→ Business → Data/EF Core → SQL Server
-      │
-      └─ Product Detail (flag ON) → REST API → Business/Data → SQL Server
+### Admin WinForms
 
-Admin WinForms ─────────────→ Business → Data/EF Core → SQL Server
+Giao diện dành cho quản trị viên quản lý dữ liệu và theo dõi hoạt động cửa hàng.
+
+![Giao diện Admin WinForms](docs/images/admin-winforms.png)
+
+## Kiến trúc hệ thống
+
+```mermaid
+flowchart LR
+    Customer[Khách hàng] --> Web[Customer Web<br/>ASP.NET Core MVC]
+    AdminUser[Quản trị viên] --> Admin[Admin WinForms<br/>Windows]
+
+    Web -. "HTTP/JSON: chi tiết sản phẩm khi bật feature flag" .-> Api[PhoneStore.Api<br/>REST API c]
+    Web --> Db[(SQL Server<br/>PhoneStoreDB)]
+    Api --> Db
+    Admin --> Db
 ```
 
-Đây là kiến trúc phân lớp trong một repository dùng chung, có thêm HTTP boundary đọc cho catalog. Dự án không được mô tả là microservices hoặc Clean Architecture thuần túy.
+- `PhoneStore.Web`, `PhoneStore.Api` và `PhoneStore.Admin` sử dụng các project `PhoneStore.Business`, `PhoneStore.Data` và `PhoneStore.Models` theo dependency thực tế.
+- Entity Framework Core cung cấp `PhoneStoreDbContext` và kết nối SQL Server.
+- Admin kết nối SQL Server trực tiếp, không gọi REST API.
+- Trong Docker Compose, Web gọi API qua service DNS `api` và Web/API gọi SQL qua service `db`.
+- Khi Admin chạy trên Windows, phải cấu hình nó tới cùng SQL Docker nếu muốn thấy dữ liệu do Customer Web Docker tạo.
 
-### Project chính
+## Cấu trúc repository
 
-| Project | Trách nhiệm |
-|---|---|
-| `PhoneStore.Web` | Customer Web MVC/Razor |
-| `PhoneStore.Admin` | Ứng dụng quản trị WinForms |
-| `PhoneStore.Api` | REST API catalog read-only |
-| `PhoneStore.Business` | Use case và quy tắc nghiệp vụ |
-| `PhoneStore.Data` | EF Core DbContext, mapping và truy vấn dữ liệu |
-| `PhoneStore.Models` | Entity, DTO/model dùng chung |
-| `PhoneStore.Tests` | Automated tests cách ly |
-| `PhoneStore.AdminBootstrap` | Công cụ tạo Admin đầu tiên có guard an toàn |
+```text
+PhoneStore/
+├── src/
+│   ├── PhoneStore.Web/          # Customer Web MVC/Razor
+│   ├── PhoneStore.Api/          # REST API
+│   ├── PhoneStore.Admin/        # Admin WinForms
+│   ├── PhoneStore.Business/     # Use case và quy tắc nghiệp vụ
+│   ├── PhoneStore.Data/         # EF Core DbContext, mapping và data stores
+│   └── PhoneStore.Models/       # Entity, enum và DTO/model dùng chung
+├── tests/
+│   ├── PhoneStore.Tests/        # Unit/integration tests cách ly
+│   └── PhoneStore.SqlIntegration/ # Kiểm tra SQL/UI tích hợp có kiểm soát
+├── tools/
+│   ├── PhoneStore.AdminBootstrap/
+│   └── PhoneStore.CatalogImport/
+├── scripts/                     # Script vận hành local an toàn
+├── docs/                        # Tài liệu phát triển và phân tích hệ thống
+├── Dockerfile                   # Image Customer Web
+├── docker-compose.yml           # Web, API và SQL Server
+├── docker-compose.restore.yml   # Override restore/tài nguyên cho môi trường đã chuẩn bị
+└── PhoneStore.sln
+```
 
-Phân tích kiến trúc chi tiết: [`docs/system-analysis/10-ARCHITECTURE-AUDIT.md`](docs/system-analysis/10-ARCHITECTURE-AUDIT.md).
+## Cài đặt và chạy dự án
 
-## Chạy dự án
+### Yêu cầu phần mềm
 
-### Yêu cầu
+- Git.
+- .NET 8 SDK tương thích `global.json`.
+- Docker Desktop chạy Linux containers để dùng Docker Compose.
+- Windows 10/11 để chạy Admin WinForms.
+- `sqlcmd` nếu dùng launcher Admin kết nối SQL Docker.
 
-- Windows 10/11 (bắt buộc cho Admin WinForms).
-- .NET SDK 8.0.427 hoặc bản patch tương thích theo `global.json`.
-- SQL Server 2022 hoặc SQL Server tương thích EF Core 8.
-- Database `PhoneStoreDB` có schema đúng migrations hiện tại.
 
-### Thiết lập nhanh
+### Chuẩn bị source
 
 ```powershell
 git clone https://github.com/vuvantai14/PhoneStore.git
@@ -96,127 +148,76 @@ dotnet restore PhoneStore.sln
 dotnet build PhoneStore.sln
 ```
 
-Cấu hình `ConnectionStrings__PhoneStoreConnection` bằng biến môi trường hoặc user-secrets phù hợp với máy của bạn. Không commit credential vào repository. Ứng dụng không tự migration hoặc seed database khi khởi động.
+### A. Chạy Web, API và SQL Server bằng Docker Compose
 
-### Chạy API
-
-```powershell
-dotnet run --project src/PhoneStore.Api/PhoneStore.Api.csproj --launch-profile PhoneStore.Api
-```
-
-- API: <http://localhost:5025>
-- Swagger trong Development: <http://localhost:5025/swagger>
-- Root `/` trả 404 là hành vi bình thường.
-
-### Chạy Customer Web
+Tạo `.env` nếu file này chưa tồn tại, sau đó điền mật khẩu SQL mạnh và đường dẫn uploads tuyệt đối:
 
 ```powershell
-dotnet run --project src/PhoneStore.Web/PhoneStore.Web.csproj --launch-profile http
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Web chạy tại <http://localhost:5015>.
-
-Để Product Detail dùng API:
 
 ```powershell
-$env:CatalogApi__Enabled = "true"
-$env:CatalogApi__BaseUrl = "http://localhost:5025/"
-$env:CatalogApi__TimeoutSeconds = "3"
-dotnet run --project src/PhoneStore.Web/PhoneStore.Web.csproj --launch-profile http
+docker compose -f docker-compose.yml config --quiet
+docker compose -f docker-compose.yml up -d --build
+docker compose -f docker-compose.yml ps
 ```
 
-Flag mặc định là `false`. Khi OFF, Product Detail dùng trực tiếp Business/Data và không gọi API.
+Địa chỉ mặc định:
 
-### Chạy Admin
+- Customer Web: <http://localhost:5015>
+- API health: <http://localhost:5025/api/health>
+- Swagger trong môi trường Development: <http://localhost:5025/swagger>
+- SQL Server từ Windows host: `127.0.0.1,14334`
+
+Xem log:
 
 ```powershell
-dotnet run --project src/PhoneStore.Admin/PhoneStore.Admin.csproj
+docker compose -f docker-compose.yml logs -f web api db
 ```
 
-Không ghi tài khoản/mật khẩu Admin vào source hoặc tài liệu. Quy trình bootstrap Admin đầu tiên được mô tả trong [hướng dẫn local](docs/LOCAL_DEVELOPMENT.md#tạo-admin-đầu-tiên-khi-cần).
-
-Để chạy Admin Windows với SQL Docker trên `127.0.0.1,14334`, dùng environment override lấy secret từ `.env` ignored theo [hướng dẫn Admin ↔ Docker SQL](docs/LOCAL_DEVELOPMENT.md#chạy-admin-với-sql-server-docker). Không sửa `appsettings.json` hoặc hardcode credential.
-
-### Chạy bằng Docker Compose
-
-Docker Compose đóng gói Customer Web, REST API và SQL Server; Admin WinForms vẫn chạy trực tiếp trên Windows.
+Dừng dịch vụ nhưng giữ container/volume dữ liệu:
 
 ```powershell
-Copy-Item .env.example .env
-# Điền MSSQL_SA_PASSWORD mạnh và PRODUCT_UPLOADS_PATH tuyệt đối trong .env (không commit file này).
-docker compose -f docker-compose.yml -f docker-compose.restore.yml config --quiet
-docker compose -f docker-compose.yml -f docker-compose.restore.yml up -d --build
-docker compose -f docker-compose.yml -f docker-compose.restore.yml ps
+docker compose -f docker-compose.yml stop
 ```
 
-Các cổng mặc định của cấu hình cách ly: Web `5015`, API `5025`, SQL Server `14334`. Trong container, Web gọi API qua `http://api:8080/` và Web/API gọi SQL qua service `db:1433`; không dùng `localhost` cho giao tiếp nội bộ.
 
-> Database Docker phải được restore hoặc khởi tạo theo quy trình đã phê duyệt trước khi khởi động toàn stack. Không chạy migration/seed tự động và không dùng `RESTORE ... WITH REPLACE`. Backup `.bak`, `.env` và dữ liệu người dùng không được đưa lên GitHub.
+### B. Chạy Admin WinForms với SQL Docker
 
-Chi tiết vận hành và trạng thái nghiệm thu: [Local Development](docs/LOCAL_DEVELOPMENT.md#10-docker-compose-cách-ly) và [Docker final completion](docs/system-analysis/30-DOCKER-FINAL-COMPLETION.md).
 
-S31.5F đã nghiệm thu runtime trên project cách ly: SQL/API/Web healthy, API health và các trang Web chính HTTP 200, catalog 40 sản phẩm và 41/41 ảnh được phục vụ thành công. Named volume trên máy đã nghiệm thu đã chứa database; không restore lại khi chỉ khởi động lại stack.
+Admin WinForms chạy trực tiếp trên Windows và kết nối đến cùng cơ sở dữ liệu SQL Server Docker với Customer Web.
 
-### Chạy tests
+Sau khi khởi động Docker Compose, mở PowerShell tại thư mục gốc của dự án và chạy:
+
+```powershell
+.\scripts\run-admin-docker.ps1
+```
+
+Script tự đọc cấu hình từ `.env`, thiết lập Admin sử dụng cùng SQL Server Docker với Customer Web, kiểm tra kết nối rồi khởi động Admin WinForms bằng `dotnet run`.
+
+Có thể kiểm tra kết nối mà không mở ứng dụng:
+
+```powershell
+.\scripts\run-admin-docker.ps1 -CheckOnly
+```
+
+**Lưu ý:** Không sử dụng `dotnet run --project src/PhoneStore.Admin` nếu muốn Admin kết nối SQL Docker, vì cấu hình mặc định hiện tại kết nối SQL Server Windows.
+
+Khi Customer Web và Admin cùng sử dụng SQL Docker, dữ liệu sản phẩm, danh mục và đơn hàng được chia sẻ giữa hai ứng dụng.
+
+
+## Kiểm thử
+
+Chạy bộ test chính trong solution:
 
 ```powershell
 dotnet test tests/PhoneStore.Tests/PhoneStore.Tests.csproj
 ```
 
-Tests chính dùng SQLite/doubles/TestServer cách ly. Không trỏ test tùy ý vào `PhoneStoreDB` đang vận hành.
+Các test chính sử dụng SQLite, doubles hoặc TestServer cách ly. Không tự trỏ test vào `PhoneStoreDB` đang vận hành. Project `PhoneStore.SqlIntegration` dành cho nghiệm thu SQL/WinForms có kiểm soát và cần cấu hình database test riêng
 
-Hướng dẫn đầy đủ và troubleshooting: [`docs/LOCAL_DEVELOPMENT.md`](docs/LOCAL_DEVELOPMENT.md).
 
-## API Reference
 
-| Method | Endpoint | Mô tả |
-|---|---|---|
-| GET | `/api/health` | SQL readiness |
-| GET | `/api/v1/products` | Catalog có pagination/filter/sort |
-| GET | `/api/v1/products/{id}` | Chi tiết sản phẩm active |
-| GET | `/api/v1/brands` | Thương hiệu active |
-| GET | `/api/v1/categories` | Danh mục active |
 
-Contracts, status codes, security và runbook: [`docs/system-analysis/17-REST-API-FINAL-ACCEPTANCE.md`](docs/system-analysis/17-REST-API-FINAL-ACCEPTANCE.md).
-
-## Database
-
-Các bảng nghiệp vụ hiện có: `Roles`, `Users`, `Brands`, `Categories`, `Products`, `ProductImages`, `Orders`, `OrderDetails`.
-
-- Thiết kế database: [`docs/system-analysis/09-DATABASE-DESIGN-AUDIT.md`](docs/system-analysis/09-DATABASE-DESIGN-AUDIT.md)
-- Schema inventory: [`docs/system-analysis/07-DATABASE-SCHEMA-INVENTORY.md`](docs/system-analysis/07-DATABASE-SCHEMA-INVENTORY.md)
-
-Không chạy migration, seed, restore hoặc bootstrap Admin trên database quan trọng nếu chưa kiểm tra đúng server/database và có phê duyệt phù hợp.
-
-## Testing và nghiệm thu
-
-- S31.5F: Docker Compose ba service runtime PASS; database restore có kiểm soát, Web/API/SQL healthy và smoke test read-only PASS.
-- S31.3G: solution build cách ly `0 warnings / 0 errors`; **232/232 tests PASS**, không skip.
-- S31.3E–F: API, Web, SQL Server và feature flag/fallback có bằng chứng live runtime.
-- Admin WinForms đã được người dùng nghiệm thu thủ công; tài liệu phân biệt rõ manual evidence với automated evidence.
-- Fresh live recheck S31.3G từ token Codex gặp lỗi TLS trước SQL; không được dùng để tuyên bố một lần live PASS mới.
-
-Tiến độ hiện tại: [`docs/PROGRESS.md`](docs/PROGRESS.md).
-
-## Giới hạn hiện tại
-
-- API V1 chỉ đọc và chưa có API authentication/JWT.
-- Chỉ Product Detail dùng REST API khi feature flag bật.
-- Rate limiter lưu trong memory của từng process, chưa hỗ trợ multi-instance distributed state.
-- SQL principal cho API chưa tách thành account read-only least privilege.
-- Chưa production deployment và chưa load/stress test đầy đủ.
-- Docker Compose hiện dành cho development/nghiệm thu cục bộ. Credential bắt buộc lấy từ `.env` ignored; lịch sử Git từng chứa credential cũ nên credential đó không được tái sử dụng.
-
-## Tài liệu
-
-- [Hướng dẫn phát triển local](docs/LOCAL_DEVELOPMENT.md)
-- [REST API final acceptance](docs/system-analysis/17-REST-API-FINAL-ACCEPTANCE.md)
-- [Architecture audit](docs/system-analysis/10-ARCHITECTURE-AUDIT.md)
-- [Database design audit](docs/system-analysis/09-DATABASE-DESIGN-AUDIT.md)
-- [Docker & CI guide](docs/DOCKER_AND_CI_GUIDE.md)
-
-## Bảo mật repository
-
-- Không commit `.env`, secrets, database backup, certificate, `bin/`, `obj/`, logs hoặc test output.
-- `.env.example` chỉ nên chứa placeholder, không chứa credential có thể sử dụng.
-- Nếu một credential từng được dùng thật và đã vào Git history, phải rotate credential; chỉ xóa ở commit mới không loại bỏ giá trị khỏi history.
+#
