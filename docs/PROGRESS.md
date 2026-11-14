@@ -1,5 +1,18 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-14 — S31.4 **DOCUMENTATION STANDARDIZED / SECURITY REVIEW REQUIRED**:
+- Viết lại `README.md` theo source thực tế và thêm `docs/LOCAL_DEVELOPMENT.md`: chức năng Web/Admin/API, kiến trúc phân lớp, project/dependency, SQL setup, ports, feature flag, API reference, test evidence, troubleshooting và giới hạn; toàn bộ link repository dùng đường dẫn tương đối.
+- Restore PASS; solution build cách ly **0 warnings/errors**; full regression **232/232 PASS**, 0 fail/skip. Không sửa application source/database, không migration/seed, không commit/push.
+- `.gitignore` đã bao phủ `bin/obj/.vs/scratch/TestResults/log/.env/certificate/SQL backup`; không có build artifact/database backup được Git track. `.env.example` được track có chủ ý.
+- **SECURITY REVIEW REQUIRED:** `.env.example`, `docker-compose.yml` và Docker guide đang chứa cùng một default SQL SA credential có thể sử dụng. Chưa sửa ngoài phạm vi tài liệu và chưa rewrite history; phải thay bằng placeholder/required environment value, rotate nếu từng dùng thật, rồi đánh giá history trước khi public push.
+
+
+Cập nhật 2026-11-14 — S31.3G **REST API FINAL ACCEPTANCE PASS (CUMULATIVE EVIDENCE)**:
+- Source/architecture/contracts khớp S31.3B–F; không sửa application source. Build solution ra output cách ly **0 warnings/errors** vì Admin PID 3604 khóa `bin`; full regression an toàn **232/232 PASS**, 0 fail/skip.
+- Live Swagger recheck 200/5 paths và validation 400 PASS. Catalog/health recheck từ process Codex bị TLS chướng ngại trước SQL (503/500); không hạ bảo mật. Kết luận PASS dựa trên live SQL/API/Web S31.3E–F còn phù hợp source, automated regression mới và Admin manual FULL PASS do người dùng xác nhận; không tuyên bố recheck này là live catalog PASS mới.
+- SQL read-only trước/sau không đổi: Roles2/Users3/Brands8/Categories2/Products40/Images41/Orders11/Details26; 2 migration EF 8.0.28 giữ nguyên. API task đã cleanup, 5015/5025 trống; Admin PID 3604 không bị ảnh hưởng.
+- Báo cáo `docs/system-analysis/17-REST-API-FINAL-ACCEPTANCE.md`; bổ sung ghi chú Admin manual vào report S31.3E, không viết lại bằng chứng gốc. Không DML/DDL/migration/seed, commit/push/deploy.
+
 Cập nhật 2026-11-13 — S31.3F **CUSTOMER WEB PRODUCT DETAIL API INTEGRATION PASS / GO FOR S31.3G**:
 - Tích hợp duy nhất Product Detail qua typed `ICatalogApiClient` + `IProductDetailResolver`; feature flag `CatalogApi` mặc định OFF, BaseUrl/timeout configurable và validate startup. Không đổi Razor/UI, route, Business/Data/Models/API/Admin hoặc các trang Web khác.
 - Policy: OFF không gọi API; ON 200 dùng API; 404 thành Web 404 không fallback; 400 thành 502; 429/5xx/network/timeout/invalid payload fallback local đúng một lần; client cancellation không fallback. DTO map đầy đủ và chỉ chấp nhận relative image URL an toàn trên Web origin.
