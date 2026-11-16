@@ -39,7 +39,7 @@ public class ProductsController(IProductService products, IProductDetailResolver
         }
 
         // Bỏ qua lỗi định dạng của param page (nếu có, ví dụ page=abc) và đưa về trang 1
-        if (ModelState.ContainsKey(nameof(filter.Page)))
+        if (ModelState.TryGetValue(nameof(filter.Page), out var pageState) && pageState.Errors.Count > 0)
         {
             ModelState.Remove(nameof(filter.Page));
             filter.Page = 1;

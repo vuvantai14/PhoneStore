@@ -1,5 +1,12 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-16 — S32.3A-FIX01 **PASS SOURCE/AUTOMATED; FIX01-RUNTIME PASS HTTP**:
+- Sửa `ProductsController.Index`: chỉ reset Page khi ModelState có lỗi binding; giữ Page hợp lệ, page size, sort và filters hiện có.
+- Thêm `CatalogPaginationHttpTests`: 11 ca HTTP qua MVC/Razor thật, catalog double riêng; trang 1–3 khác nhau, page sai/overflow, search/brand/category/sort và giữ query trong liên kết trang tiếp theo. Không kết nối SQL thật.
+- `dotnet build PhoneStore.sln --no-restore`: PASS 0 warnings/errors; `dotnet test tests/PhoneStore.Tests/PhoneStore.Tests.csproj --no-restore --verbosity minimal`: 243/243 PASS, 0 skipped, runner khoảng 4 giây.
+- FIX01-RUNTIME: sau phê duyệt riêng, build/recreate chỉ `web` bằng Compose `--no-deps --no-build --force-recreate`; Web healthy, SQL/API giữ nguyên container ID và StartedAt.
+- HTTP runtime PASS: trang 1–4 đúng ID40–31/30–21/20–11/10–1, 40 ID duy nhất; page sai/overflow về1, page999 về4; search/brand/category/sort, next-link giữ query, 40 ảnh primary và API health200. SELECT count/checksum Products/Orders/Details/Images/Users trước-sau khớp (40/15/37/41/3). Không ghi DB/sửa code thêm/commit/push; browser trực quan chờ user duyệt.
+
 Cập nhật 2026-11-14 — S31.5H **READY FOR USER TEST — ADMIN LAUNCHER FOR DOCKER SQL**:
 - Thêm `scripts/run-admin-docker.ps1`: đọc `MSSQL_SA_PASSWORD`, `SQL_PORT`, `DB_NAME` từ `.env` ignored; dùng `SQLCMDPASSWORD` và một `SELECT` để preflight; chỉ truyền connection string qua environment của process Admin và dọn biến sau khi đóng. Không log/in secret, không khởi động Docker, không chạy song song khi Admin đã mở.
 - Chuẩn hóa fallback Compose và `.env.example` về `PhoneStoreDB`; cập nhật README/LOCAL với lệnh một bước và cách quay lại SQL Server Windows. UI/business/appsettings không đổi.
