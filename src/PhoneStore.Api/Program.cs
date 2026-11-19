@@ -77,6 +77,8 @@ public partial class Program
         builder.Services.AddDbContext<PhoneStoreDbContext>(options => options.UseSqlServer(connection));
         builder.Services.AddScoped<PurchaseStore>();
         builder.Services.AddScoped<IOrderService, OrderService>();
+        builder.Services.AddScoped<CustomerManagementStore>();
+        builder.Services.AddScoped<CustomerManagementService>();
         builder.Services.AddScoped<OrderManagementStore>();
         builder.Services.AddScoped<OrderManagementService>();
         builder.Services.AddScoped<ProductManagementStore>();

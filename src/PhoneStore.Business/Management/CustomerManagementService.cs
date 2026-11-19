@@ -12,6 +12,10 @@ public sealed class CustomerManagementService(CustomerManagementStore store) : I
     public Task<IReadOnlyList<CustomerManagementRow>> ListAsync(CustomerManagementQuery query, CancellationToken ct = default) =>
         store.ListAsync(query, ct);
 
+    public Task<(IReadOnlyList<CustomerManagementRow> Items, int Total)> ListPageAsync(
+        CustomerManagementQuery query, int offset, int limit, CancellationToken ct) =>
+        store.ListPageAsync(query, offset, limit, ct);
+
     public Task<CustomerManagementRow?> GetAsync(int id, CancellationToken ct = default) =>
         id > 0 ? store.GetRowAsync(id, ct) : Task.FromResult<CustomerManagementRow?>(null);
 
@@ -32,7 +36,7 @@ public sealed class CustomerManagementService(CustomerManagementStore store) : I
         }
         catch (Exception exception) when (exception is DbException or DbUpdateException)
         {
-            return ManagementResult.Fail(DatabaseError);
+            return ManagementResult.Fail(DatabaseError, ManagementFailure.Database);
         }
         finally { store.ClearTracking(); }
     }
@@ -42,15 +46,13 @@ public sealed class CustomerManagementService(CustomerManagementStore store) : I
         if (id <= 0) return ManagementResult.Fail("Khách hàng không hợp lệ.");
         try
         {
-            var customer = await store.FindAsync(id, ct);
-            if (customer is null) return ManagementResult.Fail("Khách hàng không còn tồn tại. Vui lòng tải lại danh sách.");
-            customer.IsActive = active;
-            await store.SaveAsync(ct);
-            return ManagementResult.Success(id);
+            var changed = await store.SetActiveAsync(id, active, ct);
+            return changed == 1 ? ManagementResult.Success(id)
+                : ManagementResult.Fail("Khách hàng không còn tồn tại. Vui lòng tải lại danh sách.", ManagementFailure.NotFound);
         }
         catch (Exception exception) when (exception is DbException or DbUpdateException)
         {
-            return ManagementResult.Fail(DatabaseError);
+            return ManagementResult.Fail(DatabaseError, ManagementFailure.Database);
         }
         finally { store.ClearTracking(); }
     }
