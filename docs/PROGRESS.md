@@ -1,5 +1,9 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+2026-11-19 — [S34.3B](S34_3B_API_AUTHENTICATION_PREPARATION.md) **PASS chuẩn bị tích hợp**. Typed options OIDC kiểm tra khi startup; API vẫn từ chối bearer cho tới khi có issuer và ánh xạ danh tính đã xác minh. Release build sạch, auth 9/9, regression 272/272 PASS. SQL counts và 5 container healthy khớp trước/sau; chưa deploy.
+
+Cập nhật 2026-11-19 — [S34.3A API Authorization](S34_3A_API_AUTHORIZATION.md) **PASS source/test** tại checkpoint 3660ef4. API có policy Customer/Admin kiểm tra tài khoản active và role từ SQL, trả 401/403 ProblemDetails. Catalog/health công khai. Release build sạch, HTTP auth 2/2, full suite 265/265 PASS. Runtime business vẫn ở S34.2R-04; cần issuer và ánh xạ danh tính trước khi phục vụ client đăng nhập qua API.
+
 Cập nhật 2026-11-19 — S34.2R-04 **PASS rollout business Web/API .NET 10 và smoke chỉ đọc**.
 - FULL COPY_ONLY/CHECKSUM backup + VERIFYONLY PASS. Chỉ thay API `b79d2e025e11` rồi Web `e55bfc7a1117`, cả hai chạy .NET 10.0.15. Dùng `docker-compose.net10.yml` pin image mới; image .NET 8 còn để rollback.
 - Health/live/ready, Catalog v1/detail, Swagger, Web Home/Catalog/Login/ảnh đều HTTP 200. Business SQL và acceptance giữ ID/image/StartedAt. Hai DB ONLINE, count/checksum 8/8 bảng mỗi DB và manifests uploads 42/5 khớp.

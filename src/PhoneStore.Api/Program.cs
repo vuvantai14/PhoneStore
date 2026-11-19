@@ -3,6 +3,8 @@ using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authorization;
+using PhoneStore.Api.Authorization;
 using PhoneStore.Api.Health;
 using PhoneStore.Api.Infrastructure;
 using PhoneStore.Business.Catalog;
@@ -36,6 +38,7 @@ public partial class Program
             options.Limits.MaxRequestLineSize = operational.MaxRequestLineSize);
 
         builder.Services.AddControllers();
+        builder.Services.AddPhoneStoreApiAccess(builder.Configuration);
         builder.Services.AddSingleton(operational);
         builder.Services.AddProblemDetails(options =>
         {
@@ -97,7 +100,13 @@ public partial class Program
         app.UseRouting();
         app.UseRateLimiter();
         app.UseRequestTimeouts();
-        app.MapControllers();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.MapControllers().Add(endpoint =>
+        {
+            if (!endpoint.Metadata.OfType<IAllowAnonymous>().Any() && !endpoint.Metadata.OfType<IAuthorizeData>().Any())
+                endpoint.Metadata.Add(new AuthorizeAttribute());
+        });
         app.Run();
     }
 

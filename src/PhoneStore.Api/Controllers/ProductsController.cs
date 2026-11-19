@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.RateLimiting;
@@ -14,6 +15,7 @@ namespace PhoneStore.Api.Controllers;
 [RequestTimeout(ApiPolicies.CatalogTimeout)]
 public sealed class ProductsController(IProductService products) : ControllerBase
 {
+    [AllowAnonymous]
     [HttpGet]
     [ProducesResponseType<PagedProductsResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -32,6 +34,7 @@ public sealed class ProductsController(IProductService products) : ControllerBas
             result.TotalPages));
     }
 
+    [AllowAnonymous]
     [HttpGet("{id}")]
     [ProducesResponseType<ProductDetailResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]

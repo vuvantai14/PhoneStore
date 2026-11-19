@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.RateLimiting;
@@ -14,10 +15,12 @@ namespace PhoneStore.Api.Controllers;
 [RequestTimeout(ApiPolicies.HealthTimeout)]
 public sealed class HealthController(HealthCheckService healthChecks) : ControllerBase
 {
+    [AllowAnonymous]
     [HttpGet("live")]
     [ProducesResponseType<HealthResponse>(StatusCodes.Status200OK)]
     public ActionResult<HealthResponse> Live() => Ok(new HealthResponse("healthy"));
 
+    [AllowAnonymous]
     [HttpGet]
     [HttpGet("ready")]
     [ProducesResponseType<HealthResponse>(StatusCodes.Status200OK)]
