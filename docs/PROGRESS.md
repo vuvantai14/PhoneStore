@@ -1,5 +1,14 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-19 — S34.2 **PASS source/automated, chờ người dùng nghiệm thu**.
+- Thêm `GET /api/health/live` và `GET /api/health/ready`; `GET /api/health` và bốn route Catalog v1 giữ nguyên hợp đồng. Regression khóa JSON, HTTP methods, lỗi validation và bộ lọc/phân trang.
+- Build solution 0 warning/error, targeted 65/65, full 263/263, `git diff --check` PASS. Docker 5/5 healthy, ID/image/StartedAt giữ nguyên, API 5025/5286 health 200. Hai route mới đã test qua TestServer và chưa deploy.
+- Báo cáo [S34_2_REST_API_FOUNDATION.md](S34_2_REST_API_FOUNDATION.md). Giữ các thay đổi S34.1; chưa stage/commit/push.
+
+Cập nhật 2026-11-19 — S34.1 **AUDIT COMPLETE / chờ phê duyệt S34.2**.
+- GitHub `main` xác nhận checkpoint S32 `b0d07a7` qua `git ls-remote`. Docker 5/5 healthy; API business/acceptance đã smoke GET catalog/health/Swagger và validation. Không chạy lại suite 249/249 hoặc thay đổi runtime.
+- Báo cáo [S34_1_REST_API_ARCHITECTURE_AUDIT.md](S34_1_REST_API_ARCHITECTURE_AUDIT.md) có endpoint inventory, sơ đồ, thiết kế security và lộ trình S34.2–S34.9. Ưu tiên giữ hợp đồng v1, health split và chuyển runtime .NET còn hỗ trợ trước go-live.
+
 Cập nhật 2026-11-19 — S32.3B-FINAL-HANDOFF **kết thúc vòng kiểm thử theo quyết định người dùng**.
 - S32.3A CLOSED theo mốc PREP, FIX01 runtime PASS HTTP. EXEC-A1/A2/A3 PASS trong phạm vi đã chạy, CT01/AC01 PASS theo bằng chứng tương ứng, CT02 FIX/STABILIZE PASS. Full automated gần nhất 249/249 PASS. SE01 runtime BLOCKED và RP01 PARTIAL được hoãn cùng CLOSEOUT-02A/02B và EXEC-B.
 - Runtime gần nhất tại CLOSEOUT-01: 5/5 healthy, 4/4 HTTP 200, hai DB ONLINE và snapshot 8/8 bảng mỗi DB khớp. Không chạy lại test và không thay đổi runtime/dữ liệu trong phiên bàn giao.

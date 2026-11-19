@@ -30,11 +30,19 @@ public sealed class CatalogApiTests
         var root = json.RootElement;
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        AssertJsonFields(root, "items", "page", "pageSize", "totalItems", "totalPages");
         Assert.Equal(1, root.GetProperty("page").GetInt32());
         Assert.Equal(10, root.GetProperty("pageSize").GetInt32());
         Assert.Equal(3, root.GetProperty("totalItems").GetInt32());
         Assert.Equal(1, root.GetProperty("totalPages").GetInt32());
         Assert.Equal(3, root.GetProperty("items").GetArrayLength());
+        var item = root.GetProperty("items")[0];
+        AssertJsonFields(item, "id", "name", "brandName", "ram", "storage", "price", "stockQuantity", "primaryImageUrl");
+        Assert.Equal(27, item.GetProperty("id").GetInt32());
+        Assert.Equal(24990000m, item.GetProperty("price").GetDecimal());
+        Assert.Equal(0, item.GetProperty("stockQuantity").GetInt32());
+        Assert.Equal(JsonValueKind.Null, item.GetProperty("primaryImageUrl").ValueKind);
         Assert.DoesNotContain("ProductId", body, StringComparison.Ordinal);
         Assert.DoesNotContain("isActive", body, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("createdAt", body, StringComparison.OrdinalIgnoreCase);
@@ -47,6 +55,11 @@ public sealed class CatalogApiTests
         yield return ["page=0"];
         yield return ["pageSize=0"];
         yield return ["pageSize=51"];
+        yield return ["page=2147483648"];
+        yield return ["pageSize=1.5"];
+        yield return ["brandId=abc"];
+        yield return ["inStockOnly=unknown"];
+        yield return ["minPrice=abc"];
         yield return ["search=" + new string('x', 101)];
         yield return ["brandId=0"];
         yield return ["categoryId=-1"];
@@ -64,11 +77,33 @@ public sealed class CatalogApiTests
         using var client = factory.CreateClient();
 
         var response = await client.GetAsync("/api/v1/products?" + query);
-        var body = await response.Content.ReadAsStringAsync();
+        using var error = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-        Assert.Contains("errors", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(400, error.RootElement.GetProperty("status").GetInt32());
+        Assert.NotEmpty(error.RootElement.GetProperty("errors").EnumerateObject());
+    }
+
+    [Fact]
+    public async Task Combined_filters_preserve_page_two_and_include_equal_price_boundaries()
+    {
+        await using var factory = new CatalogApiFactory(new FixtureProductService());
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync(
+            "/api/v1/products?search=%20vivo%20&brandId=2&categoryId=1&minPrice=2990000&maxPrice=3490000&inStockOnly=true&sort=price-desc&page=2&pageSize=1");
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var result = json.RootElement;
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(2, result.GetProperty("page").GetInt32());
+        Assert.Equal(1, result.GetProperty("pageSize").GetInt32());
+        Assert.Equal(2, result.GetProperty("totalItems").GetInt32());
+        Assert.Equal(2, result.GetProperty("totalPages").GetInt32());
+        var item = Assert.Single(result.GetProperty("items").EnumerateArray());
+        Assert.Equal(26, item.GetProperty("id").GetInt32());
+        Assert.Equal(2990000m, item.GetProperty("price").GetDecimal());
     }
 
     [Fact]
@@ -105,8 +140,14 @@ public sealed class CatalogApiTests
         var malformed = await client.GetAsync("/api/v1/products/not-an-id");
 
         Assert.Equal(HttpStatusCode.OK, found.StatusCode);
+        Assert.Equal("application/json", found.Content.Headers.ContentType?.MediaType);
+        AssertJsonFields(foundJson.RootElement, "id", "name", "brandId", "brandName", "categoryId",
+            "categoryName", "price", "stockQuantity", "ram", "storage", "chip", "screen", "camera",
+            "battery", "operatingSystem", "description", "images");
         Assert.Equal(25, foundJson.RootElement.GetProperty("id").GetInt32());
         Assert.Equal("vivo", foundJson.RootElement.GetProperty("brandName").GetString());
+        Assert.Equal(3490000m, foundJson.RootElement.GetProperty("price").GetDecimal());
+        Assert.Equal(38, foundJson.RootElement.GetProperty("stockQuantity").GetInt32());
         Assert.Equal("/uploads/products/vivo-y17s.png", foundJson.RootElement.GetProperty("images")[0].GetString());
         Assert.DoesNotContain("isActive", foundBody, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
@@ -116,27 +157,52 @@ public sealed class CatalogApiTests
         Assert.Equal(HttpStatusCode.BadRequest, malformed.StatusCode);
     }
 
-    [Fact]
-    public async Task Brands_categories_and_empty_product_query_return_200()
+    [Theory]
+    [InlineData("search=does-not-exist")]
+    [InlineData("categoryId=2147483647")]
+    public async Task Brands_categories_and_empty_product_query_return_200(string query)
     {
         await using var factory = new CatalogApiFactory(new FixtureProductService());
         using var client = factory.CreateClient();
 
         var brands = await client.GetAsync("/api/v1/brands");
         var categories = await client.GetAsync("/api/v1/categories");
-        var empty = await client.GetAsync("/api/v1/products?search=does-not-exist");
-        var brandsBody = await brands.Content.ReadAsStringAsync();
-        var categoriesBody = await categories.Content.ReadAsStringAsync();
+        var empty = await client.GetAsync("/api/v1/products?" + query);
+        using var brandsJson = JsonDocument.Parse(await brands.Content.ReadAsStringAsync());
+        using var categoriesJson = JsonDocument.Parse(await categories.Content.ReadAsStringAsync());
         using var emptyJson = JsonDocument.Parse(await empty.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.OK, brands.StatusCode);
-        Assert.Contains("\"id\":2", brandsBody, StringComparison.Ordinal);
-        Assert.DoesNotContain("description", brandsBody, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("application/json", brands.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(new[] { 1, 2 }, brandsJson.RootElement.EnumerateArray().Select(item => item.GetProperty("id").GetInt32()));
+        foreach (var brand in brandsJson.RootElement.EnumerateArray())
+            AssertJsonFields(brand, "id", "name");
         Assert.Equal(HttpStatusCode.OK, categories.StatusCode);
-        Assert.Contains("\"name\":\"Phone\"", categoriesBody, StringComparison.Ordinal);
+        Assert.Equal("application/json", categories.Content.Headers.ContentType?.MediaType);
+        var category = Assert.Single(categoriesJson.RootElement.EnumerateArray());
+        AssertJsonFields(category, "id", "name");
+        Assert.Equal(1, category.GetProperty("id").GetInt32());
+        Assert.Equal("Phone", category.GetProperty("name").GetString());
         Assert.Equal(HttpStatusCode.OK, empty.StatusCode);
         Assert.Equal(0, emptyJson.RootElement.GetProperty("items").GetArrayLength());
+        Assert.Equal(0, emptyJson.RootElement.GetProperty("totalItems").GetInt32());
         Assert.Equal(0, emptyJson.RootElement.GetProperty("totalPages").GetInt32());
+    }
+
+    [Theory]
+    [InlineData("/api/v1/products")]
+    [InlineData("/api/v1/products/25")]
+    [InlineData("/api/v1/brands")]
+    [InlineData("/api/v1/categories")]
+    public async Task V1_catalog_routes_reject_post_and_advertise_get(string path)
+    {
+        await using var factory = new CatalogApiFactory(new FixtureProductService());
+        using var client = factory.CreateClient();
+
+        using var response = await client.PostAsync(path, null);
+
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
+        Assert.Contains("GET", response.Content.Headers.Allow);
     }
 
     [Fact]
@@ -193,12 +259,14 @@ public sealed class CatalogApiTests
         using var json = JsonDocument.Parse(await client.GetStringAsync("/swagger/v1/swagger.json"));
         var paths = json.RootElement.GetProperty("paths");
 
-        Assert.True(paths.TryGetProperty("/api/health", out _));
-        Assert.True(paths.TryGetProperty("/api/v1/products", out _));
-        Assert.True(paths.TryGetProperty("/api/v1/products/{id}", out _));
-        Assert.True(paths.TryGetProperty("/api/v1/brands", out _));
-        Assert.True(paths.TryGetProperty("/api/v1/categories", out _));
-        Assert.Equal(5, paths.EnumerateObject().Count());
+        string[] expectedPaths =
+        [
+            "/api/health", "/api/health/live", "/api/health/ready",
+            "/api/v1/products", "/api/v1/products/{id}", "/api/v1/brands", "/api/v1/categories"
+        ];
+        AssertJsonFields(paths, expectedPaths);
+        foreach (var path in expectedPaths)
+            AssertJsonFields(paths.GetProperty(path), "get");
     }
 
     [Fact]
@@ -207,15 +275,24 @@ public sealed class CatalogApiTests
         await using var factory = new CatalogApiFactory(new UnavailableProductService());
         using var client = factory.CreateClient();
 
-        var response = await client.GetAsync("/api/v1/products");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/products");
+        request.Headers.Add("X-Correlation-ID", "catalog-error-test");
+        using var response = await client.SendAsync(request);
         var body = await response.Content.ReadAsStringAsync();
+        using var error = JsonDocument.Parse(body);
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("catalog-error-test", error.RootElement.GetProperty("traceId").GetString());
+        Assert.Equal("catalog-error-test", Assert.Single(response.Headers.GetValues("X-Correlation-ID")));
         Assert.Contains("Service temporarily unavailable", body, StringComparison.Ordinal);
         Assert.DoesNotContain("private-server", body, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(nameof(TestDatabaseException), body, StringComparison.Ordinal);
     }
+
+    private static void AssertJsonFields(JsonElement json, params string[] fields) =>
+        Assert.Equal(fields.Order(StringComparer.Ordinal),
+            json.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal));
 
     private sealed class CatalogApiFactory(IProductService service)
         : WebApplicationFactory<PhoneStore.Api.Program>

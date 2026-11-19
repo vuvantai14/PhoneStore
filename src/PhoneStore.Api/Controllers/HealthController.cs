@@ -14,7 +14,12 @@ namespace PhoneStore.Api.Controllers;
 [RequestTimeout(ApiPolicies.HealthTimeout)]
 public sealed class HealthController(HealthCheckService healthChecks) : ControllerBase
 {
+    [HttpGet("live")]
+    [ProducesResponseType<HealthResponse>(StatusCodes.Status200OK)]
+    public ActionResult<HealthResponse> Live() => Ok(new HealthResponse("healthy"));
+
     [HttpGet]
+    [HttpGet("ready")]
     [ProducesResponseType<HealthResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
     public async Task<ActionResult<HealthResponse>> Get(CancellationToken cancellationToken)

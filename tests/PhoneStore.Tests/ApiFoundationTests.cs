@@ -19,35 +19,62 @@ namespace PhoneStore.Tests;
 
 public sealed class ApiFoundationTests
 {
-    [Fact]
-    public async Task Development_api_starts_and_exposes_healthy_readiness()
+    [Theory]
+    [InlineData("/api/health")]
+    [InlineData("/api/health/ready")]
+    public async Task Healthy_database_returns_the_existing_health_contract(string path)
     {
         await using var factory = new ApiFactory(true, Environments.Development);
         using var client = factory.CreateClient();
 
-        var response = await client.GetAsync("/api/health");
-        var json = await response.Content.ReadAsStringAsync();
+        using var response = await client.GetAsync(path);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("healthy", JsonDocument.Parse(json).RootElement.GetProperty("status").GetString());
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        var status = Assert.Single(json.RootElement.EnumerateObject());
+        Assert.Equal("status", status.Name);
+        Assert.Equal("healthy", status.Value.GetString());
+        Assert.Equal(1, factory.Probe.Calls);
     }
 
-    [Fact]
-    public async Task Unavailable_database_returns_503_without_infrastructure_details()
+    [Theory]
+    [InlineData("/api/health")]
+    [InlineData("/api/health/ready")]
+    public async Task Unavailable_database_returns_503_without_infrastructure_details(string path)
     {
         await using var factory = new ApiFactory(false, Environments.Development);
         using var client = factory.CreateClient();
 
-        var response = await client.GetAsync("/api/health");
+        using var response = await client.GetAsync(path);
         var body = await response.Content.ReadAsStringAsync();
+        using var json = JsonDocument.Parse(body);
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-        Assert.Contains("unhealthy", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(503, json.RootElement.GetProperty("status").GetInt32());
+        Assert.Equal("unhealthy", json.RootElement.GetProperty("health").GetString());
+        Assert.Equal(path, json.RootElement.GetProperty("instance").GetString());
         Assert.DoesNotContain("localhost", body, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("PhoneStoreDB", body, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("connection", body, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("exception", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, factory.Probe.Calls);
+    }
+
+    [Fact]
+    public async Task Liveness_stays_healthy_without_calling_the_database_probe()
+    {
+        await using var factory = new ApiFactory(false, Environments.Production);
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/api/health/live");
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("healthy", json.RootElement.GetProperty("status").GetString());
+        Assert.Equal(0, factory.Probe.Calls);
     }
 
     [Fact]
@@ -124,19 +151,27 @@ public sealed class ApiFoundationTests
     private sealed class ApiFactory(bool databaseAvailable, string environment)
         : WebApplicationFactory<PhoneStore.Api.Program>
     {
+        public FixedReadinessProbe Probe { get; } = new(databaseAvailable);
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment(environment);
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<IPhoneStoreReadinessProbe>();
-                services.AddSingleton<IPhoneStoreReadinessProbe>(new FixedReadinessProbe(databaseAvailable));
+                services.AddSingleton<IPhoneStoreReadinessProbe>(Probe);
             });
         }
     }
 
     private sealed class FixedReadinessProbe(bool available) : IPhoneStoreReadinessProbe
     {
-        public Task<bool> CanConnectAsync(CancellationToken cancellationToken) => Task.FromResult(available);
+        public int Calls { get; private set; }
+
+        public Task<bool> CanConnectAsync(CancellationToken cancellationToken)
+        {
+            Calls++;
+            return Task.FromResult(available);
+        }
     }
 }
