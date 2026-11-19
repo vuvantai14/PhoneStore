@@ -7,6 +7,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-and-test-windows:
     name: Build Solution & Test (Windows)
@@ -15,6 +18,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup .NET SDK from global.json
         uses: actions/setup-dotnet@v4
@@ -47,6 +52,18 @@ jobs:
       - name: Run unit & isolated tests
         run: dotnet test tests/PhoneStore.Tests/PhoneStore.Tests.csproj --no-build --configuration Release --verbosity normal
 
+      - name: Publish and check Admin WinForms artifact
+        shell: pwsh
+        run: ./scripts/ci/Publish-AdminArtifact.ps1 -Destination (Join-Path $env:RUNNER_TEMP 'phonestore-admin')
+
+      - name: Upload Admin WinForms
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhoneStore.Admin-net10-win-x64-${{ github.sha }}-run${{ github.run_id }}.${{ github.run_attempt }}
+          path: ${{ runner.temp }}/phonestore-admin/
+          if-no-files-found: error
+          retention-days: 14
+
   build-docker-ubuntu:
     name: Build Docker Image (Ubuntu)
     runs-on: ubuntu-latest
@@ -54,6 +71,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -74,9 +93,5 @@ jobs:
           push: false
           tags: phonestore-api:ci
 
-      - name: Validate Docker Compose configuration
-        shell: bash
-        run: |
-          export MSSQL_SA_PASSWORD="$(openssl rand -base64 36)Aa1!"
-          export PRODUCT_UPLOADS_PATH=/tmp/phonestore-products
-          docker compose config --quiet
+      - name: Validate merged business Compose configuration
+        run: python3 scripts/ci/validate_business_compose.py

@@ -1,5 +1,7 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+2026-11-19 — [S35.2A CI hardening](S35_2A_CI_HARDENING.md). Workflow contents:read, thêm publish/upload Admin WinForms và kiểm tra model merge của ba Compose business. Local restore, Release build + 3 project phụ, 298/298 tests, publish WinForms, 2 Docker build cache-only và Compose validation PASS. Chưa có run GitHub cho workflow mới; chờ nghiệm thu artifact trước GHCR/CD.
+
 2026-11-19 — [S35.1 — CI/CD readiness](S35_1_CICD_READINESS_AUDIT.md). GitHub CI pass tại remote main 1a96390; local e22fc34. Business Compose config và HTTP readiness/Web pass. GHCR publish, runner CD và rollback chưa nghiệm thu; public repo và drift cấu hình SQL cần được xử lý trong thiết kế CD. Chỉ cập nhật báo cáo/tiến độ, không chạy lại tests. Bước đề xuất: duyệt CI permissions, merged Compose và WinForms artifact trước khi publish.
 
 2026-11-19 — [S34.9E — Đổi hướng xác thực, bỏ Auth0](S34_9E_AUTHENTICATION_ARCHITECTURE_REVISION.md). Dừng kế hoạch tenant/linking của S34.9B–D. Giữ login hiện tại; đề xuất OpenIddict tự host và tái sử dụng Users/Roles khi có client REST cần token. Source S34.9C vẫn ở chế độ opt-in mặc định tắt. Chỉ cập nhật báo cáo và tiến độ; chưa chạy lại tests. Chờ duyệt pilot, subject, host/khóa và storage.
