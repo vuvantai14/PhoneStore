@@ -1,5 +1,7 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+2026-11-19 — [S34.9E — Đổi hướng xác thực, bỏ Auth0](S34_9E_AUTHENTICATION_ARCHITECTURE_REVISION.md). Dừng kế hoạch tenant/linking của S34.9B–D. Giữ login hiện tại; đề xuất OpenIddict tự host và tái sử dụng Users/Roles khi có client REST cần token. Source S34.9C vẫn ở chế độ opt-in mặc định tắt. Chỉ cập nhật báo cáo và tiến độ; chưa chạy lại tests. Chờ duyệt pilot, subject, host/khóa và storage.
+
 2026-11-19 — [S34.9D-01 Auth0 tenant và PKCE](S34_9D_01_AUTH0_TENANT_READINESS.md). PARTIAL. Đã đối chiếu source, pin image, port và target SQL acceptance. Business healthy, hai container acceptance Exited 255. Chờ domain/Client ID, callback, HTTPS, mapping và duyệt deployment acceptance. Chỉ cập nhật tài liệu; không chạy lại tests.
 
 2026-11-19 — [S34.9C Auth0 Customer API](S34_9C_AUTH0_INTEGRATION_PREPARATION.md). Đã bổ sung JwtBearer opt-in, lookup liên kết fail-closed và scope đọc đơn. Release build sạch, targeted 29/29, full 298/298 PASS với issuer/JWKS thử. SQL SELECT xác nhận chưa có bảng mapping. Business healthy; hai container acceptance đang dừng. Auth0 tenant thật chưa thử; Customer thật BLOCKED đến khi duyệt mapping và triển khai acceptance.
