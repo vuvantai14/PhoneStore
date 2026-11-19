@@ -266,7 +266,10 @@ public sealed class CatalogApiTests
         ];
         AssertJsonFields(paths, [.. expectedPaths, "/api/admin/products", "/api/admin/products/{id}", "/api/admin/products/{id}/status",
             "/api/orders", "/api/orders/{id}", "/api/admin/orders", "/api/admin/orders/{id}", "/api/admin/orders/{id}/status",
-            "/api/admin/customers", "/api/admin/customers/{id}", "/api/admin/customers/{id}/status"]);
+            "/api/admin/customers", "/api/admin/customers/{id}", "/api/admin/customers/{id}/status",
+            "/api/admin/reports/overview", "/api/admin/reports/revenue", "/api/admin/reports/top-products"]);
+        foreach (var path in new[] { "/api/admin/reports/overview", "/api/admin/reports/revenue", "/api/admin/reports/top-products" })
+            AssertJsonFields(paths.GetProperty(path), "get");
         AssertJsonFields(paths.GetProperty("/api/admin/customers"), "get");
         AssertJsonFields(paths.GetProperty("/api/admin/customers/{id}"), "get");
         AssertJsonFields(paths.GetProperty("/api/admin/customers/{id}/status"), "patch");

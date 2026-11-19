@@ -1,5 +1,7 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+2026-11-19 — [S34.7A Reporting API](S34_7A_REPORTING_API.md) **PASS source/test**. Ba GET Api.Admin dùng báo cáo WinForms và biên UTC+7. Build Release sạch, targeted 15/15, full 280/280 PASS. SQL counts/checksums khớp, 5 container healthy. Chưa deploy.
+
 2026-11-19 — [S34.6A Admin Customers API](S34_6A_ADMIN_CUSTOMERS_API.md) **PASS source/test**. GET danh sách/chi tiết và PATCH trạng thái giới hạn role Customer ở SQL; cả ba route yêu cầu Api.Admin. Build Release sạch, targeted 42/42, full 278/278 PASS. Users/Roles khớp trước/sau, 1 Admin active, 5 container healthy. Chưa deploy.
 
 2026-11-19 — [S34.5A Orders API](S34_5A_ORDERS_API.md) **PASS source/test**. Hai GET Customer theo owner, hai GET Admin và PATCH có expectedStatus qua workflow WinForms. Release build sạch, targeted 50/50, full suite 276/276 PASS. SQL count/checksum 3 bảng khớp; cùng 5 container healthy. Chưa deploy, chờ issuer cho client thật.

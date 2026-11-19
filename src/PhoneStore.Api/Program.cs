@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Authorization;
 using PhoneStore.Api.Authorization;
 using PhoneStore.Api.Health;
 using PhoneStore.Api.Infrastructure;
+using PhoneStore.Business.Reporting;
+using PhoneStore.Data.Reporting;
 using PhoneStore.Business.Management;
 using PhoneStore.Business.Purchasing;
 using PhoneStore.Data.Purchasing;
@@ -77,6 +79,8 @@ public partial class Program
         builder.Services.AddDbContext<PhoneStoreDbContext>(options => options.UseSqlServer(connection));
         builder.Services.AddScoped<PurchaseStore>();
         builder.Services.AddScoped<IOrderService, OrderService>();
+        builder.Services.AddScoped<IReportingStore, ReportingStore>();
+        builder.Services.AddScoped<IReportingService, ReportingService>();
         builder.Services.AddScoped<CustomerManagementStore>();
         builder.Services.AddScoped<CustomerManagementService>();
         builder.Services.AddScoped<OrderManagementStore>();
