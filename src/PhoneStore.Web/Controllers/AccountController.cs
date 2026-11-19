@@ -58,6 +58,7 @@ public class AccountController(IAuthService auth, SessionCart cart) : Controller
             ModelState.AddModelError(string.Empty, "Email hoặc mật khẩu không chính xác.");
             return View(model);
         }
+        cart.BindOwner(customer.UserId.ToString());
         var identity = new ClaimsIdentity(new[]
         {
             new Claim(ClaimTypes.NameIdentifier, customer.UserId.ToString()),

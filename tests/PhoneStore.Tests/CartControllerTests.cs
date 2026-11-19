@@ -24,6 +24,49 @@ namespace PhoneStore.Tests;
 public sealed class CartControllerTests
 {
     [Fact]
+    public void Anonymous_cart_is_adopted_but_customer_switch_clears_cart_and_token()
+    {
+        var context = Context();
+        context.User = new ClaimsPrincipal(new ClaimsIdentity());
+        var cart = new SessionCart(new FixedAccessor { HttpContext = context });
+        cart.Write([new CartItem(25, 2)]);
+        var anonymousToken = cart.CheckoutToken();
+        cart.BindOwner("2");
+        context.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(ClaimTypes.NameIdentifier, "2")], "test"));
+        Assert.Equal(2, cart.Count);
+        Assert.False(cart.ValidToken(anonymousToken));
+        var tokenA = cart.CheckoutToken();
+        Assert.Equal(2, cart.Count);
+        Assert.True(cart.ValidToken(tokenA));
+        cart.BindOwner("3");
+        context.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(ClaimTypes.NameIdentifier, "3")], "test"));
+        Assert.Empty(cart.Read());
+        Assert.False(cart.ValidToken(tokenA));
+    }
+
+    [Fact]
+    public void Legacy_ownerless_cart_is_adopted_but_legacy_token_is_cleared_on_login()
+    {
+        var context = Context();
+        context.User = new ClaimsPrincipal(new ClaimsIdentity());
+        context.Session.SetString("PhoneStore.Cart", JsonSerializer.Serialize(new[] { new CartItem(25, 2) }));
+        context.Session.SetString("PhoneStore.CheckoutToken", "legacy-token");
+        var cart = new SessionCart(new FixedAccessor { HttpContext = context });
+
+        Assert.Equal(2, cart.Count);
+        Assert.True(cart.ValidToken("legacy-token"));
+
+        cart.BindOwner("2");
+        context.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(ClaimTypes.NameIdentifier, "2")], "test"));
+
+        Assert.Equal(2, cart.Count);
+        Assert.False(cart.ValidToken("legacy-token"));
+    }
+
+    [Fact]
     public async Task Logout_clears_cart_and_checkout_token_before_signing_out()
     {
         var context = Context();

@@ -105,6 +105,11 @@ app.UseRouting();
 app.UseSession();
 
 app.UseAuthentication();
+app.Use(async (context, next) =>
+{
+    context.RequestServices.GetRequiredService<SessionCart>().EnsureOwner();
+    await next(context);
+});
 app.UseAuthorization();
 
 app.MapControllerRoute(
