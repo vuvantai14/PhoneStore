@@ -22,6 +22,10 @@ public sealed class OrderManagementService(OrderManagementStore store) : IOrderM
     public Task<IReadOnlyList<OrderManagementRow>> ListAsync(OrderManagementQuery query, CancellationToken ct = default) =>
         store.ListAsync(query, ct);
 
+    public Task<(IReadOnlyList<OrderManagementRow> Items, int Total)> ListPageAsync(
+        OrderManagementQuery query, int offset, int limit, CancellationToken ct) =>
+        store.ListPageAsync(query, offset, limit, ct);
+
     public Task<OrderManagementDetail?> GetAsync(int id, CancellationToken ct = default) =>
         id > 0 ? store.GetAsync(id, ct) : Task.FromResult<OrderManagementDetail?>(null);
 
@@ -44,7 +48,7 @@ public sealed class OrderManagementService(OrderManagementStore store) : IOrderM
         {
             await using var transaction = await store.BeginAsync(ct);
             var order = await store.LockAsync(id, ct);
-            if (order is null) return ManagementResult.Fail("Đơn hàng không còn tồn tại. Vui lòng tải lại danh sách.");
+            if (order is null) return ManagementResult.Fail("Đơn hàng không còn tồn tại. Vui lòng tải lại danh sách.", ManagementFailure.NotFound);
             if (customerId.HasValue)
             {
                 if (order.UserId != customerId.Value || !await store.IsActiveCustomerAsync(customerId.Value, ct))
@@ -52,15 +56,15 @@ public sealed class OrderManagementService(OrderManagementStore store) : IOrderM
                 if (order.Status == OrderStatus.Cancelled) return ManagementResult.Success(id);
             }
             if (expected.HasValue && order.Status != expected.Value)
-                return ManagementResult.Fail("Trạng thái đơn hàng đã thay đổi. Vui lòng tải lại trước khi thao tác.");
+                return ManagementResult.Fail("Trạng thái đơn hàng đã thay đổi. Vui lòng tải lại trước khi thao tác.", ManagementFailure.Conflict);
             if (!NextStatuses(order.Status).Contains(target))
-                return ManagementResult.Fail("Không thể chuyển đơn hàng sang trạng thái đã chọn.");
+                return ManagementResult.Fail("Không thể chuyển đơn hàng sang trạng thái đã chọn.", ManagementFailure.Conflict);
 
             if (target == OrderStatus.Cancelled)
             {
                 var details = await store.DetailsForCancellationAsync(id, ct);
                 if (!RestoreStock(details))
-                    return ManagementResult.Fail("Không thể hoàn tồn kho vì sản phẩm không còn tồn tại.");
+                    return ManagementResult.Fail("Không thể hoàn tồn kho vì sản phẩm không còn tồn tại.", ManagementFailure.Conflict);
             }
 
             order.Status = target;
@@ -70,11 +74,11 @@ public sealed class OrderManagementService(OrderManagementStore store) : IOrderM
         }
         catch (OverflowException)
         {
-            return ManagementResult.Fail("Không thể hoàn tồn kho vì số lượng vượt giới hạn cho phép.");
+            return ManagementResult.Fail("Không thể hoàn tồn kho vì số lượng vượt giới hạn cho phép.", ManagementFailure.Conflict);
         }
         catch (Exception exception) when (exception is DbException or DbUpdateException)
         {
-            return ManagementResult.Fail(DatabaseError);
+            return ManagementResult.Fail(DatabaseError, ManagementFailure.Database);
         }
         finally { store.ClearTracking(); }
     }

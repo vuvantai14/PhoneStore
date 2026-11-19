@@ -13,6 +13,14 @@ public static class ApiAccess
     public const string Admin = "Api.Admin";
     public const string Scheme = "PhoneStore.Api";
 
+    internal static int? UserId(ClaimsPrincipal principal)
+    {
+        var subjects = principal.Identities.Where(i => i.IsAuthenticated)
+            .SelectMany(i => i.FindAll(ClaimTypes.NameIdentifier)).ToArray();
+        return subjects.Length == 1 && int.TryParse(subjects[0].Value, NumberStyles.None,
+            CultureInfo.InvariantCulture, out var id) && id > 0 ? id : null;
+    }
+
     internal static void Configure(AuthorizationOptions options)
     {
         // An unclassified controller action stays closed until its audience is specified.
@@ -34,10 +42,7 @@ internal sealed class ActiveRoleHandler(PhoneStoreDbContext db) : AuthorizationH
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, ActiveRole requirement)
     {
         if (context.Resource is not HttpContext http) return;
-        var subjects = context.User.Identities.Where(i => i.IsAuthenticated)
-            .SelectMany(i => i.FindAll(ClaimTypes.NameIdentifier)).ToArray();
-        if (subjects.Length != 1 || !int.TryParse(subjects[0].Value, NumberStyles.None,
-                CultureInfo.InvariantCulture, out var userId) || userId <= 0) return;
+        if (ApiAccess.UserId(context.User) is not int userId) return;
 
         if (await db.Users.AnyAsync(u => u.UserId == userId && u.IsActive &&
             u.Role.RoleName == requirement.Role, http.RequestAborted))

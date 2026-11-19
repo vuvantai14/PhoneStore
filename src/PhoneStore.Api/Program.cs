@@ -8,6 +8,8 @@ using PhoneStore.Api.Authorization;
 using PhoneStore.Api.Health;
 using PhoneStore.Api.Infrastructure;
 using PhoneStore.Business.Management;
+using PhoneStore.Business.Purchasing;
+using PhoneStore.Data.Purchasing;
 using PhoneStore.Data.Management;
 using PhoneStore.Business.Catalog;
 using PhoneStore.Data.Catalog;
@@ -73,6 +75,10 @@ public partial class Program
                 CreateFixedWindowPartition(context, operational.HealthRequestsPerMinute));
         });
         builder.Services.AddDbContext<PhoneStoreDbContext>(options => options.UseSqlServer(connection));
+        builder.Services.AddScoped<PurchaseStore>();
+        builder.Services.AddScoped<IOrderService, OrderService>();
+        builder.Services.AddScoped<OrderManagementStore>();
+        builder.Services.AddScoped<OrderManagementService>();
         builder.Services.AddScoped<ProductManagementStore>();
         builder.Services.AddScoped<ProductEditorService>();
         builder.Services.AddScoped<ProductCatalogReader>();
@@ -87,7 +93,7 @@ public partial class Program
             {
                 Title = "PhoneStore API",
                 Version = "v1",
-                Description = "Public catalog and health endpoints. Product management requires an active Admin account; client authentication is not enabled."
+                Description = "Public catalog and health endpoints. Admin management requires an active Admin account; client authentication is not enabled."
             });
         });
 

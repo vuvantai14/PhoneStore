@@ -1,5 +1,7 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+2026-11-19 — [S34.5A Orders API](S34_5A_ORDERS_API.md) **PASS source/test**. Hai GET Customer theo owner, hai GET Admin và PATCH có expectedStatus qua workflow WinForms. Release build sạch, targeted 50/50, full suite 276/276 PASS. SQL count/checksum 3 bảng khớp; cùng 5 container healthy. Chưa deploy, chờ issuer cho client thật.
+
 2026-11-19 — [S34.4A](S34_4A_PRODUCT_MANAGEMENT_API.md) **PASS source/test**. 5 endpoint quản lý sản phẩm dùng Api.Admin và nghiệp vụ WinForms, kiểm tra tồn gốc khi PUT. Release build sạch, targeted 40/40, full 274/274 PASS. SQL checksum sản phẩm và ID 5 container khớp trước/sau; chưa deploy, chờ issuer cho client thật.
 
 2026-11-19 — [S34.3B](S34_3B_API_AUTHENTICATION_PREPARATION.md) **PASS chuẩn bị tích hợp**. Typed options OIDC kiểm tra khi startup; API vẫn từ chối bearer cho tới khi có issuer và ánh xạ danh tính đã xác minh. Release build sạch, auth 9/9, regression 272/272 PASS. SQL counts và 5 container healthy khớp trước/sau; chưa deploy.

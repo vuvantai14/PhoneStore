@@ -10,7 +10,18 @@ namespace PhoneStore.Data.Management;
 
 public sealed class OrderManagementStore(PhoneStoreDbContext db)
 {
-    public async Task<IReadOnlyList<OrderManagementRow>> ListAsync(OrderManagementQuery filter, CancellationToken ct)
+    public async Task<IReadOnlyList<OrderManagementRow>> ListAsync(OrderManagementQuery filter, CancellationToken ct) =>
+        await Rows(filter).ToListAsync(ct);
+
+    public async Task<(IReadOnlyList<OrderManagementRow> Items, int Total)> ListPageAsync(
+        OrderManagementQuery filter, int offset, int limit, CancellationToken ct)
+    {
+        var rows = Rows(filter);
+        var total = await rows.CountAsync(ct);
+        return (await rows.Skip(offset).Take(limit).ToListAsync(ct), total);
+    }
+
+    private IQueryable<OrderManagementRow> Rows(OrderManagementQuery filter)
     {
         var query = db.Orders.AsNoTracking();
         var search = filter.Search?.Trim();
@@ -18,10 +29,10 @@ public sealed class OrderManagementStore(PhoneStoreDbContext db)
             query = query.Where(order => order.OrderCode.Contains(search) || order.ReceiverName.Contains(search)
                 || order.ReceiverPhone.Contains(search) || order.User.Email.Contains(search));
         if (filter.Status.HasValue) query = query.Where(order => order.Status == filter.Status.Value);
-        return await query.OrderBy(order => order.OrderId)
+        return query.OrderBy(order => order.OrderId)
             .Select(order => new OrderManagementRow(order.OrderId, order.OrderCode, order.User.FullName,
                 order.User.Email, order.ReceiverName, order.ReceiverPhone, order.OrderDate,
-                order.TotalAmount, order.Status)).ToListAsync(ct);
+                order.TotalAmount, order.Status));
     }
 
     public Task<OrderManagementDetail?> GetAsync(int id, CancellationToken ct) => db.Orders.AsNoTracking()
