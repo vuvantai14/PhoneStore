@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Authorization;
 using PhoneStore.Api.Authorization;
 using PhoneStore.Api.Health;
 using PhoneStore.Api.Infrastructure;
+using PhoneStore.Business.Management;
+using PhoneStore.Data.Management;
 using PhoneStore.Business.Catalog;
 using PhoneStore.Data.Catalog;
 using PhoneStore.Data.Context;
@@ -71,6 +73,8 @@ public partial class Program
                 CreateFixedWindowPartition(context, operational.HealthRequestsPerMinute));
         });
         builder.Services.AddDbContext<PhoneStoreDbContext>(options => options.UseSqlServer(connection));
+        builder.Services.AddScoped<ProductManagementStore>();
+        builder.Services.AddScoped<ProductEditorService>();
         builder.Services.AddScoped<ProductCatalogReader>();
         builder.Services.AddScoped<IProductService, ProductService>();
         builder.Services.AddScoped<IPhoneStoreReadinessProbe, PhoneStoreReadinessProbe>();
@@ -83,7 +87,7 @@ public partial class Program
             {
                 Title = "PhoneStore API",
                 Version = "v1",
-                Description = "Read-only integration API for PhoneStore."
+                Description = "Public catalog and health endpoints. Product management requires an active Admin account; client authentication is not enabled."
             });
         });
 

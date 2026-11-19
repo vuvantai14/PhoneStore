@@ -111,7 +111,7 @@ public sealed class ApiAuthorizationTests
         Assert.Throws<OptionsValidationException>(() => host.CreateClient());
     }
 
-    private static WebApplicationFactory<PhoneStore.Api.Program> Host(PhoneStoreDbContext? db = null) =>
+    internal static WebApplicationFactory<PhoneStore.Api.Program> Host(PhoneStoreDbContext? db = null) =>
         new WebApplicationFactory<PhoneStore.Api.Program>().WithWebHostBuilder(builder =>
             builder.ConfigureServices(services =>
             {

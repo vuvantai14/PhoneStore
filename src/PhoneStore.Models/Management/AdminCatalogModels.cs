@@ -17,6 +17,8 @@ public sealed record LookupOption(int Id, string Name, bool IsActive)
 public sealed record ProductManagementQuery(string? Search = null, int? BrandId = null,
     int? CategoryId = null, bool? IsActive = null);
 
+public sealed record ProductManagementPage(IReadOnlyList<ProductManagementRow> Items, int TotalCount);
+
 public sealed record ProductManagementRow(int ProductId, string ProductName, string BrandName,
     string CategoryName, decimal Price, int StockQuantity, string? RAM, string? Storage,
     bool IsActive, DateTime? UpdatedAt)
@@ -51,8 +53,12 @@ public sealed record ProductImageRow(int ImageId, int ProductId, string ImageUrl
     public string PrimaryLabel => IsPrimary ? "Ảnh chính" : "";
 }
 
+public enum ManagementFailure { Validation, NotFound, Conflict, Database }
+
 public sealed record ManagementResult(bool Succeeded, string? Error = null, int? Id = null, string? Notice = null)
 {
-    public static ManagementResult Fail(string error) => new(false, error);
+    public ManagementFailure Failure { get; init; }
+    public static ManagementResult Fail(string error) => Fail(error, ManagementFailure.Validation);
+    public static ManagementResult Fail(string error, ManagementFailure failure) => new(false, error) { Failure = failure };
     public static ManagementResult Success(int? id = null, string? notice = null) => new(true, Id: id, Notice: notice);
 }

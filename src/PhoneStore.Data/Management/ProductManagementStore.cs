@@ -9,7 +9,16 @@ namespace PhoneStore.Data.Management;
 
 public sealed class ProductManagementStore(PhoneStoreDbContext db)
 {
-    public async Task<IReadOnlyList<ProductManagementRow>> ListAsync(ProductManagementQuery filter, CancellationToken ct)
+    public async Task<IReadOnlyList<ProductManagementRow>> ListAsync(ProductManagementQuery filter, CancellationToken ct) => await Rows(filter).ToListAsync(ct);
+
+    public async Task<ProductManagementPage> ListPageAsync(ProductManagementQuery filter, int offset, int limit, CancellationToken ct)
+    {
+        var rows = Rows(filter);
+        var total = await rows.CountAsync(ct);
+        return new ProductManagementPage(await rows.Skip(offset).Take(limit).ToListAsync(ct), total);
+    }
+
+    private IQueryable<ProductManagementRow> Rows(ProductManagementQuery filter)
     {
         var query = db.Products.AsNoTracking();
         var search = filter.Search?.Trim();
@@ -18,10 +27,9 @@ public sealed class ProductManagementStore(PhoneStoreDbContext db)
         if (filter.BrandId.HasValue) query = query.Where(p => p.BrandId == filter.BrandId.Value);
         if (filter.CategoryId.HasValue) query = query.Where(p => p.CategoryId == filter.CategoryId.Value);
         if (filter.IsActive.HasValue) query = query.Where(p => p.IsActive == filter.IsActive.Value);
-        return await query.OrderBy(p => p.ProductId)
+        return query.OrderBy(p => p.ProductId)
             .Select(p => new ProductManagementRow(p.ProductId, p.ProductName, p.Brand.BrandName,
-                p.Category.CategoryName, p.Price, p.StockQuantity, p.RAM, p.Storage, p.IsActive, p.UpdatedAt))
-            .ToListAsync(ct);
+                p.Category.CategoryName, p.Price, p.StockQuantity, p.RAM, p.Storage, p.IsActive, p.UpdatedAt));
     }
 
     public Task<ProductEdit?> GetEditAsync(int id, CancellationToken ct) =>
