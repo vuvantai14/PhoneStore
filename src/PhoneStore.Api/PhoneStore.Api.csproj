@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
+    <InternalsVisibleTo Include="PhoneStore.Tests" />
     <ProjectReference Include="..\PhoneStore.Business\PhoneStore.Business.csproj" />
     <ProjectReference Include="..\PhoneStore.Data\PhoneStore.Data.csproj" />
     <ProjectReference Include="..\PhoneStore.Models\PhoneStore.Models.csproj" />

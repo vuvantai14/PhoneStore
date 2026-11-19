@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using PhoneStore.Api.Authorization;
 using PhoneStore.Data.Context;
@@ -91,15 +90,6 @@ public sealed class Auth0BearerTests
         using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new("Bearer", Token(rsa));
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/orders")).StatusCode);
-    }
-
-    [Fact]
-    public void Enabled_without_issuer_rejects_startup()
-    {
-        using var factory = ApiAuthorizationTests.Host().WithWebHostBuilder(builder =>
-            builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
-                new Dictionary<string, string?> { ["ApiAuthentication:Oidc:Enabled"] = "true" })));
-        Assert.Throws<OptionsValidationException>(() => factory.CreateClient());
     }
 
     private static WebApplicationFactory<PhoneStore.Api.Program> Host(RSA rsa, Lookup? lookup, PhoneStoreDbContext? db = null)

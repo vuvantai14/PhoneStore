@@ -1,5 +1,7 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+2026-11-19 — [S35.2A-FIX01 — OIDC startup test](S35_2A_FIX01_CI_TEST_FAILURE.md). GitHub CI tại 86315dc đạt 297/298; deferred test host truy cập provider đã dispose. Sửa fixture startup để kiểm trực tiếp ValidateOnStart và đúng kiểu options. Local Windows Release build sạch, targeted 7/7, auth 27/27, full 298/298 PASS. Chưa commit/push. Chờ run GitHub của SHA mới và nghiệm thu artifact.
+
 2026-11-19 — [S35.2A CI hardening](S35_2A_CI_HARDENING.md). Workflow contents:read, thêm publish/upload Admin WinForms và kiểm tra model merge của ba Compose business. Local restore, Release build + 3 project phụ, 298/298 tests, publish WinForms, 2 Docker build cache-only và Compose validation PASS. Chưa có run GitHub cho workflow mới; chờ nghiệm thu artifact trước GHCR/CD.
 
 2026-11-19 — [S35.1 — CI/CD readiness](S35_1_CICD_READINESS_AUDIT.md). GitHub CI pass tại remote main 1a96390; local e22fc34. Business Compose config và HTTP readiness/Web pass. GHCR publish, runner CD và rollback chưa nghiệm thu; public repo và drift cấu hình SQL cần được xử lý trong thiết kế CD. Chỉ cập nhật báo cáo/tiến độ, không chạy lại tests. Bước đề xuất: duyệt CI permissions, merged Compose và WinForms artifact trước khi publish.

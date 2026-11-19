@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using PhoneStore.Api.Authorization;
 using PhoneStore.Data.Context;
@@ -100,15 +101,21 @@ public sealed class ApiAuthorizationTests
     [InlineData("https://issuer.example.test?query=1", "api")]
     [InlineData("https://issuer.example.test/path#fragment", "api")]
     [InlineData("https://user@issuer.example.test", "api")]
-    public void Invalid_oidc_configuration_rejects_startup(string? issuer, string? audience)
+    [InlineData(null, null, true)]
+    public async Task Invalid_oidc_configuration_rejects_startup(string? issuer, string? audience, bool enabled = false)
     {
-        using var host = Host().WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ApiAuthentication:Oidc:Issuer"] = issuer,
-                ["ApiAuthentication:Oidc:Audience"] = audience
-            })));
-        Assert.Throws<OptionsValidationException>(() => host.CreateClient());
+        // Own startup directly so a rejected host cannot be disposed by a concurrent web entry point.
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["ApiAuthentication:Oidc:Issuer"] = issuer,
+            ["ApiAuthentication:Oidc:Audience"] = audience,
+            ["ApiAuthentication:Oidc:Enabled"] = enabled.ToString()
+        }).Build();
+        using var host = new HostBuilder()
+            .ConfigureServices(services => services.AddPhoneStoreApiAccess(config))
+            .Build();
+        var error = await Assert.ThrowsAsync<OptionsValidationException>(() => host.StartAsync());
+        Assert.Equal(typeof(ApiOidcOptions), error.OptionsType);
     }
 
     internal static WebApplicationFactory<PhoneStore.Api.Program> Host(PhoneStoreDbContext? db = null) =>
