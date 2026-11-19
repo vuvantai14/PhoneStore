@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -37,6 +38,7 @@ public sealed class CustomerProfileHttpTests
                 services.PostConfigure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme,
                     options => options.TimeProvider = Clock);
                 services.RemoveAll<DbContextOptions<PhoneStoreDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<PhoneStoreDbContext>>();
                 services.RemoveAll<PhoneStoreDbContext>();
                 connection.CreateFunction("SYSUTCDATETIME", () => DateTime.UtcNow);
                 connection.Open();

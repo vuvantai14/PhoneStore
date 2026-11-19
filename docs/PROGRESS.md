@@ -1,5 +1,23 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+Cập nhật 2026-11-19 — S34.2R-04 **PASS rollout business Web/API .NET 10 và smoke chỉ đọc**.
+- FULL COPY_ONLY/CHECKSUM backup + VERIFYONLY PASS. Chỉ thay API `b79d2e025e11` rồi Web `e55bfc7a1117`, cả hai chạy .NET 10.0.15. Dùng `docker-compose.net10.yml` pin image mới; image .NET 8 còn để rollback.
+- Health/live/ready, Catalog v1/detail, Swagger, Web Home/Catalog/Login/ảnh đều HTTP 200. Business SQL và acceptance giữ ID/image/StartedAt. Hai DB ONLINE, count/checksum 8/8 bảng mỗi DB và manifests uploads 42/5 khớp.
+- [Báo cáo S34.2R-04](S34_2R_04_DIRECT_DOCKER_UPGRADE.md). Bỏ qua isolated acceptance theo yêu cầu. Không ghi dữ liệu nghiệp vụ, migration, restore hoặc chạy lại full suite. Chưa stage/commit/push.
+
+Cập nhật 2026-11-19 — S34.2R-03 **BLOCKED do RAM tại preflight**.
+- Hai image khớp ID R-02, 5/5 container healthy và giữ ID/image/StartedAt. Hai DB ONLINE với snapshot 8/8 bảng mỗi DB khớp. RAM host 0,879–0,909 GiB, chưa tạo tài nguyên test hoặc chạy smoke.
+- [Báo cáo S34.2R-03](S34_2R_03_ISOLATED_RUNTIME_ACCEPTANCE.md) lưu kế hoạch Docker/SQL cách ly. Chờ giải phóng RAM và kiểm tra lại tài nguyên trước khi khởi tạo.
+
+Cập nhật 2026-11-19 — S34.2R-02 **PASS build/test/image, chờ nghiệm thu**.
+- SDK 10.0.403, EF/Identity/Mvc.Testing 10.0.15, build Release 11/11 và full 263/263 PASS; targeted 129/129. Sửa metadata designer WFO1000 và ba SQLite test fixture cho EF Core 10. EF model snapshot không có pending changes.
+- Hai image .NET 10 build dưới tag riêng. WinForms mở/đóng LoginForm offline. Hậu kiểm 5/5 services healthy, 4/4 HTTP 200, ID/image/StartedAt giữ nguyên, hai snapshot SQL 8/8 bảng khớp. Chưa chạy image mới, SQL runtime test hoặc deploy.
+- Báo cáo [S34_2R_02_DOTNET10_MIGRATION.md](S34_2R_02_DOTNET10_MIGRATION.md). Giữ checkpoint 4d77bd0 và tài liệu R-01. Chưa stage/commit/push.
+
+Cập nhật 2026-11-19 — S34.2R-01 **AUDIT COMPLETE, GO có điều kiện cho nâng cấp cách ly**.
+- S34.2 `4d77bd0` khớp GitHub main. Host có SDK 10.0.403 và Desktop ref pack 10; repo còn pin SDK 8.0.427 trên 11 project. Docker Web/API còn .NET 8, 5/5 healthy. SQL hai DB ONLINE ở compatibility 160.
+- Báo cáo [S34_2R_01_DOTNET10_COMPATIBILITY_AUDIT.md](S34_2R_01_DOTNET10_COMPATIBILITY_AUDIT.md) ghi tương thích EF/ASP.NET Core/WinForms/Docker/CI, launcher hardcode TFM và rollback. Không restore package, build/test runtime 10 hoặc đổi config. Chờ phê duyệt.
+
 Cập nhật 2026-11-19 — S34.2 **PASS source/automated, chờ người dùng nghiệm thu**.
 - Thêm `GET /api/health/live` và `GET /api/health/ready`; `GET /api/health` và bốn route Catalog v1 giữ nguyên hợp đồng. Regression khóa JSON, HTTP methods, lỗi validation và bộ lọc/phân trang.
 - Build solution 0 warning/error, targeted 65/65, full 263/263, `git diff --check` PASS. Docker 5/5 healthy, ID/image/StartedAt giữ nguyên, API 5025/5286 health 200. Hai route mới đã test qua TestServer và chưa deploy.

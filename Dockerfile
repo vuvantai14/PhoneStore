@@ -1,10 +1,11 @@
 # ==============================================================
-# PhoneStore.Web - Multi-stage Dockerfile (.NET 8 ASP.NET Core)
+# PhoneStore.Web - Multi-stage Dockerfile (.NET 10 ASP.NET Core)
 # ==============================================================
 
 # Stage 1: Build & Publish
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.403-noble AS build
 WORKDIR /src
+COPY global.json ./
 
 # Copy project files first for efficient Docker layer caching
 COPY ["src/PhoneStore.Web/PhoneStore.Web.csproj", "src/PhoneStore.Web/"]
@@ -29,10 +30,10 @@ RUN dotnet publish "PhoneStore.Web.csproj" \
     /p:UseAppHost=false
 
 # Stage 2: Runtime Environment
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS final
 WORKDIR /app
 
-# .NET 8 ASP.NET Core container standard port
+# ASP.NET Core container port
 EXPOSE 8080
 
 ENV ASPNETCORE_HTTP_PORTS=8080

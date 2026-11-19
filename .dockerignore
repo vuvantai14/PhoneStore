@@ -16,6 +16,7 @@
 **/obj/
 **/TestResults/
 **/*.log
+**/scratch/
 
 # Runtime-managed product images are deployment data, not image layers.
 **/wwwroot/uploads/products/
@@ -39,6 +40,8 @@ Dockerfile
 docker-compose*.yml
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
 
 # Documentation & project instructions

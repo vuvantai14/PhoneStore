@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PhoneStore.Business.Catalog;
@@ -62,6 +63,7 @@ public sealed class HomePresentationTests
                 // Cookie middleware constructs the auth services even for anonymous GETs.
                 // Keep that DI graph valid but replace SQL Server with a private memory provider.
                 services.RemoveAll<DbContextOptions<PhoneStoreDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<PhoneStoreDbContext>>();
                 services.RemoveAll<PhoneStoreDbContext>();
                 services.AddDbContext<PhoneStoreDbContext>(options => options.UseSqlite("Data Source=:memory:"));
             });

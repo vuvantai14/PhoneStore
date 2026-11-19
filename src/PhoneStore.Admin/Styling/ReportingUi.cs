@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.Globalization;
@@ -10,8 +11,13 @@ namespace PhoneStore.Admin.Styling;
 
 public sealed class RoundedCardPanel : Panel
 {
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public int CornerRadius { get; set; } = 12;
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Color CardFillColor { get; set; } = Color.White;
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Color BorderColor { get; set; } = AdminTheme.Border;
 
     public RoundedCardPanel()

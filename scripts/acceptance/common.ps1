@@ -29,7 +29,7 @@ function Invoke-AcceptanceTool([string]$Mode) {
             $value = if ($settings[$key] -is [Security.SecureString]) { Read-Secret $settings[$key] } else { [string]$settings[$key] }
             [Environment]::SetEnvironmentVariable($key, $value, 'Process')
         }
-        & dotnet (Join-Path $script:AcceptanceRoot 'tools\PhoneStore.AcceptanceEnvironment\bin\Debug\net8.0\PhoneStore.AcceptanceEnvironment.dll') $Mode
+        & dotnet (Join-Path $script:AcceptanceRoot 'tools\PhoneStore.AcceptanceEnvironment\bin\Debug\net10.0\PhoneStore.AcceptanceEnvironment.dll') $Mode
         if ($LASTEXITCODE -ne 0) { throw 'Acceptance tool failed. Do not retry provisioning blindly.' }
     } finally {
         foreach ($key in $saved.Keys) { [Environment]::SetEnvironmentVariable($key, $saved[$key], 'Process') }
