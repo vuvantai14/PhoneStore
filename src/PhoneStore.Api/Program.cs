@@ -79,7 +79,9 @@ public partial class Program
         builder.Services.AddDbContext<PhoneStoreDbContext>(options => options.UseSqlServer(connection));
         builder.Services.AddScoped<PurchaseStore>();
         builder.Services.AddScoped<IOrderService, OrderService>();
-        builder.Services.AddScoped<IReportingStore, ReportingStore>();
+        builder.Services.AddScoped<ReportingStore>();
+        builder.Services.AddScoped<IReportingStore>(sp => sp.GetRequiredService<ReportingStore>());
+        builder.Services.AddScoped<ReportSectionReader>();
         builder.Services.AddScoped<IReportingService, ReportingService>();
         builder.Services.AddScoped<CustomerManagementStore>();
         builder.Services.AddScoped<CustomerManagementService>();
@@ -95,11 +97,12 @@ public partial class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(options =>
         {
+            options.OperationFilter<AuthorizationDocumentationFilter>();
             options.SwaggerDoc("v1", new OpenApiInfo
             {
                 Title = "PhoneStore API",
                 Version = "v1",
-                Description = "Public catalog and health endpoints. Admin management requires an active Admin account; client authentication is not enabled."
+                Description = "Public catalog and health endpoints. Protected operations require a verified local account with the appropriate role."
             });
         });
 
@@ -114,6 +117,17 @@ public partial class Program
         }
 
         app.UseRouting();
+        app.Use(async (context, next) =>
+        {
+            var metadata = context.GetEndpoint()?.Metadata;
+            if (metadata?.GetMetadata<IAuthorizeData>() is not null && metadata.GetMetadata<IAllowAnonymous>() is null)
+                context.Response.OnStarting(() =>
+                {
+                    context.Response.Headers.CacheControl = "no-store";
+                    return Task.CompletedTask;
+                });
+            await next(context);
+        });
         app.UseRateLimiter();
         app.UseRequestTimeouts();
         app.UseAuthentication();

@@ -9,6 +9,7 @@ namespace PhoneStore.Api.Controllers;
 [ApiController]
 [Route("api/orders")]
 [Authorize(Policy = ApiAccess.Customer)]
+[Authorize(Policy = "Orders.Read")]
 [ProducesResponseType<ProblemDetails>(401)]
 [ProducesResponseType<ProblemDetails>(403)]
 public sealed class CustomerOrdersController(IOrderService orders) : ControllerBase

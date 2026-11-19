@@ -26,7 +26,9 @@ public sealed class AdminReportApiTests
         using var client = host.CreateClient();
         foreach (var route in Routes)
         {
-            Assert.Equal(HttpStatusCode.Unauthorized, (await anon.GetAsync(Root + route + Range)).StatusCode);
+            using var denied = await anon.GetAsync(Root + route + Range);
+            Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
+            Assert.True(denied.Headers.CacheControl?.NoStore);
             foreach (var user in new[] { customer, admin })
             {
                 client.DefaultRequestHeaders.Remove("Fixture-Subject");
@@ -61,7 +63,13 @@ public sealed class AdminReportApiTests
         Add("end", startUtc.AddDays(2), OrderStatus.Completed, second, 10);
         await fixture.Db.SaveChangesAsync();
 
-        using var host = ApiAuthorizationTests.Host(fixture.Db);
+        int commands = 0;
+        var measuredOptions = new DbContextOptionsBuilder<PhoneStore.Data.Context.PhoneStoreDbContext>()
+            .UseSqlite(fixture.Db.Database.GetDbConnection())
+            .LogTo(_ => commands++, [Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.CommandExecuted])
+            .Options;
+        await using var measuredDb = new PhoneStore.Data.Context.PhoneStoreDbContext(measuredOptions);
+        using var host = ApiAuthorizationTests.Host(measuredDb);
         using var client = host.CreateClient();
         client.DefaultRequestHeaders.Add("Fixture-Subject", admin.UserId.ToString());
         foreach (var invalid in new[] { "", "?fromDate=2026-11-02", "?fromDate=x&toDate=2026-11-02",
@@ -75,14 +83,30 @@ public sealed class AdminReportApiTests
         Assert.Equal(21m, revenue!.TotalRevenue);
         Assert.Equal(2, revenue.CompletedOrders);
         Assert.Equal(new decimal[] { 14, 7 }, revenue.Days.Select(d => d.Revenue));
-        var overview = await client.GetFromJsonAsync<ReportOverview>(Root + "overview" + Range);
+        commands = 0;
+        using var overviewResponse = await client.GetAsync(Root + "overview" + Range);
+        overviewResponse.EnsureSuccessStatusCode();
+        Assert.True(overviewResponse.Headers.CacheControl?.NoStore);
+        var overview = await overviewResponse.Content.ReadFromJsonAsync<ReportOverview>();
+        Assert.Equal(3, commands);;
         Assert.Equal(6, overview!.TotalOrders);
         Assert.Equal(revenue.TotalRevenue, overview.CompletedRevenue);
         Assert.Equal(10.5m, overview.AverageCompletedOrderValue);
+        Assert.Equal(new CurrentInventory(2, 11, 0, 1), overview.CurrentInventory);
+        Assert.Equal(new[] { 1, 1, 1, 2, 1 }, overview.OrderStatuses.Select(s => s.Count));
+        commands = 0;
         var top = await client.GetFromJsonAsync<TopProductsReport>(Root + "top-products" + Range);
+        Assert.Equal(2, commands);
         Assert.Collection(top!.Items,
             p => Assert.Equal((1, second.ProductName, 4, 28m), (p.Rank, p.ProductName, p.QuantitySold, p.SalesValue)),
             p => Assert.Equal((2, first.ProductName, 3, 21m), (p.Rank, p.ProductName, p.QuantitySold, p.SalesValue)));
+
+        var winForms = new PhoneStore.Business.Reporting.ReportingService(new PhoneStore.Data.Reporting.ReportingStore(fixture.Db));
+        var report = (await winForms.GetReportAsync(new(2026, 11, 2), new(2026, 11, 3))).Report!;
+        Assert.Equal(report.CompletedRevenue, overview.CompletedRevenue);
+        Assert.Equal(report.AverageCompletedOrderValue, overview.AverageCompletedOrderValue);
+        Assert.Equal(report.OrderStatuses.Select(s => new StatusCount(s.Status.ToString(), s.Count)), overview.OrderStatuses);
+        Assert.Equal(report.BestSellers.Select(p => new TopProduct(p.Rank, p.ProductName, p.BrandName, p.QuantitySold, p.SalesValue)), top.Items);
 
         const string empty = "?fromDate=2026-12-01&toDate=2026-12-01";
         Assert.Empty((await client.GetFromJsonAsync<TopProductsReport>(Root + "top-products" + empty))!.Items);

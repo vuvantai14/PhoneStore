@@ -41,20 +41,10 @@ public sealed class ReportingStore(PhoneStoreDbContext db) : IReportingStore
         DateTime startUtc, DateTime endExclusiveUtc, int localOffsetMinutes,
         int lowStockThreshold, CancellationToken ct)
     {
-        var orders = db.Orders.AsNoTracking().Where(order => order.OrderDate >= startUtc && order.OrderDate < endExclusiveUtc);
-        var totalOrders = await orders.CountAsync(ct);
-        var statusCounts = await StatusCounts(orders, ct);
-        var completed = orders.Where(order => order.Status == OrderStatus.Completed);
-        var completedOrders = await completed.CountAsync(ct);
-        var completedRevenue = await completed.SumAsync(order => (decimal?)order.TotalAmount, ct) ?? 0m;
-        var best = await BestSellers(db.OrderDetails.AsNoTracking().Where(detail =>
-            detail.Order.OrderDate >= startUtc && detail.Order.OrderDate < endExclusiveUtc
-            && SalesOrderStatuses.Values.Contains(detail.Order.Status)), 10, ct);
-        var activeProducts = await db.Products.AsNoTracking().CountAsync(product => product.IsActive, ct);
-        var totalStock = await db.Products.AsNoTracking().Where(product => product.IsActive)
-            .SumAsync(product => (long)product.StockQuantity, ct);
-        var outOfStock = await db.Products.AsNoTracking().CountAsync(product => product.IsActive && product.StockQuantity == 0, ct);
-        var lowStock = await db.Products.AsNoTracking().CountAsync(product => product.IsActive && product.StockQuantity <= lowStockThreshold, ct);
+        var overview = await OverviewAsync(startUtc, endExclusiveUtc, lowStockThreshold, ct);
+        var best = await TopProductsAsync(startUtc, endExclusiveUtc, ct);
+        var completed = db.Orders.AsNoTracking().Where(order => order.Status == OrderStatus.Completed &&
+            order.OrderDate >= startUtc && order.OrderDate < endExclusiveUtc);
         var alerts = await LowStock(lowStockThreshold, 50, ct);
         var trendRows = await completed.GroupBy(order => order.OrderDate.AddMinutes(localOffsetMinutes).Date)
             .Select(group => new { Date = group.Key, Revenue = group.Sum(order => order.TotalAmount) })
@@ -62,14 +52,41 @@ public sealed class ReportingStore(PhoneStoreDbContext db) : IReportingStore
         var trend = trendRows.Select(point => new RevenuePoint(point.Date, point.Revenue)).ToArray();
         return new ReportSnapshot
         {
-            FromDate = fromDate, ToDate = toDate, TotalOrders = totalOrders,
-            CompletedOrders = completedOrders, CompletedRevenue = completedRevenue,
-            AverageCompletedOrderValue = completedOrders == 0 ? 0m : completedRevenue / completedOrders,
-            OrderStatuses = statusCounts, BestSellers = Rank(best), ActiveProducts = activeProducts,
-            TotalStock = totalStock, OutOfStockProducts = outOfStock, LowStockProducts = lowStock,
+            FromDate = fromDate, ToDate = toDate, TotalOrders = overview.TotalOrders,
+            CompletedOrders = overview.CompletedOrders, CompletedRevenue = overview.CompletedRevenue,
+            AverageCompletedOrderValue = overview.AverageCompletedOrderValue,
+            OrderStatuses = overview.OrderStatuses, BestSellers = best, ActiveProducts = overview.ActiveProducts,
+            TotalStock = overview.TotalStock, OutOfStockProducts = overview.OutOfStockProducts,
+            LowStockProducts = overview.LowStockProducts,
             InventoryAlerts = alerts, RevenueTrend = trend
         };
     }
+
+    public async Task<ReportOverviewMetrics> OverviewAsync(DateTime startUtc, DateTime endExclusiveUtc,
+        int lowStockThreshold, CancellationToken ct)
+    {
+        var groups = await db.Orders.AsNoTracking()
+            .Where(o => o.OrderDate >= startUtc && o.OrderDate < endExclusiveUtc)
+            .GroupBy(o => o.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count(),
+                Revenue = g.Sum(o => o.Status == OrderStatus.Completed ? o.TotalAmount : 0m) })
+            .ToListAsync(ct);
+        var completed = groups.SingleOrDefault(g => g.Status == OrderStatus.Completed);
+        var inventory = await db.Products.AsNoTracking().Where(p => p.IsActive)
+            .GroupBy(p => p.IsActive)
+            .Select(g => new { Active = g.Count(), Stock = g.Sum(p => (long)p.StockQuantity),
+                Out = g.Count(p => p.StockQuantity == 0), Low = g.Count(p => p.StockQuantity <= lowStockThreshold) })
+            .SingleOrDefaultAsync(ct);
+        var statuses = Enum.GetValues<OrderStatus>().Select(status =>
+            new OrderStatusMetric(status, groups.SingleOrDefault(g => g.Status == status)?.Count ?? 0)).ToArray();
+        return new ReportOverviewMetrics(groups.Sum(g => g.Count), completed?.Count ?? 0, completed?.Revenue ?? 0m,
+            statuses, inventory?.Active ?? 0, inventory?.Stock ?? 0, inventory?.Out ?? 0, inventory?.Low ?? 0);
+    }
+
+    public async Task<IReadOnlyList<BestSellerMetric>> TopProductsAsync(DateTime startUtc, DateTime endExclusiveUtc,
+        CancellationToken ct) => Rank(await BestSellers(db.OrderDetails.AsNoTracking().Where(detail =>
+            detail.Order.OrderDate >= startUtc && detail.Order.OrderDate < endExclusiveUtc &&
+            SalesOrderStatuses.Values.Contains(detail.Order.Status)), 10, ct));
 
     public Task<IReadOnlyList<RevenueBucketAggregate>> CompletedRevenueBucketsAsync(RevenueChartPeriod period,
         DateTime startUtc, DateTime endExclusiveUtc, int localOffsetMinutes, CancellationToken ct)

@@ -279,6 +279,21 @@ public sealed class CatalogApiTests
         AssertJsonFields(paths.GetProperty("/api/admin/products"), "get", "post");
         AssertJsonFields(paths.GetProperty("/api/admin/products/{id}"), "get", "put");
         AssertJsonFields(paths.GetProperty("/api/admin/products/{id}/status"), "patch");
+        foreach (var path in paths.EnumerateObject())
+        foreach (var method in path.Value.EnumerateObject())
+        {
+            var operation = method.Value;
+            if (expectedPaths.Contains(path.Name))
+            {
+                Assert.False(operation.TryGetProperty("x-phonestore-policy", out _));
+                continue;
+            }
+
+            var expectedPolicy = path.Name.StartsWith("/api/admin/", StringComparison.Ordinal) ? "Api.Admin" : "Api.Customer";
+            Assert.Equal(expectedPolicy, operation.GetProperty("x-phonestore-policy").GetString());
+            Assert.True(operation.GetProperty("responses").TryGetProperty("401", out _));
+            Assert.True(operation.GetProperty("responses").TryGetProperty("403", out _));
+        }
         foreach (var path in expectedPaths)
             AssertJsonFields(paths.GetProperty(path), "get");
     }

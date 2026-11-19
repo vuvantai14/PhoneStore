@@ -1,5 +1,13 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+2026-11-19 — [S34.9C Auth0 Customer API](S34_9C_AUTH0_INTEGRATION_PREPARATION.md). Đã bổ sung JwtBearer opt-in, lookup liên kết fail-closed và scope đọc đơn. Release build sạch, targeted 29/29, full 298/298 PASS với issuer/JWKS thử. SQL SELECT xác nhận chưa có bảng mapping. Business healthy; hai container acceptance đang dừng. Auth0 tenant thật chưa thử; Customer thật BLOCKED đến khi duyệt mapping và triển khai acceptance.
+
+2026-11-19 — [S34.9B kiến trúc xác thực API](S34_9B_AUTHENTICATION_ARCHITECTURE_DECISION.md). Đã đối chiếu source và hoàn tất thiết kế OIDC/OAuth2, mapping, tích hợp client và tiêu chí nghiệm thu. Khuyến nghị issuer được vận hành sẵn; chờ duyệt provider, registration và liên kết UserId. Chỉ cập nhật tài liệu; chưa chạy lại tests, chưa triển khai xác thực thật.
+
+2026-11-19 — [S34.9A integration readiness](S34_9A_API_INTEGRATION_READINESS.md). Source 23 operation, build sạch, targeted 83/83, full 280/280 PASS. Business Docker chỉ 7 GET, acceptance 5 GET; Web gọi Catalog detail thật PASS. Protected client BLOCKED bởi issuer/mapping. Bổ sung metadata policy OpenAPI; production NO-GO. Chưa deploy.
+
+2026-11-19 — [S34.8A API hardening](S34_8A_API_HARDENING.md) **PASS source/test**. SQLite HTTP overview 12→3 câu SQL, top-products 12→2, gồm phân quyền. Route bảo vệ trả no-store. Build Release sạch, targeted 30/30, full 280/280 PASS. SQL counts/checksums và 5 container khớp; SQL Server concurrency chưa nghiệm thu. Chưa deploy.
+
 2026-11-19 — [S34.7A Reporting API](S34_7A_REPORTING_API.md) **PASS source/test**. Ba GET Api.Admin dùng báo cáo WinForms và biên UTC+7. Build Release sạch, targeted 15/15, full 280/280 PASS. SQL counts/checksums khớp, 5 container healthy. Chưa deploy.
 
 2026-11-19 — [S34.6A Admin Customers API](S34_6A_ADMIN_CUSTOMERS_API.md) **PASS source/test**. GET danh sách/chi tiết và PATCH trạng thái giới hạn role Customer ở SQL; cả ba route yêu cầu Api.Admin. Build Release sạch, targeted 42/42, full 278/278 PASS. Users/Roles khớp trước/sau, 1 Admin active, 5 container healthy. Chưa deploy.

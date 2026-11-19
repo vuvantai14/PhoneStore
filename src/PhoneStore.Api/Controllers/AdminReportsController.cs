@@ -13,15 +13,14 @@ namespace PhoneStore.Api.Controllers;
 [ProducesResponseType<ProblemDetails>(401)]
 [ProducesResponseType<ProblemDetails>(403)]
 [ProducesResponseType<ProblemDetails>(503)]
-public sealed class AdminReportsController(IReportingService reports) : ControllerBase
+public sealed class AdminReportsController(IReportingService reports, ReportSectionReader sections) : ControllerBase
 {
     [HttpGet("overview")]
     [ProducesResponseType<ReportOverview>(200)]
     public async Task<ActionResult<ReportOverview>> Overview([FromQuery] ReportRange range, CancellationToken ct)
     {
-        var result = await reports.GetReportAsync(range.FromDate, range.ToDate, ct);
-        if (result.Report is not { } r) return Problem(statusCode: 503, detail: "Report data is unavailable.");
-        return new ReportOverview(r.FromDate, r.ToDate, r.TotalOrders, r.CompletedOrders, r.CompletedRevenue,
+        var r = await sections.OverviewAsync(range.FromDate, range.ToDate, ct);
+        return new ReportOverview(range.FromDate, range.ToDate, r.TotalOrders, r.CompletedOrders, r.CompletedRevenue,
             r.AverageCompletedOrderValue, r.OrderStatuses.Select(s => new StatusCount(s.Status.ToString(), s.Count)).ToArray(),
             new CurrentInventory(r.ActiveProducts, r.TotalStock, r.OutOfStockProducts, r.LowStockProducts));
     }
@@ -39,9 +38,8 @@ public sealed class AdminReportsController(IReportingService reports) : Controll
     [ProducesResponseType<TopProductsReport>(200)]
     public async Task<ActionResult<TopProductsReport>> TopProducts([FromQuery] ReportRange range, CancellationToken ct)
     {
-        var result = await reports.GetReportAsync(range.FromDate, range.ToDate, ct);
-        if (result.Report is not { } r) return Problem(statusCode: 503, detail: "Report data is unavailable.");
-        return new TopProductsReport(r.FromDate, r.ToDate, r.BestSellers.Select(p =>
+        var products = await sections.TopProductsAsync(range.FromDate, range.ToDate, ct);
+        return new TopProductsReport(range.FromDate, range.ToDate, products.Select(p =>
             new TopProduct(p.Rank, p.ProductName, p.BrandName, p.QuantitySold, p.SalesValue)).ToArray());
     }
 }

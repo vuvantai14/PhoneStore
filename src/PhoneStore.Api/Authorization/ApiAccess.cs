@@ -28,6 +28,8 @@ public static class ApiAccess
             .RequireAssertion(_ => false).Build();
         AddRolePolicy(options, Customer, SystemRoles.Customer);
         AddRolePolicy(options, Admin, SystemRoles.Admin);
+        options.AddPolicy("Orders.Read", policy => policy.AddAuthenticationSchemes(Scheme)
+            .RequireClaim("scope", "orders:read"));
     }
 
     private static void AddRolePolicy(AuthorizationOptions options, string name, string role) =>

@@ -53,6 +53,13 @@ public sealed class DashboardSnapshot
     public IReadOnlyList<LowStockMetric> LowStockProducts { get; init; } = [];
 }
 
+public sealed record ReportOverviewMetrics(int TotalOrders, int CompletedOrders, decimal CompletedRevenue,
+    IReadOnlyList<OrderStatusMetric> OrderStatuses, int ActiveProducts, long TotalStock,
+    int OutOfStockProducts, int LowStockProducts)
+{
+    public decimal AverageCompletedOrderValue => CompletedOrders == 0 ? 0m : CompletedRevenue / CompletedOrders;
+}
+
 public sealed class ReportSnapshot
 {
     public DateOnly FromDate { get; init; }
