@@ -1,5 +1,7 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+2026-11-19 — [S35.1 — CI/CD readiness](S35_1_CICD_READINESS_AUDIT.md). GitHub CI pass tại remote main 1a96390; local e22fc34. Business Compose config và HTTP readiness/Web pass. GHCR publish, runner CD và rollback chưa nghiệm thu; public repo và drift cấu hình SQL cần được xử lý trong thiết kế CD. Chỉ cập nhật báo cáo/tiến độ, không chạy lại tests. Bước đề xuất: duyệt CI permissions, merged Compose và WinForms artifact trước khi publish.
+
 2026-11-19 — [S34.9E — Đổi hướng xác thực, bỏ Auth0](S34_9E_AUTHENTICATION_ARCHITECTURE_REVISION.md). Dừng kế hoạch tenant/linking của S34.9B–D. Giữ login hiện tại; đề xuất OpenIddict tự host và tái sử dụng Users/Roles khi có client REST cần token. Source S34.9C vẫn ở chế độ opt-in mặc định tắt. Chỉ cập nhật báo cáo và tiến độ; chưa chạy lại tests. Chờ duyệt pilot, subject, host/khóa và storage.
 
 2026-11-19 — [S34.9D-01 Auth0 tenant và PKCE](S34_9D_01_AUTH0_TENANT_READINESS.md). PARTIAL. Đã đối chiếu source, pin image, port và target SQL acceptance. Business healthy, hai container acceptance Exited 255. Chờ domain/Client ID, callback, HTTPS, mapping và duyệt deployment acceptance. Chỉ cập nhật tài liệu; không chạy lại tests.
