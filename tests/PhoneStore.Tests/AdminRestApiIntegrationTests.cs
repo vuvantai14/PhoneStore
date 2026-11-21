@@ -30,8 +30,12 @@ public sealed class AdminRestApiIntegrationTests
     public void Data_access_options_default_to_direct_sql_and_fail_closed_on_invalid_config()
     {
         var defaults = AdminDataAccessOptions.Parse(null, null, null);
-        Assert.Equal(AdminDataAccessMode.DirectSql, defaults.Mode);
+        Assert.Equal(AdminDataAccessMode.RestApi, defaults.Mode);
+        Assert.Equal("http://127.0.0.1:5025/", defaults.GetNormalizedBaseUri().ToString());
         Assert.Equal(15, defaults.TimeoutSeconds);
+
+        var directSql = AdminDataAccessOptions.Parse("DirectSql", null, null);
+        Assert.Equal(AdminDataAccessMode.DirectSql, directSql.Mode);
 
         var rest = AdminDataAccessOptions.Parse("RestApi", "https://api.phonestore.local:5025", "20");
         Assert.Equal(AdminDataAccessMode.RestApi, rest.Mode);
@@ -244,7 +248,20 @@ public sealed class AdminRestApiIntegrationTests
             Assert.Null(store.Current);
         }
 
-        // 4. Customer identity cannot be established into AdminApiSessionStore
+        // 4. 429 TooManyRequests -> distinct rate-limit AdminApiException without clearing session or retrying writes
+        var rateLimitHandler = new StubHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.TooManyRequests));
+        using (var http = new HttpClient(rateLimitHandler) { BaseAddress = new Uri("http://localhost:5999/") })
+        using (var store = new AdminApiSessionStore())
+        {
+            store.Establish("tok", DateTime.UtcNow.AddMinutes(10), "ref", DateTime.UtcNow.AddDays(1),
+                new AdminIdentity(1, "Admin", "a@b.c", SystemRoles.Admin));
+            var client = new AdminApiClient(http, store);
+            var rlEx = await Assert.ThrowsAsync<AdminApiException>(() => new RestReportingService(client).GetDashboardAsync());
+            Assert.Equal(HttpStatusCode.TooManyRequests, rlEx.StatusCode);
+            Assert.NotNull(store.Current);
+        }
+
+        // 5. Customer identity cannot be established into AdminApiSessionStore
         using (var store = new AdminApiSessionStore())
         {
             Assert.Throws<UnauthorizedAccessException>(() =>

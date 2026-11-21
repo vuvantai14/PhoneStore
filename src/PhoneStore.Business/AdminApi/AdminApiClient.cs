@@ -62,6 +62,12 @@ public sealed class AdminApiClient
             return new AdminLoginResult(AdminLoginStatus.Forbidden);
         if (response.StatusCode == HttpStatusCode.BadRequest)
             return new AdminLoginResult(AdminLoginStatus.InvalidCredentials);
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            throw new AdminApiException(
+                "Quá nhiều yêu cầu đăng nhập trong thời gian ngắn. Vui lòng đợi ít giây rồi thử lại.",
+                HttpStatusCode.TooManyRequests);
+        }
 
         if (!response.IsSuccessStatusCode)
         {
@@ -322,6 +328,13 @@ public sealed class AdminApiClient
                 : "Phiên đăng nhập quản trị đã hết hạn hoặc bị thu hồi.");
         }
 
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            throw new AdminApiException(
+                "Thao tác quá nhanh (vượt giới hạn tần suất API). Vui lòng đợi ít giây rồi thử lại.",
+                HttpStatusCode.TooManyRequests);
+        }
+
         if (!response.IsSuccessStatusCode)
         {
             var detail = await ReadProblemDetailAsync(response, ct);
@@ -342,6 +355,13 @@ public sealed class AdminApiClient
             throw new UnauthorizedAccessException(response.StatusCode == HttpStatusCode.Forbidden
                 ? "Tài khoản quản trị không còn quyền thực hiện thao tác này."
                 : "Phiên đăng nhập quản trị đã hết hạn hoặc bị thu hồi.");
+        }
+
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            return ManagementResult.Fail(
+                "Thao tác quá nhanh (vượt giới hạn tần suất API). Vui lòng đợi ít giây rồi thử lại.",
+                ManagementFailure.Database);
         }
 
         if (response.IsSuccessStatusCode)

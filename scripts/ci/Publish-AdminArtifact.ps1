@@ -9,9 +9,10 @@ $project = Join-Path $PSScriptRoot '../../src/PhoneStore.Admin/PhoneStore.Admin.
 dotnet publish $project -c Release --no-build --self-contained false -o $Destination
 if ($LASTEXITCODE -ne 0) { throw 'Admin publish failed.' }
 
-# Package a public Windows-authentication default. Operators provide deployment settings locally.
+# Package a public RestApi default targeting loopback 127.0.0.1:5025, keeping DirectSql fallback settings intact.
 $settings = Join-Path $Destination 'appsettings.json'
 @{
+    AdminDataAccess = @{ Mode = 'RestApi'; ApiBaseUrl = 'http://127.0.0.1:5025'; TimeoutSeconds = 15 }
     ConnectionStrings = @{ PhoneStoreConnection = 'Server=localhost;Database=PhoneStoreDB;Integrated Security=True;MultipleActiveResultSets=True;TrustServerCertificate=True' }
     ProductImages = @{ UploadsDirectory = 'uploads/products' }
 } |

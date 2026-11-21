@@ -1,0 +1,74 @@
+name: phonestore-dev-swagger
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server@sha256:11927f5edc5122658e90b3a80ee36e8aef779310bf771415c1d89271859c73fd
+    platform: linux/amd64
+    pull_policy: never
+    mem_limit: 2048m
+    cpus: 1.5
+    stop_grace_period: 60s
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_MEMORY_LIMIT_MB: "1408"
+      MSSQL_SA_PASSWORD: "${SWAGGER_DEV_SA_PASSWORD:?Run scripts/dev/Start-PhoneStoreSwagger.ps1}"
+    volumes:
+      - sql_data:/var/opt/mssql
+    networks:
+      - swagger_net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$${MSSQL_SA_PASSWORD}" -C -Q 'SELECT 1'
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 15s
+
+  api:
+    image: "${SWAGGER_DEV_API_IMAGE:-ghcr.io/vuvantai14/phonestore-api@sha256:7ee39dc64cd0b026c26d0016f49f736fff77050f1dddef3144c3ad77267149fb}"
+    platform: linux/amd64
+    pull_policy: never
+    mem_limit: 512m
+    cpus: 1.0
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__PhoneStoreConnection: "Server=db,1433;Database=PhoneStoreDB_SwaggerDev;User Id=swagger_dev_app;Password=${SWAGGER_DEV_APP_PASSWORD:?Run scripts/dev/Start-PhoneStoreSwagger.ps1};Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true;"
+      ApiAuthentication__Mode: "LocalJwt"
+      ApiAuthentication__LocalJwt__Issuer: "https://auth.phonestore.dev.local"
+      ApiAuthentication__LocalJwt__Audience: "phonestore-api-dev"
+      ApiAuthentication__LocalJwt__SigningKey: "${SWAGGER_DEV_JWT_KEY:?Run scripts/dev/Start-PhoneStoreSwagger.ps1}"
+      ApiAuthentication__LocalJwt__AccessTokenMinutes: "30"
+      ApiAuthentication__LocalJwt__RefreshTokenDays: "7"
+      ApiAuthentication__LocalJwt__KeyId: "dev-swagger-hs256-v1"
+      ApiOperational__AuthRequestsPerMinute: "120"
+      ApiOperational__ProtectedRequestsPerMinute: "300"
+      ProductImages__UploadsDirectory: "/app/wwwroot/uploads/products"
+    ports:
+      - "127.0.0.1:5026:8080"
+    volumes:
+      - uploads_data:/app/wwwroot/uploads/products
+    networks:
+      - swagger_net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080; printf "GET /api/health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3; read -r status <&3; [[ "$${status}" == *" 200 "* ]]'
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+networks:
+  swagger_net:
+    driver: bridge
+
+volumes:
+  sql_data:
+  uploads_data:

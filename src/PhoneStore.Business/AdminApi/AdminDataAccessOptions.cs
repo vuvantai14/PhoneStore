@@ -10,8 +10,8 @@ public sealed class AdminDataAccessOptions
 {
     public const string SectionName = "AdminDataAccess";
 
-    public AdminDataAccessMode Mode { get; init; } = AdminDataAccessMode.DirectSql;
-    public string ApiBaseUrl { get; init; } = "http://localhost:5025";
+    public AdminDataAccessMode Mode { get; init; } = AdminDataAccessMode.RestApi;
+    public string ApiBaseUrl { get; init; } = "http://127.0.0.1:5025";
     public int TimeoutSeconds { get; init; } = 15;
 
     public static AdminDataAccessOptions Parse(string? modeValue, string? apiBaseUrl, string? timeoutSeconds)
@@ -19,7 +19,7 @@ public sealed class AdminDataAccessOptions
         AdminDataAccessMode mode;
         if (string.IsNullOrWhiteSpace(modeValue))
         {
-            mode = AdminDataAccessMode.DirectSql;
+            mode = AdminDataAccessMode.RestApi;
         }
         else if (!Enum.TryParse(modeValue.Trim(), ignoreCase: true, out mode) || !Enum.IsDefined(mode))
         {
@@ -37,7 +37,7 @@ public sealed class AdminDataAccessOptions
         var options = new AdminDataAccessOptions
         {
             Mode = mode,
-            ApiBaseUrl = string.IsNullOrWhiteSpace(apiBaseUrl) ? "http://localhost:5025" : apiBaseUrl.Trim(),
+            ApiBaseUrl = string.IsNullOrWhiteSpace(apiBaseUrl) ? "http://127.0.0.1:5025" : apiBaseUrl.Trim(),
             TimeoutSeconds = timeout
         };
         options.Validate();
