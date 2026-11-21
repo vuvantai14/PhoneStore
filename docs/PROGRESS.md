@@ -1,5 +1,9 @@
 # PhoneStore — Tiến độ và điểm tiếp tục
 
+2026-11-21 — S35.2B-GATE đạt kiểm tra trước commit. Đã ghim SHA toàn bộ action, kiểm tra 251 file context, ba appsettings, Compose và 4/4 ca manifest mô phỏng. Nghiệm thu publish thực tế chờ run push lên main. [Báo cáo GHCR](S35_2B_GHCR_PUBLISHING.md)
+
+2026-11-21 — [S35.2B — GHCR Publishing](S35_2B_GHCR_PUBLISHING.md). CI FIX01 trên main `5ba636e` đã thành công tại [run 44558140643](https://github.com/vuvantai14/PhoneStore/actions/runs/44558140643). Bổ sung job publish và script chuẩn bị Docker build context. Kiểm tra cục bộ PASS cho YAML/quyền, hai Dockerfile, cấu hình image, ba ca manifest và Compose hợp nhất. Chưa chạy lại .NET tests hoặc build image. Chờ push được duyệt và run mới để nghiệm thu hai digest GHCR. Chưa triển khai CD.
+
 2026-11-19 — [S35.2A-FIX01 — OIDC startup test](S35_2A_FIX01_CI_TEST_FAILURE.md). GitHub CI tại 86315dc đạt 297/298; deferred test host truy cập provider đã dispose. Sửa fixture startup để kiểm trực tiếp ValidateOnStart và đúng kiểu options. Local Windows Release build sạch, targeted 7/7, auth 27/27, full 298/298 PASS. Chưa commit/push. Chờ run GitHub của SHA mới và nghiệm thu artifact.
 
 2026-11-19 — [S35.2A CI hardening](S35_2A_CI_HARDENING.md). Workflow contents:read, thêm publish/upload Admin WinForms và kiểm tra model merge của ba Compose business. Local restore, Release build + 3 project phụ, 298/298 tests, publish WinForms, 2 Docker build cache-only và Compose validation PASS. Chưa có run GitHub cho workflow mới; chờ nghiệm thu artifact trước GHCR/CD.
