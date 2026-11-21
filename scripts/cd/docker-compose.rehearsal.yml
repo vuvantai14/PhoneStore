@@ -1,0 +1,59 @@
+name: phonestore-cd-rehearsal
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server@sha256:11927f5edc5122658e90b3a80ee36e8aef779310bf771415c1d89271859c73fd
+    platform: linux/amd64
+    pull_policy: never
+    mem_limit: 2304m
+    cpus: 2.0
+    stop_grace_period: 60s
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_PID: Developer
+      MSSQL_MEMORY_LIMIT_MB: "1536"
+      MSSQL_SA_PASSWORD: ${CD_REHEARSAL_SQL_PASSWORD:?Required}
+    volumes:
+      - sql:/var/opt/mssql
+    networks: [isolated]
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          SQLCMDPASSWORD="$$MSSQL_SA_PASSWORD"
+          /opt/mssql-tools18/bin/sqlcmd -S 127.0.0.1 -U sa -C -b -l 3
+          -Q 'SET NOCOUNT ON; SELECT 1' -o /dev/null
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+  api:
+    image: ${CD_REHEARSAL_API_IMAGE:?Required}
+    platform: linux/amd64
+    pull_policy: never
+    mem_limit: 512m
+    cpus: 0.5
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__PhoneStoreConnection: "Server=db,1433;Database=PhoneStoreDB_CdRehearsal;User Id=cd_rehearsal;Password=${CD_REHEARSAL_APP_PASSWORD:?Required};Encrypt=True;TrustServerCertificate=True;Max Pool Size=5"
+    ports: ["127.0.0.1:5386:8080"]
+    networks: [isolated]
+  web:
+    image: ${CD_REHEARSAL_WEB_IMAGE:?Required}
+    platform: linux/amd64
+    pull_policy: never
+    mem_limit: 512m
+    cpus: 0.5
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__PhoneStoreConnection: "Server=db,1433;Database=PhoneStoreDB_CdRehearsal;User Id=cd_rehearsal;Password=${CD_REHEARSAL_APP_PASSWORD:?Required};Encrypt=True;TrustServerCertificate=True;Max Pool Size=5"
+      CatalogApi__Enabled: "true"
+      CatalogApi__BaseUrl: "http://api:8080"
+    ports: ["127.0.0.1:5385:8080"]
+    networks: [isolated]
+networks:
+  isolated:
+    internal: true
+volumes:
+  sql:

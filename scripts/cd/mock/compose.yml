@@ -1,0 +1,31 @@
+name: phonestore-cd-rehearsal
+x-defaults: &defaults
+  platform: linux/amd64
+  pull_policy: never
+  networks: [mock]
+  mem_limit: 64m
+  cpus: 0.25
+  pids_limit: 32
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  healthcheck:
+    test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/', timeout=1)"]
+    interval: 2s
+    timeout: 2s
+    retries: 2
+services:
+  api:
+    <<: *defaults
+    image: ${CD_MOCK_API_IMAGE:?required}
+    ports: ["127.0.0.1:5386:8080"]
+  web:
+    <<: *defaults
+    image: ${CD_MOCK_WEB_IMAGE:?required}
+    ports: ["127.0.0.1:5385:8080"]
+  sentinel:
+    <<: *defaults
+    image: phonestore-cd-rehearsal-http:old
+networks:
+  mock:
+    internal: true
