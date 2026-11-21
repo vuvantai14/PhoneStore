@@ -148,6 +148,7 @@ public sealed class ApiAuthorizationTests
         {
             var identity = new ClaimsIdentity([
                 new Claim("scope", "orders:read"),
+                new Claim("scope", "orders:write"),
                 new Claim(ClaimTypes.NameIdentifier, Request.Headers["Fixture-Subject"].ToString()),
                 new Claim(ClaimTypes.Role, SystemRoles.Admin)], Scheme.Name);
             return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), Scheme.Name)));

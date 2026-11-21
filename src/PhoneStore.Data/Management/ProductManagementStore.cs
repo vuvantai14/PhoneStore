@@ -119,6 +119,8 @@ public sealed class ProductManagementStore(PhoneStoreDbContext db)
         // Serialize image writers BEFORE taking any Product/image lock; no automatic retry.
         if (db.Database.IsSqlServer())
             await db.Database.ExecuteSqlRawAsync("DECLARE @r int; EXEC @r=sys.sp_getapplock @Resource=N'PhoneStore.ProductImages.Write', @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000; IF @r<0 THROW 51021,'Image management is busy; reload before trying again',1;", ct);
+        if (!db.Database.IsSqlServer())
+            return await db.Products.SingleOrDefaultAsync(p => p.ProductId == id, ct);
         return await db.Products.FromSqlInterpolated($"SELECT * FROM [Products] WITH (UPDLOCK, HOLDLOCK) WHERE [ProductId] = {id}")
             .SingleOrDefaultAsync(ct);
     }

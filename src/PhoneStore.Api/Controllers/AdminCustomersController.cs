@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PhoneStore.Api.Authorization;
 using PhoneStore.Api.Contracts.Customers;
+using PhoneStore.Api.Infrastructure;
 using PhoneStore.Business.Management;
 using PhoneStore.Models.Management;
 
@@ -9,10 +12,13 @@ namespace PhoneStore.Api.Controllers;
 
 [ApiController]
 [Authorize(Policy = ApiAccess.Admin)]
+[Route("api/v1/admin/customers")]
 [Route("api/admin/customers")]
+[EnableRateLimiting(ApiPolicies.ProtectedRateLimit)]
+[RequestTimeout(ApiPolicies.CatalogTimeout)]
 [ProducesResponseType<ProblemDetails>(401)]
 [ProducesResponseType<ProblemDetails>(403)]
-public sealed class AdminCustomersController(CustomerManagementService customers) : ControllerBase
+public sealed class AdminCustomersController(ICustomerManagementService customers) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType<CustomerPage>(200)]
@@ -23,7 +29,14 @@ public sealed class AdminCustomersController(CustomerManagementService customers
         if (offset > int.MaxValue) return Problem(statusCode: 400, detail: "Page offset exceeds the supported range.");
         var page = await customers.ListPageAsync(new CustomerManagementQuery(query.Search, query.IsActive),
             (int)offset, query.PageSize, ct);
-        var items = page.Items.Select(c => new CustomerSummary(c.UserId, c.FullName, c.Email, c.Phone, c.IsActive));
+        var items = page.Items.Select(c => new CustomerSummary(
+            c.UserId,
+            c.FullName,
+            c.Email,
+            c.Phone,
+            c.IsActive,
+            c.Address,
+            DateTime.SpecifyKind(c.CreatedAt, DateTimeKind.Utc)));
         return new CustomerPage(items.ToArray(), page.Total, query.Page, query.PageSize);
     }
 
@@ -36,6 +49,23 @@ public sealed class AdminCustomersController(CustomerManagementService customers
         if (c is null) return Problem(statusCode: 404, detail: "Customer not found.");
         return new CustomerDetail(c.UserId, c.FullName, c.Email, c.Phone, c.Address, c.IsActive,
             DateTime.SpecifyKind(c.CreatedAt, DateTimeKind.Utc));
+    }
+
+    [HttpPut("{id:int}")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType<ProblemDetails>(400)]
+    [ProducesResponseType<ProblemDetails>(404)]
+    [ProducesResponseType<ProblemDetails>(503)]
+    public async Task<IActionResult> Update(int id, AdminCustomerUpdateRequest request, CancellationToken ct)
+    {
+        var result = await customers.UpdateAsync(id, new CustomerEdit(request.FullName, request.Phone, request.Address), ct);
+        if (result.Succeeded) return NoContent();
+        return Problem(statusCode: result.Failure switch
+        {
+            ManagementFailure.NotFound => 404,
+            ManagementFailure.Database => 503,
+            _ => 400
+        }, detail: result.Error);
     }
 
     [HttpPatch("{id:int}/status")]

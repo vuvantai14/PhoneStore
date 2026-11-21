@@ -5,6 +5,7 @@ namespace PhoneStore.Business.Management;
 public interface IProductManagementService
 {
     Task<IReadOnlyList<ProductManagementRow>> ListAsync(ProductManagementQuery query, CancellationToken cancellationToken = default);
+    Task<ProductManagementPage> ListPageAsync(ProductManagementQuery query, int offset, int limit, CancellationToken cancellationToken = default);
     Task<ProductEdit?> GetEditAsync(int id, CancellationToken cancellationToken = default);
     Task<ProductEditOptions> GetOptionsAsync(int? productId = null, CancellationToken cancellationToken = default);
     Task<ProductEditOptions> GetFilterOptionsAsync(CancellationToken cancellationToken = default);

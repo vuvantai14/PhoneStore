@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using PhoneStore.Business.AdminApi;
 using PhoneStore.Business.Authentication;
 using PhoneStore.Models.Authentication;
 
@@ -8,9 +9,16 @@ public sealed class AdminLoginGateway(IServiceScopeFactory scopeFactory)
 {
     public async Task<AdminLoginResult> LoginAsync(string email, string password, CancellationToken cancellationToken)
     {
-        // Each attempt has its own DbContext, disposed before returning the safe identity.
         using var scope = scopeFactory.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<IAdminAuthService>()
             .LoginAsync(email, password, cancellationToken);
+    }
+
+    public async Task LogoutAsync(CancellationToken cancellationToken = default)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var logout = scope.ServiceProvider.GetService<IAdminSessionLogout>();
+        if (logout is not null)
+            await logout.LogoutAsync(cancellationToken);
     }
 }

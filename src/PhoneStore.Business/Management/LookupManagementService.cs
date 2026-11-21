@@ -31,18 +31,18 @@ public sealed class LookupManagementService(LookupManagementStore store) : ILook
         try
         {
             if (await store.NameExistsAsync(kind, id, name.ToUpperInvariant(), cancellationToken))
-                return ManagementResult.Fail($"Tên {title} đã tồn tại. Vui lòng chọn tên khác.");
+                return ManagementResult.Fail($"Tên {title} đã tồn tại. Vui lòng chọn tên khác.", ManagementFailure.Conflict);
             var savedId = await store.SaveAsync(kind, id, new LookupEdit(name, description, edit.IsActive), cancellationToken);
             return savedId.HasValue ? ManagementResult.Success(savedId)
-                : ManagementResult.Fail($"{char.ToUpper(title[0]) + title[1..]} không còn tồn tại. Vui lòng tải lại danh sách.");
+                : ManagementResult.Fail($"{char.ToUpper(title[0]) + title[1..]} không còn tồn tại. Vui lòng tải lại danh sách.", ManagementFailure.NotFound);
         }
         catch (DbUpdateException exception) when (exception.InnerException is SqlException { Number: 2601 or 2627 })
         {
-            return ManagementResult.Fail($"Tên {title} đã tồn tại. Vui lòng chọn tên khác.");
+            return ManagementResult.Fail($"Tên {title} đã tồn tại. Vui lòng chọn tên khác.", ManagementFailure.Conflict);
         }
         catch (Exception exception) when (exception is DbUpdateException or DbException)
         {
-            return ManagementResult.Fail("Không thể lưu dữ liệu. Vui lòng kiểm tra kết nối và thử lại.");
+            return ManagementResult.Fail("Không thể lưu dữ liệu. Vui lòng kiểm tra kết nối và thử lại.", ManagementFailure.Database);
         }
         finally
         {
@@ -60,11 +60,11 @@ public sealed class LookupManagementService(LookupManagementStore store) : ILook
         {
             return await store.SetActiveAsync(kind, id, active, cancellationToken)
                 ? ManagementResult.Success(id)
-                : ManagementResult.Fail("Dữ liệu không còn tồn tại. Vui lòng tải lại danh sách.");
+                : ManagementResult.Fail("Dữ liệu không còn tồn tại. Vui lòng tải lại danh sách.", ManagementFailure.NotFound);
         }
         catch (Exception exception) when (exception is DbUpdateException or DbException)
         {
-            return ManagementResult.Fail("Không thể cập nhật trạng thái. Vui lòng kiểm tra kết nối và thử lại.");
+            return ManagementResult.Fail("Không thể cập nhật trạng thái. Vui lòng kiểm tra kết nối và thử lại.", ManagementFailure.Database);
         }
         finally
         {

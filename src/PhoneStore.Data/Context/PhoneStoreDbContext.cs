@@ -13,6 +13,7 @@ public class PhoneStoreDbContext(DbContextOptions<PhoneStoreDbContext> options) 
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderDetail> OrderDetails => Set<OrderDetail>();
+    public DbSet<ApiRefreshToken> ApiRefreshTokens => Set<ApiRefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

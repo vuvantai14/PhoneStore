@@ -27,7 +27,7 @@ public sealed class CustomerManagementService(CustomerManagementStore store) : I
         try
         {
             var customer = await store.FindAsync(id, ct);
-            if (customer is null) return ManagementResult.Fail("Khách hàng không còn tồn tại. Vui lòng tải lại danh sách.");
+            if (customer is null) return ManagementResult.Fail("Khách hàng không còn tồn tại. Vui lòng tải lại danh sách.", ManagementFailure.NotFound);
             customer.FullName = edit.FullName.Trim();
             customer.Phone = TrimOptional(edit.Phone);
             customer.Address = TrimOptional(edit.Address);

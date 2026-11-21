@@ -15,6 +15,23 @@ public sealed partial class RequestSafetyMiddleware(
 
     public async Task InvokeAsync(HttpContext context)
     {
+        if (options.RequireHttps && !context.Request.IsHttps && !IsLoopbackHealthProbe(context))
+        {
+            await WriteProblemAsync(context, StatusCodes.Status400BadRequest,
+                "HTTPS required", "Requests must use HTTPS.");
+            return;
+        }
+
+        var maxBodyBytes = IsProductImageUpload(context)
+            ? Math.Max(options.MaxRequestBodyBytes, options.MaxImageUploadBytes)
+            : options.MaxRequestBodyBytes;
+        if (context.Request.ContentLength is long contentLength && contentLength > maxBodyBytes)
+        {
+            await WriteProblemAsync(context, StatusCodes.Status413PayloadTooLarge,
+                "Request body is too large", "The request body exceeds the allowed size.");
+            return;
+        }
+
         if (context.Request.QueryString.HasValue &&
             context.Request.QueryString.Value!.Length > options.MaxQueryStringLength)
         {
@@ -64,6 +81,24 @@ public sealed partial class RequestSafetyMiddleware(
         }
     }
 
+    private static bool IsLoopbackHealthProbe(HttpContext context)
+    {
+        if (!HttpMethods.IsGet(context.Request.Method) || context.Connection.RemoteIpAddress is not { } remote)
+            return false;
+
+        var normalized = remote.IsIPv4MappedToIPv6 ? remote.MapToIPv4() : remote;
+        return System.Net.IPAddress.IsLoopback(normalized) &&
+            (context.Request.Path.Equals("/api/health", StringComparison.OrdinalIgnoreCase) ||
+             context.Request.Path.Equals("/api/health/live", StringComparison.OrdinalIgnoreCase) ||
+             context.Request.Path.Equals("/api/health/ready", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsProductImageUpload(HttpContext context) =>
+        HttpMethods.IsPost(context.Request.Method) &&
+        context.Request.HasFormContentType &&
+        context.Request.Path.Value is { } path &&
+        ProductImageUploadPathPattern().IsMatch(path);
+
     private static bool IsValidCorrelationId(string? value) =>
         value is { Length: >= 1 and <= 64 } && CorrelationIdPattern().IsMatch(value);
 
@@ -90,4 +125,7 @@ public sealed partial class RequestSafetyMiddleware(
 
     [GeneratedRegex("^[A-Za-z0-9._-]+$", RegexOptions.CultureInvariant)]
     private static partial Regex CorrelationIdPattern();
+
+    [GeneratedRegex("^/api(?:/v1)?/admin/products/[0-9]+/images$", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
+    private static partial Regex ProductImageUploadPathPattern();
 }

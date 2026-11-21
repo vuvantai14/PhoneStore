@@ -7,6 +7,7 @@ internal sealed class AdminApplicationContext : ApplicationContext
 {
     private readonly IServiceProvider services;
     private readonly AdminSession session;
+    private readonly AdminLoginGateway loginGateway;
     private readonly Management.CatalogManagementGateway gateway;
     private LoginForm? login;
     private MainForm? shell;
@@ -15,6 +16,7 @@ internal sealed class AdminApplicationContext : ApplicationContext
     {
         this.services = services;
         session = services.GetRequiredService<AdminSession>();
+        loginGateway = services.GetRequiredService<AdminLoginGateway>();
         gateway = services.GetRequiredService<Management.CatalogManagementGateway>();
         gateway.AuthorizationRevoked += OnAuthorizationRevoked;
         ShowLogin();
@@ -57,8 +59,16 @@ internal sealed class AdminApplicationContext : ApplicationContext
         login = null;
     }
 
-    private void OnLogout(object? sender, EventArgs args)
+    private async void OnLogout(object? sender, EventArgs args)
     {
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await loginGateway.LogoutAsync(cts.Token);
+        }
+        catch (Exception)
+        {
+        }
         session.Clear();
         CloseShell();
         ShowLogin();
@@ -87,8 +97,16 @@ internal sealed class AdminApplicationContext : ApplicationContext
     }
 
     private void OnLoginClosed(object? sender, FormClosedEventArgs args) => ExitThread();
-    private void OnShellClosed(object? sender, FormClosedEventArgs args)
+    private async void OnShellClosed(object? sender, FormClosedEventArgs args)
     {
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await loginGateway.LogoutAsync(cts.Token);
+        }
+        catch (Exception)
+        {
+        }
         session.Clear();
         ExitThread();
     }

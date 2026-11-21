@@ -114,6 +114,86 @@ public sealed class AdminReportApiTests
         Assert.Equal(0, (await client.GetFromJsonAsync<ReportOverview>(Root + "overview" + empty))!.TotalOrders);
     }
 
+    [Fact]
+    public async Task V1_dashboard_and_multi_period_revenue_match_reporting_service_and_exclude_cancelled()
+    {
+        await using var fixture = await TestDatabase.CreateAsync();
+        var (customer, first) = await fixture.SeedCatalogAsync();
+        first.StockQuantity = 3; // low stock (<= 5)
+        var admin = await AddAdmin(fixture);
+        // 2026-11-02 10:00 local (UTC+7) = 2026-11-02 03:00 UTC
+        var orderTimeUtc = new DateTime(2026, 11, 2, 3, 0, 0, DateTimeKind.Utc);
+        fixture.Db.Orders.AddRange(
+            new Order
+            {
+                OrderCode = "ORD-COMP-1", User = customer, OrderDate = orderTimeUtc, Status = OrderStatus.Completed,
+                ReceiverName = "Buyer", ReceiverPhone = "0900", ShippingAddress = "Addr", TotalAmount = 1500m,
+                OrderDetails = [new OrderDetail { Product = first, Quantity = 1, UnitPrice = 1500m }]
+            },
+            new Order
+            {
+                OrderCode = "ORD-CANC-1", User = customer, OrderDate = orderTimeUtc.AddMinutes(5), Status = OrderStatus.Cancelled,
+                ReceiverName = "Buyer", ReceiverPhone = "0900", ShippingAddress = "Addr", TotalAmount = 9999m,
+                OrderDetails = [new OrderDetail { Product = first, Quantity = 5, UnitPrice = 1999.8m }]
+            });
+        await fixture.Db.SaveChangesAsync();
+
+        // Authorization check on /api/v1/admin/dashboard
+        using var anonHost = ApiAuthorizationTests.Host();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonHost.CreateClient().GetAsync("/api/v1/admin/dashboard")).StatusCode);
+
+        using var host = ApiAuthorizationTests.Host(fixture.Db);
+        using var client = host.CreateClient();
+        client.DefaultRequestHeaders.Add("Fixture-Subject", customer.UserId.ToString());
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/v1/admin/dashboard")).StatusCode);
+
+        client.DefaultRequestHeaders.Remove("Fixture-Subject");
+        client.DefaultRequestHeaders.Add("Fixture-Subject", admin.UserId.ToString());
+
+        // Dashboard matches IReportingService.GetDashboardAsync
+        var dashboard = await client.GetFromJsonAsync<DashboardResponse>("/api/v1/admin/dashboard");
+        var reportingService = new PhoneStore.Business.Reporting.ReportingService(new PhoneStore.Data.Reporting.ReportingStore(fixture.Db));
+        var expectedDash = await reportingService.GetDashboardAsync();
+        Assert.Equal(expectedDash.ActiveProducts, dashboard!.ActiveProducts);
+        Assert.Equal(expectedDash.TotalStock, dashboard.TotalStock);
+        Assert.Equal(expectedDash.Customers, dashboard.Customers);
+        Assert.Equal(expectedDash.Orders, dashboard.Orders);
+        Assert.Equal(expectedDash.CompletedOrders, dashboard.CompletedOrders);
+        Assert.Equal(1500m, dashboard.CompletedRevenue); // Cancelled 9999m excluded
+        Assert.Single(dashboard.LowStockProducts);
+        Assert.Equal(2, dashboard.RecentOrders.Count);
+
+        // Multi-period revenue: Day (24 buckets), Week (7 buckets), Month (30 buckets for Nov), Year (12 buckets)
+        var day = await client.GetFromJsonAsync<RevenueReport>("/api/v1/admin/reports/revenue?period=Day&anchorDate=2026-11-02");
+        Assert.Equal("Day", day!.Period);
+        Assert.Equal(24, day.Buckets!.Count);
+        Assert.Equal(1500m, day.TotalRevenue);
+        Assert.Equal(1, day.CompletedOrders);
+
+        var week = await client.GetFromJsonAsync<RevenueReport>("/api/v1/admin/reports/revenue?period=Week&anchorDate=2026-11-02");
+        Assert.Equal("Week", week!.Period);
+        Assert.Equal(7, week.Buckets!.Count);
+        Assert.Equal(1500m, week.TotalRevenue);
+
+        var month = await client.GetFromJsonAsync<RevenueReport>("/api/v1/admin/reports/revenue?period=Month&anchorDate=2026-11-02");
+        Assert.Equal("Month", month!.Period);
+        Assert.Equal(30, month.Buckets!.Count);
+        Assert.Equal(1500m, month.TotalRevenue);
+
+        var year = await client.GetFromJsonAsync<RevenueReport>("/api/v1/admin/reports/revenue?period=Year&anchorDate=2026-11-02");
+        Assert.Equal("Year", year!.Period);
+        Assert.Equal(12, year.Buckets!.Count);
+        Assert.Equal(1500m, year.TotalRevenue);
+
+        // Overview with includeAlerts=true includes InventoryAlerts & RevenueTrend
+        var fullOverview = await client.GetFromJsonAsync<ReportOverview>(
+            "/api/v1/admin/reports/overview?fromDate=2026-11-02&toDate=2026-11-02&includeAlerts=true");
+        Assert.NotNull(fullOverview!.InventoryAlerts);
+        Assert.Single(fullOverview.InventoryAlerts!);
+        Assert.NotNull(fullOverview.RevenueTrend);
+        Assert.Single(fullOverview.RevenueTrend!);
+    }
+
     private static async Task<User> AddAdmin(TestDatabase fixture)
     {
         var admin = new User { RoleId = 1, Email = "reports@example.test", FullName = "Fixture", PasswordHash = "unused", IsActive = true };

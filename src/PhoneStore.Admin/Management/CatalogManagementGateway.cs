@@ -10,40 +10,20 @@ public sealed class CatalogManagementGateway(IServiceScopeFactory scopeFactory, 
 {
     public event EventHandler? AuthorizationRevoked;
 
-    public async Task<T> WithLookupsAsync<T>(Func<ILookupManagementService, Task<T>> action)
-    {
-        RequireAdmin();
-        using var scope = scopeFactory.CreateScope();
-        return await action(scope.ServiceProvider.GetRequiredService<ILookupManagementService>());
-    }
+    public Task<T> WithLookupsAsync<T>(Func<ILookupManagementService, Task<T>> action) =>
+        WithReadAsync(action);
 
-    public async Task<T> WithProductsAsync<T>(Func<IProductManagementService, Task<T>> action)
-    {
-        RequireAdmin();
-        using var scope = scopeFactory.CreateScope();
-        return await action(scope.ServiceProvider.GetRequiredService<IProductManagementService>());
-    }
+    public Task<T> WithProductsAsync<T>(Func<IProductManagementService, Task<T>> action) =>
+        WithReadAsync(action);
 
-    public async Task<T> WithCustomersAsync<T>(Func<ICustomerManagementService, Task<T>> action)
-    {
-        RequireAdmin();
-        using var scope = scopeFactory.CreateScope();
-        return await action(scope.ServiceProvider.GetRequiredService<ICustomerManagementService>());
-    }
+    public Task<T> WithCustomersAsync<T>(Func<ICustomerManagementService, Task<T>> action) =>
+        WithReadAsync(action);
 
-    public async Task<T> WithOrdersAsync<T>(Func<IOrderManagementService, Task<T>> action)
-    {
-        RequireAdmin();
-        using var scope = scopeFactory.CreateScope();
-        return await action(scope.ServiceProvider.GetRequiredService<IOrderManagementService>());
-    }
+    public Task<T> WithOrdersAsync<T>(Func<IOrderManagementService, Task<T>> action) =>
+        WithReadAsync(action);
 
-    public async Task<T> WithReportingAsync<T>(Func<IReportingService, Task<T>> action)
-    {
-        RequireAdmin();
-        using var scope = scopeFactory.CreateScope();
-        return await action(scope.ServiceProvider.GetRequiredService<IReportingService>());
-    }
+    public Task<T> WithReportingAsync<T>(Func<IReportingService, Task<T>> action) =>
+        WithReadAsync(action);
 
     public Task<T> WithLookupsWriteAsync<T>(Func<ILookupManagementService, Task<T>> action) =>
         WithWriteAsync(action);
@@ -57,6 +37,21 @@ public sealed class CatalogManagementGateway(IServiceScopeFactory scopeFactory, 
     public Task<T> WithOrdersWriteAsync<T>(Func<IOrderManagementService, Task<T>> action) =>
         WithWriteAsync(action);
 
+    private async Task<T> WithReadAsync<TService, T>(Func<TService, Task<T>> action) where TService : notnull
+    {
+        RequireAdmin();
+        using var scope = scopeFactory.CreateScope();
+        try
+        {
+            return await action(scope.ServiceProvider.GetRequiredService<TService>());
+        }
+        catch (UnauthorizedAccessException)
+        {
+            RevokeSession();
+            throw;
+        }
+    }
+
     private async Task<T> WithWriteAsync<TService, T>(Func<TService, Task<T>> action) where TService : notnull
     {
         var identity = RequireAdmin();
@@ -65,11 +60,25 @@ public sealed class CatalogManagementGateway(IServiceScopeFactory scopeFactory, 
             .IsCurrentAdminAsync(identity.UserId);
         if (!authorized)
         {
-            session.Clear();
-            AuthorizationRevoked?.Invoke(this, EventArgs.Empty);
+            RevokeSession();
             throw new UnauthorizedAccessException("Tài khoản quản trị không còn hoạt động hoặc không còn quyền Admin.");
         }
-        return await action(scope.ServiceProvider.GetRequiredService<TService>());
+
+        try
+        {
+            return await action(scope.ServiceProvider.GetRequiredService<TService>());
+        }
+        catch (UnauthorizedAccessException)
+        {
+            RevokeSession();
+            throw;
+        }
+    }
+
+    private void RevokeSession()
+    {
+        session.Clear();
+        AuthorizationRevoked?.Invoke(this, EventArgs.Empty);
     }
 
     private PhoneStore.Models.Authentication.AdminIdentity RequireAdmin()

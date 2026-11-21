@@ -135,7 +135,10 @@ public static class ManagementUi
             Math.Max(0, (host.ClientSize.Height - control.Height) / 2));
     }
 
-    public static string ErrorMessage(Exception exception) => exception is UnauthorizedAccessException
-        ? "Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại."
-        : "Không thể thực hiện thao tác. Vui lòng kiểm tra kết nối và thử lại.";
+    public static string ErrorMessage(Exception exception) => exception switch
+    {
+        UnauthorizedAccessException => "Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại.",
+        PhoneStore.Business.AdminApi.AdminApiException apiEx => apiEx.Message,
+        _ => "Không thể thực hiện thao tác. Vui lòng kiểm tra kết nối và thử lại."
+    };
 }

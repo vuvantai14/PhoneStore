@@ -67,6 +67,10 @@ public sealed class CatalogApiTests
         yield return ["maxPrice=-1"];
         yield return ["minPrice=20&maxPrice=10"];
         yield return ["sort=unsupported"];
+        yield return ["brandIds=0"];
+        yield return ["brandIds=1&brandIds=-2"];
+        yield return ["rams=" + new string('x', 51)];
+        yield return ["storages=" + new string('x', 51)];
     }
 
     [Theory]
@@ -155,6 +159,61 @@ public sealed class CatalogApiTests
         Assert.Equal(HttpStatusCode.NotFound, inactive.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, zero.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, malformed.StatusCode);
+    }
+
+    [Fact]
+    public async Task Multi_brand_ram_storage_filters_and_related_bestsellers_newest_endpoints_work()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var (_, p1) = await database.SeedCatalogAsync();
+        p1.RAM = "8 GB";
+        p1.Storage = "128 GB";
+        var brand2 = new Brand { BrandName = "Samsung", IsActive = true };
+        database.Db.Brands.Add(brand2);
+        await database.Db.SaveChangesAsync();
+
+        var p2 = new Product
+        {
+            ProductName = "Galaxy S24",
+            BrandId = brand2.BrandId,
+            CategoryId = p1.CategoryId,
+            Price = 19990000m,
+            StockQuantity = 7,
+            RAM = "12GB",
+            Storage = "256GB",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow.AddMinutes(1)
+        };
+        database.Db.Products.Add(p2);
+        await database.Db.SaveChangesAsync();
+
+        var reader = new ProductCatalogReader(database.Db);
+        await using var factory = new CatalogApiFactory(new ProductService(reader));
+        using var client = factory.CreateClient();
+
+        var filtered = await client.GetAsync(
+            $"/api/v1/products?brandIds={p1.BrandId}&brandIds={brand2.BrandId}&rams=12%20GB&storages=256%20GB");
+        Assert.Equal(HttpStatusCode.OK, filtered.StatusCode);
+        using var filteredJson = JsonDocument.Parse(await filtered.Content.ReadAsStringAsync());
+        var sole = Assert.Single(filteredJson.RootElement.GetProperty("items").EnumerateArray());
+        Assert.Equal(p2.ProductId, sole.GetProperty("id").GetInt32());
+
+        var related = await client.GetAsync($"/api/v1/products/{p1.ProductId}/related");
+        Assert.Equal(HttpStatusCode.OK, related.StatusCode);
+        using var relatedJson = JsonDocument.Parse(await related.Content.ReadAsStringAsync());
+        Assert.Contains(relatedJson.RootElement.EnumerateArray(), item => item.GetProperty("id").GetInt32() == p2.ProductId);
+
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/v1/products/99999/related")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/api/v1/products/0/related")).StatusCode);
+
+        var newest = await client.GetAsync("/api/v1/products/newest?count=2&diversified=true");
+        Assert.Equal(HttpStatusCode.OK, newest.StatusCode);
+        using var newestJson = JsonDocument.Parse(await newest.Content.ReadAsStringAsync());
+        Assert.Equal(2, newestJson.RootElement.GetArrayLength());
+
+        var bestsellers = await client.GetAsync("/api/v1/products/bestsellers?count=4");
+        Assert.Equal(HttpStatusCode.OK, bestsellers.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/api/v1/products/bestsellers?count=0")).StatusCode);
     }
 
     [Theory]
@@ -262,34 +321,104 @@ public sealed class CatalogApiTests
         string[] expectedPaths =
         [
             "/api/health", "/api/health/live", "/api/health/ready",
-            "/api/v1/products", "/api/v1/products/{id}", "/api/v1/brands", "/api/v1/categories"
+            "/api/v1/products", "/api/v1/products/bestsellers", "/api/v1/products/newest",
+            "/api/v1/products/{id}", "/api/v1/products/{id}/related",
+            "/api/v1/brands", "/api/v1/categories"
         ];
-        AssertJsonFields(paths, [.. expectedPaths, "/api/admin/products", "/api/admin/products/{id}", "/api/admin/products/{id}/status",
-            "/api/orders", "/api/orders/{id}", "/api/admin/orders", "/api/admin/orders/{id}", "/api/admin/orders/{id}/status",
+        string[] anonymousAuthPaths =
+        [
+            "/api/v1/auth/login", "/api/v1/auth/admin/login", "/api/v1/auth/register", "/api/v1/auth/refresh"
+        ];
+        string[] authenticatedAuthPaths =
+        [
+            "/api/v1/auth/me", "/api/v1/auth/logout"
+        ];
+        string[] adminProductPaths =
+        [
+            "/api/admin/products", "/api/admin/products/options", "/api/admin/products/{id}", "/api/admin/products/{id}/status",
+            "/api/admin/products/{id}/images", "/api/admin/products/{id}/images/{imageId}",
+            "/api/admin/products/{id}/images/{imageId}/primary", "/api/admin/products/{id}/images/{imageId}/order",
+            "/api/v1/admin/products", "/api/v1/admin/products/options", "/api/v1/admin/products/{id}", "/api/v1/admin/products/{id}/status",
+            "/api/v1/admin/products/{id}/images", "/api/v1/admin/products/{id}/images/{imageId}",
+            "/api/v1/admin/products/{id}/images/{imageId}/primary", "/api/v1/admin/products/{id}/images/{imageId}/order",
+            "/api/admin/brands", "/api/admin/brands/{id}", "/api/admin/brands/{id}/status",
+            "/api/v1/admin/brands", "/api/v1/admin/brands/{id}", "/api/v1/admin/brands/{id}/status",
+            "/api/admin/categories", "/api/admin/categories/{id}", "/api/admin/categories/{id}/status",
+            "/api/v1/admin/categories", "/api/v1/admin/categories/{id}", "/api/v1/admin/categories/{id}/status"
+        ];
+        AssertJsonFields(paths, [.. expectedPaths, .. anonymousAuthPaths, .. authenticatedAuthPaths,
+            "/api/v1/profile",
+            .. adminProductPaths,
+            "/api/orders", "/api/orders/{id}", "/api/orders/{id}/cancel",
+            "/api/v1/orders", "/api/v1/orders/{id}", "/api/v1/orders/{id}/cancel",
+            "/api/admin/orders", "/api/admin/orders/{id}", "/api/admin/orders/{id}/status",
+            "/api/v1/admin/orders", "/api/v1/admin/orders/{id}", "/api/v1/admin/orders/{id}/status",
             "/api/admin/customers", "/api/admin/customers/{id}", "/api/admin/customers/{id}/status",
-            "/api/admin/reports/overview", "/api/admin/reports/revenue", "/api/admin/reports/top-products"]);
-        foreach (var path in new[] { "/api/admin/reports/overview", "/api/admin/reports/revenue", "/api/admin/reports/top-products" })
+            "/api/v1/admin/customers", "/api/v1/admin/customers/{id}", "/api/v1/admin/customers/{id}/status",
+            "/api/admin/dashboard", "/api/v1/admin/dashboard",
+            "/api/admin/reports/overview", "/api/admin/reports/revenue", "/api/admin/reports/top-products",
+            "/api/v1/admin/reports/overview", "/api/v1/admin/reports/revenue", "/api/v1/admin/reports/top-products"]);
+        foreach (var path in anonymousAuthPaths)
+            AssertJsonFields(paths.GetProperty(path), "post");
+        AssertJsonFields(paths.GetProperty("/api/v1/auth/me"), "get");
+        AssertJsonFields(paths.GetProperty("/api/v1/auth/logout"), "post");
+        AssertJsonFields(paths.GetProperty("/api/v1/profile"), "get", "put");
+        foreach (var path in new[]
+                 {
+                     "/api/admin/dashboard", "/api/v1/admin/dashboard",
+                     "/api/admin/reports/overview", "/api/admin/reports/revenue", "/api/admin/reports/top-products",
+                     "/api/v1/admin/reports/overview", "/api/v1/admin/reports/revenue", "/api/v1/admin/reports/top-products"
+                 })
             AssertJsonFields(paths.GetProperty(path), "get");
-        AssertJsonFields(paths.GetProperty("/api/admin/customers"), "get");
-        AssertJsonFields(paths.GetProperty("/api/admin/customers/{id}"), "get");
-        AssertJsonFields(paths.GetProperty("/api/admin/customers/{id}/status"), "patch");
-        foreach (var path in new[] { "/api/orders", "/api/orders/{id}", "/api/admin/orders", "/api/admin/orders/{id}" })
-            AssertJsonFields(paths.GetProperty(path), "get");
-        AssertJsonFields(paths.GetProperty("/api/admin/orders/{id}/status"), "patch");
-        AssertJsonFields(paths.GetProperty("/api/admin/products"), "get", "post");
-        AssertJsonFields(paths.GetProperty("/api/admin/products/{id}"), "get", "put");
-        AssertJsonFields(paths.GetProperty("/api/admin/products/{id}/status"), "patch");
+        foreach (var prefix in new[] { "/api/admin/customers", "/api/v1/admin/customers" })
+        {
+            AssertJsonFields(paths.GetProperty(prefix), "get");
+            AssertJsonFields(paths.GetProperty($"{prefix}/{{id}}"), "get", "put");
+            AssertJsonFields(paths.GetProperty($"{prefix}/{{id}}/status"), "patch");
+        }
+        foreach (var prefix in new[] { "/api/orders", "/api/v1/orders" })
+        {
+            AssertJsonFields(paths.GetProperty(prefix), "get", "post");
+            AssertJsonFields(paths.GetProperty($"{prefix}/{{id}}"), "get");
+            AssertJsonFields(paths.GetProperty($"{prefix}/{{id}}/cancel"), "post");
+        }
+        foreach (var prefix in new[] { "/api/admin/orders", "/api/v1/admin/orders" })
+        {
+            AssertJsonFields(paths.GetProperty(prefix), "get");
+            AssertJsonFields(paths.GetProperty($"{prefix}/{{id}}"), "get");
+            AssertJsonFields(paths.GetProperty($"{prefix}/{{id}}/status"), "patch");
+        }
+        foreach (var prefix in new[] { "/api/admin/products", "/api/v1/admin/products" })
+        {
+            AssertJsonFields(paths.GetProperty(prefix), "get", "post");
+            AssertJsonFields(paths.GetProperty($"{prefix}/options"), "get");
+            AssertJsonFields(paths.GetProperty($"{prefix}/{{id}}"), "get", "put");
+            AssertJsonFields(paths.GetProperty($"{prefix}/{{id}}/status"), "patch");
+            AssertJsonFields(paths.GetProperty($"{prefix}/{{id}}/images"), "get", "post");
+            AssertJsonFields(paths.GetProperty($"{prefix}/{{id}}/images/{{imageId}}"), "delete");
+            AssertJsonFields(paths.GetProperty($"{prefix}/{{id}}/images/{{imageId}}/primary"), "patch");
+            AssertJsonFields(paths.GetProperty($"{prefix}/{{id}}/images/{{imageId}}/order"), "patch");
+        }
+        foreach (var prefix in new[] { "/api/admin/brands", "/api/v1/admin/brands", "/api/admin/categories", "/api/v1/admin/categories" })
+        {
+            AssertJsonFields(paths.GetProperty(prefix), "get", "post");
+            AssertJsonFields(paths.GetProperty($"{prefix}/{{id}}"), "put");
+            AssertJsonFields(paths.GetProperty($"{prefix}/{{id}}/status"), "patch");
+        }
         foreach (var path in paths.EnumerateObject())
         foreach (var method in path.Value.EnumerateObject())
         {
             var operation = method.Value;
-            if (expectedPaths.Contains(path.Name))
+            if (expectedPaths.Contains(path.Name) || anonymousAuthPaths.Contains(path.Name))
             {
                 Assert.False(operation.TryGetProperty("x-phonestore-policy", out _));
                 continue;
             }
 
-            var expectedPolicy = path.Name.StartsWith("/api/admin/", StringComparison.Ordinal) ? "Api.Admin" : "Api.Customer";
+            var expectedPolicy = (path.Name.StartsWith("/api/admin/", StringComparison.Ordinal) ||
+                                  path.Name.StartsWith("/api/v1/admin/", StringComparison.Ordinal))
+                ? "Api.Admin"
+                : authenticatedAuthPaths.Contains(path.Name) ? "Api.Authenticated" : "Api.Customer";
             Assert.Equal(expectedPolicy, operation.GetProperty("x-phonestore-policy").GetString());
             Assert.True(operation.GetProperty("responses").TryGetProperty("401", out _));
             Assert.True(operation.GetProperty("responses").TryGetProperty("403", out _));

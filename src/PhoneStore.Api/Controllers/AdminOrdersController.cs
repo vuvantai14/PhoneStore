@@ -1,18 +1,24 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PhoneStore.Api.Authorization;
 using PhoneStore.Api.Contracts.Orders;
+using PhoneStore.Api.Infrastructure;
 using PhoneStore.Business.Management;
 using PhoneStore.Models.Management;
 
 namespace PhoneStore.Api.Controllers;
 
 [ApiController]
+[Route("api/v1/admin/orders")]
 [Route("api/admin/orders")]
 [Authorize(Policy = ApiAccess.Admin)]
+[EnableRateLimiting(ApiPolicies.ProtectedRateLimit)]
+[RequestTimeout(ApiPolicies.CatalogTimeout)]
 [ProducesResponseType<ProblemDetails>(401)]
 [ProducesResponseType<ProblemDetails>(403)]
-public sealed class AdminOrdersController(OrderManagementService orders) : ControllerBase
+public sealed class AdminOrdersController(IOrderManagementService orders) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType<OrderPage>(200)]
@@ -23,8 +29,21 @@ public sealed class AdminOrdersController(OrderManagementService orders) : Contr
         if (offset > int.MaxValue) return Problem(statusCode: 400, detail: "Page offset exceeds the supported range.");
         var page = await orders.ListPageAsync(new OrderManagementQuery(query.Search, query.Status),
             (int)offset, query.PageSize, ct);
-        return new OrderPage(page.Items.Select(o => new OrderSummary(o.OrderId, o.OrderCode, DateTime.SpecifyKind(o.OrderDate, DateTimeKind.Utc),
-            o.Status.ToString(), o.TotalAmount, o.ReceiverName)).ToArray(), page.Total, query.Page, query.PageSize);
+        return new OrderPage(
+            page.Items.Select(o => new OrderSummary(
+                o.OrderId,
+                o.OrderCode,
+                DateTime.SpecifyKind(o.OrderDate, DateTimeKind.Utc),
+                o.Status.ToString(),
+                o.TotalAmount,
+                o.ReceiverName,
+                o.CustomerName,
+                o.CustomerEmail,
+                o.ReceiverPhone,
+                o.StatusLabel)).ToArray(),
+            page.Total,
+            query.Page,
+            query.PageSize);
     }
 
     [HttpGet("{id:int}")]
@@ -34,9 +53,27 @@ public sealed class AdminOrdersController(OrderManagementService orders) : Contr
     {
         var o = await orders.GetAsync(id, ct);
         if (o is null) return Problem(statusCode: 404, detail: "Order not found.");
-        return new OrderDetailResponse(new OrderSummary(o.OrderId, o.OrderCode, DateTime.SpecifyKind(o.OrderDate, DateTimeKind.Utc), o.Status.ToString(),
-            o.TotalAmount, o.ReceiverName), o.ReceiverPhone, o.ShippingAddress, o.Note,
-            o.Items.Select(i => new OrderLine(i.ProductName, i.Quantity, i.UnitPrice)).ToArray());
+        var nextStatuses = orders.NextStatuses(o.Status).Select(s => s.ToString()).ToArray();
+        return new OrderDetailResponse(
+            new OrderSummary(
+                o.OrderId,
+                o.OrderCode,
+                DateTime.SpecifyKind(o.OrderDate, DateTimeKind.Utc),
+                o.Status.ToString(),
+                o.TotalAmount,
+                o.ReceiverName,
+                o.CustomerName,
+                o.CustomerEmail,
+                o.ReceiverPhone,
+                o.StatusLabel),
+            o.ReceiverPhone,
+            o.ShippingAddress,
+            o.Note,
+            o.Items.Select(i => new OrderLine(i.ProductName, i.Quantity, i.UnitPrice)).ToArray(),
+            o.CustomerName,
+            o.CustomerEmail,
+            o.StatusLabel,
+            nextStatuses);
     }
 
     [HttpPatch("{id:int}/status")]

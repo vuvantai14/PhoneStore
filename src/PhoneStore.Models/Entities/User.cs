@@ -13,5 +13,6 @@ public class User
     public DateTime CreatedAt { get; set; }
     public Role Role { get; set; } = null!;
     public ICollection<Order> Orders { get; set; } = new List<Order>();
+    public ICollection<ApiRefreshToken> ApiRefreshTokens { get; set; } = new List<ApiRefreshToken>();
 }
 

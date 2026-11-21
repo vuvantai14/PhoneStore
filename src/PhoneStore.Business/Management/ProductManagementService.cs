@@ -29,7 +29,7 @@ public sealed class ProductManagementService(ProductManagementStore productStore
         try
         {
             if (!await store.ExistsAsync(productId, cancellationToken))
-                return ManagementResult.Fail("Sản phẩm không còn tồn tại. Vui lòng tải lại danh sách.");
+                return ManagementResult.Fail("Sản phẩm không còn tồn tại. Vui lòng tải lại danh sách.", ManagementFailure.NotFound);
             copiedUrl = await imageStorage.StoreAsync(sourceFile, cancellationToken);
             result = await AddImageRecordAsync(productId, copiedUrl, cancellationToken);
         }
@@ -39,7 +39,7 @@ public sealed class ProductManagementService(ProductManagementStore productStore
         }
         catch (Exception ex) when (ex is DbException or DbUpdateException)
         {
-            result = ManagementResult.Fail(DatabaseError);
+            result = ManagementResult.Fail(DatabaseError, ManagementFailure.Database);
         }
         catch (OperationCanceledException)
         {
@@ -61,7 +61,7 @@ public sealed class ProductManagementService(ProductManagementStore productStore
     {
         await using var transaction = await store.BeginAsync(ct);
         var product = await store.LockProductAsync(productId, ct);
-        if (product is null) return ManagementResult.Fail("Sản phẩm không còn tồn tại. Vui lòng tải lại danh sách.");
+        if (product is null) return ManagementResult.Fail("Sản phẩm không còn tồn tại. Vui lòng tải lại danh sách.", ManagementFailure.NotFound);
         var images = await store.ImagesForUpdateAsync(productId, ct);
         if (images.Count > 0 && images.Max(i => i.DisplayOrder) == int.MaxValue)
             return ManagementResult.Fail("Thứ tự ảnh đã đạt giới hạn. Vui lòng điều chỉnh thứ tự trước khi thêm ảnh.");
@@ -103,10 +103,10 @@ public sealed class ProductManagementService(ProductManagementStore productStore
         {
             await using var transaction = await store.BeginAsync(cancellationToken);
             var product = await store.LockProductAsync(productId, cancellationToken);
-            if (product is null) return ManagementResult.Fail("Sản phẩm không còn tồn tại. Vui lòng tải lại danh sách.");
+            if (product is null) return ManagementResult.Fail("Sản phẩm không còn tồn tại. Vui lòng tải lại danh sách.", ManagementFailure.NotFound);
             var images = await store.ImagesForUpdateAsync(productId, cancellationToken);
             var image = images.SingleOrDefault(i => i.ImageId == imageId);
-            if (image is null) return ManagementResult.Fail("Ảnh không còn tồn tại hoặc không thuộc sản phẩm này.");
+            if (image is null) return ManagementResult.Fail("Ảnh không còn tồn tại hoặc không thuộc sản phẩm này.", ManagementFailure.NotFound);
             removedUrl = image.ImageUrl;
             store.RemoveImage(image);
             images.Remove(image);
@@ -117,7 +117,7 @@ public sealed class ProductManagementService(ProductManagementStore productStore
         }
         catch (Exception ex) when (ex is DbException or DbUpdateException)
         {
-            return ManagementResult.Fail(DatabaseError);
+            return ManagementResult.Fail(DatabaseError, ManagementFailure.Database);
         }
         finally { store.ClearTracking(); }
 
@@ -150,10 +150,10 @@ public sealed class ProductManagementService(ProductManagementStore productStore
         {
             await using var transaction = await store.BeginAsync(ct);
             var product = await store.LockProductAsync(productId, ct);
-            if (product is null) return ManagementResult.Fail("Sản phẩm không còn tồn tại. Vui lòng tải lại danh sách.");
+            if (product is null) return ManagementResult.Fail("Sản phẩm không còn tồn tại. Vui lòng tải lại danh sách.", ManagementFailure.NotFound);
             var images = await store.ImagesForUpdateAsync(productId, ct);
             var image = images.SingleOrDefault(i => i.ImageId == imageId);
-            if (image is null) return ManagementResult.Fail("Ảnh không còn tồn tại hoặc không thuộc sản phẩm này.");
+            if (image is null) return ManagementResult.Fail("Ảnh không còn tồn tại hoặc không thuộc sản phẩm này.", ManagementFailure.NotFound);
             if (displayOrder.HasValue)
             {
                 image.DisplayOrder = displayOrder.Value;
@@ -167,7 +167,7 @@ public sealed class ProductManagementService(ProductManagementStore productStore
         }
         catch (Exception ex) when (ex is DbException or DbUpdateException)
         {
-            return ManagementResult.Fail(DatabaseError);
+            return ManagementResult.Fail(DatabaseError, ManagementFailure.Database);
         }
         finally { store.ClearTracking(); }
     }

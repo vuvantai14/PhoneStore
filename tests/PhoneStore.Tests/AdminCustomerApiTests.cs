@@ -90,6 +90,65 @@ public sealed class AdminCustomerApiTests
         Assert.Equal(2, users.Single(u => u.UserId == last.UserId).RoleId);
     }
 
+    [Fact]
+    public async Task V1_admin_customer_update_edits_profile_fields_only_and_protects_admin_and_sensitive_fields()
+    {
+        await using var fixture = await TestDatabase.CreateAsync();
+        var admin = Account("Operator", 1);
+        var customer = Account("Buyer", 2);
+        customer.Address = "Old Address";
+        fixture.Db.AddRange(admin, customer);
+        await fixture.Db.SaveChangesAsync();
+
+        using var host = ApiAuthorizationTests.Host(fixture.Db);
+        using var client = host.CreateClient();
+        client.DefaultRequestHeaders.Add("Fixture-Subject", admin.UserId.ToString());
+
+        var v1Route = "/api/v1/admin/customers";
+        // List includes Address and CreatedAt
+        var page = await client.GetFromJsonAsync<CustomerPage>(v1Route);
+        var summary = Assert.Single(page!.Items);
+        Assert.Equal("Old Address", summary.Address);
+
+        // Update customer profile fields -> 204
+        var putResp = await client.PutAsJsonAsync($"{v1Route}/{customer.UserId}", new AdminCustomerUpdateRequest
+        {
+            FullName = "Updated Buyer",
+            Phone = "0912345678",
+            Address = "456 New Street"
+        });
+        Assert.Equal(HttpStatusCode.NoContent, putResp.StatusCode);
+
+        var updated = await client.GetFromJsonAsync<CustomerDetail>($"{v1Route}/{customer.UserId}");
+        Assert.Equal("Updated Buyer", updated!.FullName);
+        Assert.Equal("0912345678", updated.Phone);
+        Assert.Equal("456 New Street", updated.Address);
+
+        // Unmapped sensitive fields (roleId, passwordHash, email) -> 400
+        foreach (var badJson in new[]
+                 {
+                     """{"fullName":"Hack","roleId":1}""",
+                     """{"fullName":"Hack","passwordHash":"evil"}""",
+                     """{"fullName":"Hack","email":"new@example.test"}""",
+                     """{"fullName":"   "}"""
+                 })
+        {
+            using var content = new StringContent(badJson, System.Text.Encoding.UTF8, "application/json");
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsync($"{v1Route}/{customer.UserId}", content)).StatusCode);
+        }
+
+        // Cannot edit Admin account or missing customer -> 404
+        Assert.Equal(HttpStatusCode.NotFound, (await client.PutAsJsonAsync($"{v1Route}/{admin.UserId}",
+            new AdminCustomerUpdateRequest { FullName = "Nope" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.PutAsJsonAsync($"{v1Route}/99999",
+            new AdminCustomerUpdateRequest { FullName = "Nope" })).StatusCode);
+
+        // Verify Single Admin & PasswordHash untouched
+        var allUsers = await fixture.Db.Users.AsNoTracking().ToListAsync();
+        Assert.Single(allUsers, u => u.RoleId == 1);
+        Assert.All(allUsers, u => Assert.Equal("unused", u.PasswordHash));
+    }
+
     private static User Account(string name, int role) => new() { FullName = name, Email = name + "@example.test",
         PasswordHash = "unused", RoleId = role, IsActive = true };
 }

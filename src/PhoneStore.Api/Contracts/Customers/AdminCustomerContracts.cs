@@ -17,7 +17,24 @@ public sealed record CustomerStatusRequest
     public required bool IsActive { get; init; }
 }
 
-public sealed record CustomerSummary(int UserId, string FullName, string Email, string? Phone, bool IsActive);
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record AdminCustomerUpdateRequest
+{
+    public required string FullName { get; init; }
+    public string? Phone { get; init; }
+    public string? Address { get; init; }
+}
+
+public sealed record CustomerSummary(
+    int UserId,
+    string FullName,
+    string Email,
+    string? Phone,
+    bool IsActive,
+    string? Address = null,
+    DateTime CreatedAt = default);
+
 public sealed record CustomerDetail(int UserId, string FullName, string Email, string? Phone,
     string? Address, bool IsActive, DateTime CreatedAt);
+
 public sealed record CustomerPage(IReadOnlyList<CustomerSummary> Items, int TotalCount, int Page, int PageSize);

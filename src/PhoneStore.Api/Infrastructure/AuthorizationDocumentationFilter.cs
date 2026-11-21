@@ -12,11 +12,22 @@ internal sealed class AuthorizationDocumentationFilter : IOperationFilter
         var metadata = context.ApiDescription.ActionDescriptor.EndpointMetadata;
         if (metadata.OfType<IAllowAnonymous>().Any()) return;
         var policies = metadata.OfType<IAuthorizeData>().Select(a => a.Policy).ToArray();
-        var policy = policies.SingleOrDefault(p => p is Authorization.ApiAccess.Customer or Authorization.ApiAccess.Admin);
+        var policy = policies.SingleOrDefault(p =>
+            p is Authorization.ApiAccess.Customer or Authorization.ApiAccess.Admin or Authorization.ApiAccess.Authenticated);
         if (policy is null) return;
         operation.Extensions["x-phonestore-policy"] = new OpenApiString(policy);
-        operation.Description = policies.Contains("Orders.Read")
-            ? $"Requires {policy} and the orders:read scope."
-            : $"Requires {policy}.";
+        operation.Description = policies.Contains("Orders.Write")
+            ? $"Requires {policy} and the orders:write scope."
+            : policies.Contains("Orders.Read")
+                ? $"Requires {policy} and the orders:read scope."
+                : $"Requires {policy}.";
+        operation.Security ??= [];
+        operation.Security.Add(new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+            }] = []
+        });
     }
 }

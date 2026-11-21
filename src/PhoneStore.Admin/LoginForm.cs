@@ -396,6 +396,10 @@ public sealed class LoginForm : Form
                 : "Email hoặc mật khẩu không chính xác.");
         }
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+        catch (PhoneStore.Business.AdminApi.AdminApiException exception)
+        {
+            if (!IsDisposed) ShowError(exception.Message);
+        }
         catch (Exception exception) when (exception is DbException or DbUpdateException)
         {
             if (!IsDisposed) ShowError("Không thể kết nối dữ liệu. Vui lòng kiểm tra SQL Server.");
