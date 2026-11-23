@@ -64,9 +64,13 @@ services:
     build:
       context: .
       dockerfile: src/PhoneStore.Api/Dockerfile
+    env_file:
+      - path: .env
+        required: false
     environment:
       ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Development}"
       ASPNETCORE_HTTP_PORTS: "8080"
+      MSSQL_SA_PASSWORD: ""
       ConnectionStrings__PhoneStoreConnection: "Server=db,1433;Database=${DB_NAME:-PhoneStoreDB};User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in the ignored .env file};Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true;"
     ports:
       - "127.0.0.1:${API_PORT:-5025}:8080"

@@ -19,8 +19,7 @@ function Get-CdBusinessDefaults {
         RepoRoot               = [IO.Path]::GetFullPath($RepoRoot)
         ComposeFiles           = @(
             [IO.Path]::GetFullPath((Join-Path $RepoRoot 'docker-compose.yml')),
-            [IO.Path]::GetFullPath((Join-Path $RepoRoot 'docker-compose.restore.yml')),
-            [IO.Path]::GetFullPath((Join-Path $RepoRoot 'docker-compose.net10.yml'))
+            [IO.Path]::GetFullPath((Join-Path $RepoRoot 'scripts\cd\docker-compose.business.yml'))
         )
         SqlContainerName       = 'phonestore-restore-c2-db-1'
         ApiContainerName       = 'phonestore-restore-c2-api-1'
@@ -593,16 +592,14 @@ function Invoke-CdBusinessPullCycle {
             ) -join "`n"
             [IO.File]::WriteAllText($overrideFile, ($overrideYaml + "`n"), [Text.Encoding]::UTF8)
 
-            $composeArgs = @(
-                'compose',
-                '--project-name', $defaults.Project,
-                '-f', $defaults.ComposeFiles[0],
-                '-f', $defaults.ComposeFiles[1],
-                '-f', $defaults.ComposeFiles[2],
-                '-f', $overrideFile,
-                'up', '-d', '--no-deps', '--no-build', '--pull', 'never',
-                $Service
-            )
+            $composeArgsList = [Collections.Generic.List[string]]::new()
+            $composeArgsList.AddRange([string[]]@('compose', '--project-name', $defaults.Project))
+            foreach ($composeFile in $defaults.ComposeFiles) {
+                $composeArgsList.Add('-f')
+                $composeArgsList.Add($composeFile)
+            }
+            $composeArgsList.AddRange([string[]]@('-f', $overrideFile, 'up', '-d', '--no-deps', '--no-build', '--pull', 'never', $Service))
+            $composeArgs = $composeArgsList.ToArray()
             Assert-CdBusinessComposeCommandSafety -Arguments $composeArgs | Out-Null
             & $invokeDocker $composeArgs | Out-Null
         }

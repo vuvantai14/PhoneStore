@@ -124,34 +124,31 @@ Assert-Cd ($simMissingBackup.Ready -eq $false -and $simMissingBackup.Status -ceq
 'PASS SQL business external backup verification gate (live PASS verified + missing BLOCKED verified)'
 
 # 5. Business Compose Command Safety Guard
-$validComposeCmd = @(
-    'compose', '--project-name', 'phonestore-restore-c2',
-    '-f', 'docker-compose.yml', '-f', 'docker-compose.restore.yml', '-f', 'docker-compose.net10.yml', '-f', 'override.yml',
-    'up', '-d', '--no-deps', '--no-build', '--pull', 'never', 'api'
+$businessComposeFlags = @('-f', 'docker-compose.yml', '-f', 'scripts/cd/docker-compose.business.yml')
+$validComposeCmd = @('compose', '--project-name', 'phonestore-restore-c2') + $businessComposeFlags + @(
+    '-f', 'override.yml', 'up', '-d', '--no-deps', '--no-build', '--pull', 'never', 'api'
 )
 Assert-CdBusinessComposeCommandSafety -Arguments $validComposeCmd | Out-Null
 
 Expect-CdFailure {
-    Assert-CdBusinessComposeCommandSafety -Arguments @('compose', '--project-name', 'phonestore-restore-c2', '-f', 'a.yml', '-f', 'b.yml', '-f', 'c.yml', 'down')
+    Assert-CdBusinessComposeCommandSafety -Arguments (@('compose', '--project-name', 'phonestore-restore-c2') + $businessComposeFlags + @('-f', 'override.yml', 'down'))
 } 'Forbidden destructive'
 
 Expect-CdFailure {
-    Assert-CdBusinessComposeCommandSafety -Arguments @('compose', '--project-name', 'phonestore-restore-c2', '-f', 'a.yml', '-f', 'b.yml', '-f', 'c.yml', 'system', 'prune')
+    Assert-CdBusinessComposeCommandSafety -Arguments (@('compose', '--project-name', 'phonestore-restore-c2') + $businessComposeFlags + @('-f', 'override.yml', 'system', 'prune'))
 } 'Forbidden destructive'
 
 Expect-CdFailure {
-    Assert-CdBusinessComposeCommandSafety -Arguments @(
-        'compose', '--project-name', 'phonestore-restore-c2',
-        '-f', 'docker-compose.yml', '-f', 'docker-compose.restore.yml', '-f', 'docker-compose.net10.yml',
-        'up', '-d', '--no-deps', '--no-build', '--pull', 'never', 'db'
+    Assert-CdBusinessComposeCommandSafety -Arguments (
+        @('compose', '--project-name', 'phonestore-restore-c2') + $businessComposeFlags +
+        @('up', '-d', '--no-deps', '--no-build', '--pull', 'never', 'db')
     )
 } "never 'db'"
 
 Expect-CdFailure {
-    Assert-CdBusinessComposeCommandSafety -Arguments @(
-        'compose', '--project-name', 'phonestore-restore-c2',
-        '-f', 'docker-compose.yml', '-f', 'docker-compose.restore.yml', '-f', 'docker-compose.net10.yml',
-        'up', '-d', '--no-build', '--pull', 'never', 'api'
+    Assert-CdBusinessComposeCommandSafety -Arguments (
+        @('compose', '--project-name', 'phonestore-restore-c2') + $businessComposeFlags +
+        @('up', '-d', '--no-build', '--pull', 'never', 'api')
     )
 } 'must include -d, --no-deps'
 'PASS business Compose command safety guards (blocks db recreate, down, prune, missing --no-deps)'

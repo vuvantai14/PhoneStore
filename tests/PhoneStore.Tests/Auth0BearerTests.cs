@@ -97,6 +97,7 @@ public sealed class Auth0BearerTests
         {
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["ApiAuthentication:Mode"] = "Disabled",
                 ["ApiAuthentication:Oidc:Enabled"] = "true", ["ApiAuthentication:Oidc:Issuer"] = Issuer,
                 ["ApiAuthentication:Oidc:Audience"] = Audience, ["ApiAuthentication:Oidc:CustomerClientId"] = "customer-fixture"
             }));

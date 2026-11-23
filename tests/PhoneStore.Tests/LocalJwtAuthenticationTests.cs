@@ -521,7 +521,11 @@ public sealed class LocalJwtAuthenticationTests
     [Fact]
     public async Task Disabled_mode_keeps_auth_endpoints_closed()
     {
-        using var factory = new WebApplicationFactory<PhoneStore.Api.Program>();
+        using var factory = new WebApplicationFactory<PhoneStore.Api.Program>().WithWebHostBuilder(builder =>
+            builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ApiAuthentication:Mode"] = "Disabled"
+            })));
         using var client = factory.CreateClient();
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable,

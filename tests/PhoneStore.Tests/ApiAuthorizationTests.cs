@@ -120,6 +120,11 @@ public sealed class ApiAuthorizationTests
 
     internal static WebApplicationFactory<PhoneStore.Api.Program> Host(PhoneStoreDbContext? db = null) =>
         new WebApplicationFactory<PhoneStore.Api.Program>().WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ApiAuthentication:Mode"] = "Disabled"
+            }));
             builder.ConfigureServices(services =>
             {
                 services.AddControllers().AddApplicationPart(typeof(ApiAccessProbeController).Assembly);
@@ -129,7 +134,8 @@ public sealed class ApiAuthorizationTests
                 services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, FixtureIdentity>("fixture", _ => { });
                 services.Configure<AuthenticationSchemeOptions>(ApiAccess.Scheme,
                     options => options.ForwardAuthenticate = "fixture");
-            }));
+            });
+        });
 
     private static async Task AssertDenial(HttpResponseMessage response, HttpStatusCode status)
     {

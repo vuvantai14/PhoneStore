@@ -15,9 +15,11 @@ root = Path(__file__).resolve().parents[2]
 project = "phonestore-restore-c2"
 env = {**os.environ, "MSSQL_SA_PASSWORD": secrets.token_urlsafe(32),
        "PRODUCT_UPLOADS_PATH": str(root / "src/PhoneStore.Web/wwwroot/uploads/products")}
-command = ["docker", "compose", "--env-file", os.devnull, "-p", project,
-           "-f", "docker-compose.yml", "-f", "docker-compose.restore.yml",
-           "-f", "docker-compose.net10.yml", "config"]
+compose_files = ["docker-compose.yml", "scripts/cd/docker-compose.business.yml"]
+command = ["docker", "compose", "--env-file", os.devnull, "-p", project]
+for compose_file in compose_files:
+    command.extend(["-f", compose_file])
+command.append("config")
 model = json.loads(subprocess.check_output(command + ["--no-path-resolution", "--format", "json"], cwd=root, env=env))
 services = model["services"]
 require(set(services) == {"db", "web", "api"}, "Unexpected business services")
