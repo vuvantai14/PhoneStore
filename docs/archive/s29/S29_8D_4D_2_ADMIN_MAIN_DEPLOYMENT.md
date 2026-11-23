@@ -11,7 +11,7 @@ Ngày thực hiện: 2026-11-02 (Asia/Bangkok). Người dùng đã phê duyệt
 | Runtime nguồn | `src/PhoneStore.Admin/obj/S29.8D.4C.1-20261102_155007187/app` |
 | Staging main | `src/PhoneStore.Admin/obj/S29.8D.4D.2-staging/20261102_163000_D4B-main` |
 | Runtime đích | `src/PhoneStore.Admin/bin/Debug/net8.0-windows` |
-| Manifest triển khai | `docs/S29_8D_4D_1_ADMIN_RUNTIME_SHA256.txt` |
+| Manifest triển khai | `docs/archive/s29/S29_8D_4D_1_ADMIN_RUNTIME_SHA256.txt` |
 | Hash runtime | **58/58 PASS** trước staging và sau copy |
 | PID Admin main mới | `4592` |
 | Executable | `src/PhoneStore.Admin/bin/Debug/net8.0-windows/PhoneStore.Admin.exe` |

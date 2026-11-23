@@ -23,7 +23,7 @@ PASS chỉ áp dụng phạm vi bằng chứng ghi trong từng dòng; không su
 | Lịch sử/chi tiết đơn | PARTIAL | OrdersController, PurchaseStore lọc UserId; ownership tests PASS, anonymous /orders và /orders/1→302. Chưa dữ liệu order để kiểm giao diện SQL. |
 | Thông tin tài khoản | MISSING | AccountController chỉ register/login/logout/access-denied, không profile action/view; /account và /account/profile→404. Layout chỉ hiển thị danh tính, không có quy trình tự xem/sửa hồ sơ. |
 
-Source chính: [controllers](../src/PhoneStore.Web/Controllers), [catalog reader](../src/PhoneStore.Data/Catalog/ProductCatalogReader.cs), [purchasing](../src/PhoneStore.Web/Purchasing).
+Source chính: [controllers](../../../src/PhoneStore.Web/Controllers), [catalog reader](../../../src/PhoneStore.Data/Catalog/ProductCatalogReader.cs), [purchasing](../../../src/PhoneStore.Web/Purchasing).
 
 ## 2. Admin WinForms
 
@@ -46,7 +46,7 @@ Người dùng xác nhận đăng nhập và hiển thị dữ liệu. Audit đ�
 | Tồn kho | PARTIAL | Có cột tồn trong sản phẩm và cảnh báo Dashboard/Reports; chưa có quy trình kiểm kê/điều chỉnh độc lập được xác minh; sửa tồn có P1-01. Không tự suy đây là tính năng bắt buộc mới. |
 | Báo cáo doanh thu | PASS dữ liệu rỗng / PARTIAL nghiệp vụ | Mở Báo cáo:40 SP/tồn740/0 doanh thu, không lỗi runtime; chưa dữ liệu đa trạng thái/ngày để đối chiếu. Source tổng/trend/average chỉ Completed. |
 
-Source chính: [MainForm](../src/PhoneStore.Admin/MainForm.cs), [controls](../src/PhoneStore.Admin/Controls), [management services](../src/PhoneStore.Business/Management).
+Source chính: [MainForm](../../../src/PhoneStore.Admin/MainForm.cs), [controls](../../../src/PhoneStore.Admin/Controls), [management services](../../../src/PhoneStore.Business/Management).
 
 ## 3. Backend và SQL Server
 

@@ -21,10 +21,10 @@ Thêm liveness và readiness trong `HealthController`. Readiness dùng chung act
 
 ## D. Files Changed
 
-- [HealthController.cs](../src/PhoneStore.Api/Controllers/HealthController.cs)
-- [ApiFoundationTests.cs](../tests/PhoneStore.Tests/ApiFoundationTests.cs)
-- [CatalogApiTests.cs](../tests/PhoneStore.Tests/CatalogApiTests.cs)
-- Báo cáo này và [PROGRESS.md](PROGRESS.md).
+- [HealthController.cs](../../../src/PhoneStore.Api/Controllers/HealthController.cs)
+- [ApiFoundationTests.cs](../../../tests/PhoneStore.Tests/ApiFoundationTests.cs)
+- [CatalogApiTests.cs](../../../tests/PhoneStore.Tests/CatalogApiTests.cs)
+- Báo cáo này và [PROGRESS.md](../../PROGRESS.md).
 
 ## E. Error Handling
 

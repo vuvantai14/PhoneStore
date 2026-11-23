@@ -16,7 +16,7 @@ Máy Windows 11 x64 build `26200` (25H2) có SDK **8.0.427** và **10.0.403**. `
 | Ngoài solution | CatalogImport, AcceptanceEnvironment | `net8.0` → `net10.0` |
 | Ngoài solution | PhoneStore.SqlIntegration | `net8.0-windows` → `net10.0-windows` |
 
-Tổng **11 project**. App build riêng dùng project graph hiện có. Các app và tool `net8.0` không thể tham chiếu thư viện chia sẻ đã đổi sang `net10.0`, nên đổi TFM đồng bộ trong nhánh nâng cấp. [global.json](../global.json) · [Solution](../PhoneStore.sln) · [Windows SDK và runtime](https://learn.microsoft.com/en-us/dotnet/core/install/windows) · [Chính sách hỗ trợ .NET](https://dotnet.microsoft.com/en-us/platform/support/policy)
+Tổng **11 project**. App build riêng dùng project graph hiện có. Các app và tool `net8.0` không thể tham chiếu thư viện chia sẻ đã đổi sang `net10.0`, nên đổi TFM đồng bộ trong nhánh nâng cấp. [global.json](../../../global.json) · [Solution](../../../PhoneStore.sln) · [Windows SDK và runtime](https://learn.microsoft.com/en-us/dotnet/core/install/windows) · [Chính sách hỗ trợ .NET](https://dotnet.microsoft.com/en-us/platform/support/policy)
 
 ## B. SDK and Package Compatibility
 
@@ -58,11 +58,11 @@ Hai Dockerfile đang dùng `sdk:8.0` và `aspnet:8.0`, publish framework-depende
 | Business | `75bfbc07a0ab…` | `9b20d979aa6a…` |
 | Acceptance | CT02 `aeddfa741bc0…` | `9b20d979aa6a…` |
 
-SQL dùng image `11927f5edc51…`. S34.2 có trên Git, các container giữ image cũ. Tag .NET 10 mặc định chuyển từ Debian sang Ubuntu 24.04. Ở bước build cách ly, chọn tag distro rõ ràng, kiểm thử timezone/culture, CA, healthcheck Bash, 8080, quyền mount ảnh và SQL TLS. Đồng bộ Docker SDK với pin repo; Dockerfile hiện restore bằng SDK của build image vì không copy `global.json` trước restore. Pin image mới riêng, không ghi đè tag/pin CT02 đang dùng và không đổi SQL image hoặc volume. [Base image change](https://learn.microsoft.com/en-us/dotnet/core/compatibility/containers/10.0/default-images-use-ubuntu) · [Web Dockerfile](../Dockerfile) · [API Dockerfile](../src/PhoneStore.Api/Dockerfile)
+SQL dùng image `11927f5edc51…`. S34.2 có trên Git, các container giữ image cũ. Tag .NET 10 mặc định chuyển từ Debian sang Ubuntu 24.04. Ở bước build cách ly, chọn tag distro rõ ràng, kiểm thử timezone/culture, CA, healthcheck Bash, 8080, quyền mount ảnh và SQL TLS. Đồng bộ Docker SDK với pin repo; Dockerfile hiện restore bằng SDK của build image vì không copy `global.json` trước restore. Pin image mới riêng, không ghi đè tag/pin CT02 đang dùng và không đổi SQL image hoặc volume. [Base image change](https://learn.microsoft.com/en-us/dotnet/core/compatibility/containers/10.0/default-images-use-ubuntu) · [Web Dockerfile](../../../Dockerfile) · [API Dockerfile](../../../src/PhoneStore.Api/Dockerfile)
 
 ## F. CI/CD Compatibility
 
-Workflow hiện dùng Windows để restore, build Release và chạy PhoneStore.Tests với setup-dotnet `8.0.x`. Ubuntu đã có job build Web/API image và validate Compose. Khi nâng cấp, cài SDK theo `global.json` và in `dotnet --version` trong job. Build riêng ba project ngoài solution. Giữ SQL integration ghi dữ liệu ngoài CI mặc định cho tới khi có disposable SQL target được duyệt. Xác minh Linux image, smoke endpoints, test discovery và artifacts. Workflow hiện không deploy production. [CI workflow](../.github/workflows/ci.yml) · [setup-dotnet](https://github.com/actions/setup-dotnet/blob/main/README.md)
+Workflow hiện dùng Windows để restore, build Release và chạy PhoneStore.Tests với setup-dotnet `8.0.x`. Ubuntu đã có job build Web/API image và validate Compose. Khi nâng cấp, cài SDK theo `global.json` và in `dotnet --version` trong job. Build riêng ba project ngoài solution. Giữ SQL integration ghi dữ liệu ngoài CI mặc định cho tới khi có disposable SQL target được duyệt. Xác minh Linux image, smoke endpoints, test discovery và artifacts. Workflow hiện không deploy production. [CI workflow](../../../.github/workflows/ci.yml) · [setup-dotnet](https://github.com/actions/setup-dotnet/blob/main/README.md)
 
 ## G. Recommended Upgrade Sequence
 

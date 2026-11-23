@@ -35,7 +35,7 @@ Kiểm tra viewport chính xác **375/768/1024/1440 px**. Người dùng tự đ
 - Loading/disabled/pageshow reset PASS bằng sự kiện DOM tổng hợp; không coi đây là bằng chứng hoàn tất một POST nghiệp vụ thật.
 - Reduced-motion nhận diện đúng, transition còn0.00001s. Không có JavaScript exception trong các lượt browser acceptance.
 - Anonymous `/checkout`, `/orders`, `/orders/1`, `/account/profile` HTTP302 tới login.
-- 38 screenshots tại [artifacts/S29.9F](artifacts/S29.9F/); ảnh Orders/Profile1024 đã cập nhật sau sửa header.
+- 38 screenshots tại [artifacts/S29.9F](../../artifacts/S29.9F/); ảnh Orders/Profile1024 đã cập nhật sau sửa header.
 
 ## Lỗi được sửa
 

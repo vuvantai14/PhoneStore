@@ -56,7 +56,7 @@ pre-commit rollback using real services and independent connections. HTTP mode s
 only its own test Web at 127.0.0.1:5016 with an explicit test connection, verifies its SQL
 session before POSTs, uses separate in-memory credentials/cookies, and stops only that helper.
 It adds a Customer and one checkout order, then cancels it. It never uses a main credential.
-See docs/S29_8C_COMMERCE_REPORT.md for exact results and retained fixture counts, including
+See docs/archive/s29/S29_8C_COMMERCE_REPORT.md for exact results and retained fixture counts, including
 the first HTTP run that stopped on a test assertion before any checkout.
 
 ## S29.8C.5 Admin acceptance
@@ -68,7 +68,7 @@ using credentials, so it does not test full shell login. The fixture is retained
 `--execute-approved-s29.8c.5-http-sync` uses a new test Customer to check Admin Confirmed
 is visible in Customer HTTP history/detail, then repeated cancellation and restock.
 Use only after explicit approval for test writes; never blindly rerun either mode.
-Results and deployment artifacts: docs/S29_8C_5_ACCEPTANCE_DEPLOYMENT.md.
+Results and deployment artifacts: docs/archive/s29/S29_8C_5_ACCEPTANCE_DEPLOYMENT.md.
 
 ## S29.8D.2A Admin CRUD (opt-in, writes and scoped cleanup)
 
@@ -97,7 +97,7 @@ dotnet build tests/PhoneStore.SqlIntegration/PhoneStore.SqlIntegration.csproj --
 tests/PhoneStore.SqlIntegration/bin/S29.8D.2A/PhoneStore.SqlIntegration.exe --execute-approved-s29.8d.2a
 ```
 
-Results/remaining coverage: docs/S29_8D_2A_ADMIN_CRUD_AUDIT.md.
+Results/remaining coverage: docs/archive/s29/S29_8D_2A_ADMIN_CRUD_AUDIT.md.
 
 ## S29.8D.2B content validation and file safety
 
@@ -124,7 +124,7 @@ After unlink or a DB failure/uncertain commit, valid files are retained with a n
 do not expect production cleanup to delete these immediately. Controlled test cleanup
 verifies no references after removing only its fixture rows.
 
-Report: docs/S29_8D_2B_IMAGE_VALIDATION.md. D2A expectations were updated to this
+Report: docs/archive/s29/S29_8D_2B_IMAGE_VALIDATION.md. D2A expectations were updated to this
 retention policy; its historical result remains evidence for the older implementation.
 
 ## S29.8D.2C.1 scoped existing test Admin credential
@@ -143,4 +143,4 @@ files; post-commit SELECT reports only a boolean match. An attempt marker preven
 blind replay; on any failure check read-only outcome, never automatically retry.
 The new credential replaces an unknown old fixture password and is retained.
 User login to the real test Admin window is a separate manual step. Main is forbidden.
-Evidence and pending CRUD matrix: docs/S29_8D_2C_ADMIN_WINFORMS_ACCEPTANCE.md.
+Evidence and pending CRUD matrix: docs/archive/s29/S29_8D_2C_ADMIN_WINFORMS_ACCEPTANCE.md.

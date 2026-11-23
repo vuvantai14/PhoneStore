@@ -1,447 +1,111 @@
 # PhoneStore Project Context
 
+> Tài liệu mô tả bối cảnh dự án, kiến trúc hiện hành, thực thể nghiệp vụ và quy tắc phát triển cho PhoneStore.
+> Trạng thái vận hành, kết quả kiểm thử và bước tiếp theo mới nhất luôn nằm tại [`docs/PROGRESS.md`](docs/PROGRESS.md); lịch sử mốc cũ (`S1–S35`) lưu tại [`docs/archive/PROGRESS_HISTORY.md`](docs/archive/PROGRESS_HISTORY.md).
+
 ## 1. Project
 
-Topic:
-Xây dựng hệ thống quản lý và bán điện thoại di động.
+- **Đề tài**: Xây dựng hệ thống quản lý và bán điện thoại di động (**PhoneStore**).
+- **Nền tảng đã xác minh**:
+  - C# / **.NET 10** (`net10.0`, `net10.0-windows`), SDK `10.0.403` theo [`global.json`](global.json).
+  - **Customer Web** (`PhoneStore.Web`): ASP.NET Core MVC, Razor Views, Cookie Authentication, Session.
+  - **REST API** (`PhoneStore.Api`): ASP.NET Core Web API, Local JWT (`HS256`), Refresh Token Rotation, Swagger (`Development` only).
+  - **Admin Desktop** (`PhoneStore.Admin`): Windows Forms (`net10.0-windows`), mặc định kết nối REST API (`RestApi`) và hỗ trợ dự phòng `DirectSql`.
+  - **ORM & Database**: Entity Framework Core `10.0.15` + Microsoft SQL Server 2022 (`PhoneStoreDB`).
+  - **Containerization & CI/CD**: Docker Compose (Linux containers cho `web`, `api`, `db`) và GitHub Actions + GHCR.
 
-Technology:
-- C#
-- ASP.NET Core MVC: Customer Web
-- Windows Forms: Admin Desktop
-- Entity Framework Core
-- Microsoft SQL Server
-
-Web và Admin dùng chung dữ liệu nghiệp vụ.
+Customer Web, REST API và Admin WinForms dùng chung tầng nghiệp vụ và chung một cơ sở dữ liệu nghiệp vụ `PhoneStoreDB`.
 
 ## 2. Architecture
 
-Projects:
-- PhoneStore.Models
-- PhoneStore.Data
-- PhoneStore.Business
-- PhoneStore.Web
-- PhoneStore.Admin
+Solution [`PhoneStore.sln`](PhoneStore.sln) gồm 8 project (`6` ứng dụng/thư viện trong `src/`, `1` bộ test tự động, `1` công cụ bootstrap Admin), cộng 3 project phụ trợ ngoài solution (`tools/PhoneStore.CatalogImport`, `tools/PhoneStore.AcceptanceEnvironment`, `tests/PhoneStore.SqlIntegration`):
 
-Dependency:
+```text
+PhoneStore.Models
+  ↑
+PhoneStore.Data (EF Core 10, PhoneStoreDbContext, Migrations)
+  ↑
+PhoneStore.Business (Catalog, Authentication, Purchasing, Management, Reporting, AdminApi clients)
+  ↑
+  ├── PhoneStore.Web    (Customer Web MVC; gọi Api cho Product Detail khi CatalogApi:Enabled = true)
+  ├── PhoneStore.Api    (REST API; LocalJwt + Refresh Token + Admin/Customer/Public endpoints)
+  └── PhoneStore.Admin  (WinForms; mặc định Mode = RestApi -> PhoneStore.Api; dự phòng DirectSql)
+```
 
-Models
-↑
-Data
-↑
-Business
-↑
-├── Web
-└── Admin
-
-Rules:
+Quy tắc kiến trúc:
 - Không circular dependency.
-- Business logic dùng chung đặt trong Business layer.
-- Data access đặt trong Data layer.
-- Không hard-code dữ liệu nghiệp vụ.
-- Không tự thêm chức năng ngoài scope.
+- Business logic dùng chung đặt trong `PhoneStore.Business`; data access đặt trong `PhoneStore.Data`.
+- Trong chế độ mặc định `AdminDataAccess:Mode = RestApi`, `PhoneStore.Admin` không đăng ký `PhoneStoreDbContext` (không fallback ngầm sang SQL trực tiếp).
+- Không hard-code dữ liệu nghiệp vụ; không tự thêm chức năng ngoài phạm vi được yêu cầu.
+- Chi tiết kiến trúc hiện hành xem tại [`docs/architecture/SYSTEM_ARCHITECTURE.md`](docs/architecture/SYSTEM_ARCHITECTURE.md).
 
 ## 3. Actors
 
-Customer:
-- Trang chủ
-- Xem sản phẩm
-- Tìm kiếm
-- Lọc
-- Chi tiết sản phẩm
-- Đăng ký
-- Đăng nhập
-- Tài khoản
-- Giỏ hàng
-- Đặt hàng
-- Xem đơn hàng
-- Đăng xuất
-
-Admin:
-- Đăng nhập
-- Dashboard
-- Quản lý điện thoại
-- Quản lý thương hiệu
-- Quản lý danh mục
-- Quản lý khách hàng
-- Quản lý đơn hàng
-- Báo cáo/thống kê
-- Đăng xuất
+- **Customer (Customer Web & Customer API)**: Trang chủ, xem danh sách/chi tiết sản phẩm, tìm kiếm/lọc/sắp xếp/phân trang, đăng ký, đăng nhập, quản lý hồ sơ cá nhân, giỏ hàng, đặt hàng (Checkout), xem lịch sử/chi tiết đơn hàng, hủy đơn `Pending`, đăng xuất.
+- **Admin (Admin WinForms qua REST API)**: Đăng nhập, Dashboard KPI, quản lý sản phẩm & hình ảnh, quản lý thương hiệu (`Brands`), quản lý danh mục (`Categories`), quản lý khách hàng (xem/sửa/khóa-mở khóa), quản lý đơn hàng & cập nhật trạng thái, báo cáo/thống kê doanh thu, đăng xuất.
 
 ## 4. Database
 
-Database:
-PhoneStoreDB
+- **Cơ sở dữ liệu chính duy nhất**: `PhoneStoreDB` trên **Docker SQL Server 2022**:
+  - Docker Web/API kết nối `db,1433` trên bridge network nội bộ.
+  - Local Web/API (`dotnet run`) kết nối `127.0.0.1,14334` thông qua `.NET User Secrets` (ngoài Git, không lưu mật khẩu trong `appsettings.json`).
+  - Windows SQL Server `localhost\PhoneStoreDB` chỉ giữ làm bản dữ liệu cũ lưu trữ (read-only archive); server lịch sử `taiiiii\SERVER` không còn tồn tại/sử dụng.
+- **9 bảng trong [`PhoneStoreDbContext`](src/PhoneStore.Data/Context/PhoneStoreDbContext.cs)** (3 EF Core migrations: `InitialCreate`, `EnforceSingleAdmin`, `AddApiRefreshTokens`):
+  1. `Roles` (1–N `Users`)
+  2. `Users` (1–N `Orders`, 1–N `ApiRefreshTokens`; ràng buộc tối đa 1 tài khoản `Admin` qua filtered unique index `UX_Users_SingleAdmin` + `CK_Roles_AdminIdentity`)
+  3. `Brands` (1–N `Products`)
+  4. `Categories` (1–N `Products`)
+  5. `Products` (1–N `ProductImages`, 1–N `OrderDetails`)
+  6. `ProductImages`
+  7. `Orders` (1–N `OrderDetails`)
+  8. `OrderDetails`
+  9. `ApiRefreshTokens` (lưu SHA-256 hash refresh token, `FamilyId`, rotation & reuse detection — không lưu token plaintext)
+- Không thêm/sửa bảng hay áp dụng migration lên database đang vận hành khi chưa có phê duyệt tường minh.
+- Chi tiết schema xem tại [`docs/architecture/DATABASE_DESIGN.md`](docs/architecture/DATABASE_DESIGN.md).
 
-Business tables:
-1. Roles
-2. Users
-3. Brands
-4. Categories
-5. Products
-6. ProductImages
-7. Orders
-8. OrderDetails
+## 5. Authentication, Authorization & Business Rules
 
-Relations:
+- **Xác thực & phân quyền** (chi tiết tại [`docs/architecture/AUTHENTICATION_AND_JWT.md`](docs/architecture/AUTHENTICATION_AND_JWT.md)):
+  - Mật khẩu hash bằng `PasswordHasher<User>` (không dùng bảng ASP.NET Identity riêng).
+  - Customer Web dùng Cookie Auth (`PhoneStore.Auth`), gắn chủ sở hữu cho `SessionCart`/`CheckoutToken`, kiểm tra tài khoản active.
+  - REST API hỗ trợ `ApiAuthentication:Mode = LocalJwt` (`HS256`, `typ=at+jwt`), access token ngắn hạn (`15` phút), refresh token lưu hash có rotation & phát hiện tái sử dụng (`ReuseDetected`), kiểm tra DB role & `IsActive` trên từng request (`Api.Customer`, `Api.Admin`).
+  - Quy tắc Single Admin: chỉ tối đa 1 tài khoản vai trò `Admin` (tính cả inactive); đăng ký công khai luôn tạo vai trò `Customer`.
+- **Sản phẩm & ảnh**:
+  - `Price > 0`, `StockQuantity >= 0`; sản phẩm thuộc 1 `Brand` và 1 `Category` hợp lệ.
+  - Ưu tiên ngừng kinh doanh (`IsActive = false`, soft-deactivation) thay vì xóa vật lý khi đã có dữ liệu lịch sử.
+  - Cập nhật tồn kho sản phẩm áp dụng bảo vệ tồn kho gốc (`OriginalStockQuantity` optimistic guard).
+  - Ảnh sản phẩm chia sẻ qua thư mục `src/PhoneStore.Web/wwwroot/uploads/products` (Local API cấu hình tương đối qua `appsettings.Development.json`; Docker bind-mount `api` `rw` và `web` `ro`), chỉ chấp nhận JPEG/PNG hợp lệ ≤ 10 MB, tên GUID an toàn.
+- **Đơn hàng & tồn kho**:
+  - Chuỗi trạng thái: `Pending → Confirmed → Shipping → Completed`; hủy hợp lệ từ `Pending → Cancelled` (Customer/Admin) hoặc `Confirmed → Cancelled` (Admin); `Completed` và `Cancelled` là trạng thái kết thúc.
+  - `OrderDetail.Quantity > 0`; `UnitPrice` lưu giá tại thời điểm mua (không thay đổi khi `Product.Price` đổi).
+  - `TotalAmount = SUM(OrderDetail.Quantity * OrderDetail.UnitPrice)`.
+  - Checkout và hủy đơn thực thi trong transaction `Serializable` kèm khóa cập nhật tồn kho nguyên tử và chống gửi trùng đơn (`Idempotency-Key` / submission guard); hủy đơn hoàn tồn đúng 1 lần.
+  - Doanh thu báo cáo (`ReportingCalendar`, múi giờ nghiệp vụ UTC+7) chỉ tính đơn `Completed`.
 
-Roles 1-N Users
-Users 1-N Orders
-Brands 1-N Products
-Categories 1-N Products
-Products 1-N ProductImages
-Orders 1-N OrderDetails
-Products 1-N OrderDetails
+## 6. Web Screens (`W01–W11`)
 
-Do not add tables unless explicitly required by a later approved step.
+`W01 Home` · `W02 Product List` · `W03 Product Detail` · `W04 Cart` · `W05 Login` · `W06 Register` · `W07 Checkout` · `W08 Order Success` · `W09 Account/Profile` · `W10 My Orders` · `W11 Order Detail`.
 
-Local configuration:
-- Connection string key: `ConnectionStrings:PhoneStoreConnection`.
-- Configure a verified SQL Server instance and database `PhoneStoreDB` in
-  `src/PhoneStore.Web/appsettings.Development.json` (no secrets), or use
-  environment variable `ConnectionStrings__PhoneStoreConnection` for Web and tooling.
-- Development targets `taiiiii\SERVER`, database `PhoneStoreDB`, using Windows Authentication.
-- Restore tooling: `dotnet tool restore`.
-- Apply migration from repository root:
-  `dotnet ef database update --project src/PhoneStore.Data --startup-project src/PhoneStore.Data`.
-- Inspect database tables and Roles after applying; do not assume database success from build.
+## 7. Admin Screens (`A01–A10`)
 
-## 5. Business Rules
-
-Product:
-- Price > 0
-- StockQuantity >= 0
-- Product belongs to Brand.
-- Product belongs to Category.
-- Prefer deactivation instead of physical deletion when historical
-  business data exists.
-
-Order statuses:
-
-Pending
-→ Confirmed
-→ Shipping
-→ Completed
-
-Alternative:
-
-Pending
-→ Cancelled
-
-OrderDetail:
-- Quantity > 0
-- UnitPrice stores purchase-time price.
-- Old order price must not change when Product.Price changes.
-
-Order total:
-
-TotalAmount =
-SUM(OrderDetail.Quantity * OrderDetail.UnitPrice)
-
-Checkout later must be transactional.
-
-## 6. Web Screens
-
-W01 Home
-W02 Product List
-W03 Product Detail
-W04 Cart
-W05 Login
-W06 Register
-W07 Checkout
-W08 Order Success
-W09 Account
-W10 My Orders
-W11 Order Detail
-
-## 7. Admin Screens
-
-A01 Login
-A02 Dashboard
-A03 Product Management
-A04 Product Add/Edit
-A05 Brand Management
-A06 Category Management
-A07 Customer Management
-A08 Order Management
-A09 Order Detail
-A10 Reports
+`A01 Login` · `A02 Dashboard` · `A03 Product Management` · `A04 Product Add/Edit` · `A05 Brand Management` · `A06 Category Management` · `A07 Customer Management` · `A08 Order Management` · `A09 Order Detail` · `A10 Reports`.
 
 ## 8. UI/UX Direction
 
-IMPORTANT:
-This section is for later UI steps.
-Do NOT implement UI during S8.
-
-Design direction:
-- Modern phone/e-commerce store
-- Clean
-- Professional
-- White/light background
-- Blue primary accent
-- Clear visual hierarchy
-- Good whitespace
-- Consistent typography
-- Consistent spacing
-- Consistent buttons/cards/forms
-- Responsive Web
-
-Customer Web:
-- Modern e-commerce appearance
-- Responsive desktop/tablet/mobile
-- Reusable components/partials
-- Clear product cards
-- Clear search/filter UX
-- Proper form states
-- Avoid default Bootstrap appearance
-
-Admin:
-- Professional desktop management interface
-- Sidebar
-- Header/top area
-- Main content
-- Clear DataGridView/table
-- Search/filter/action controls
-- Consistent Add/Edit forms
-
-Reference images provided in future UI tasks are DESIGN REFERENCES only.
-
-May copy:
-- layout
-- hierarchy
-- spacing
-- proportions
-- design language
-
-Must NOT copy:
-- fake products
-- fake prices
-- fake customers
-- fake orders
-- fake statistics
-- unsupported features
-
-Real application data must come from the database.
-
-For UI tasks:
-- inspect available UI/UX/frontend skills first
-- use appropriate skills when available
-- inspect reference images before implementation
-- do not redesign unrelated screens
+- Phong cách cửa hàng điện thoại hiện đại, sáng sủa (nền trắng/sáng, điểm nhấn xanh dương, phân cấp chữ rõ ràng, responsive desktop/tablet/mobile cho Web; sidebar + DataGridView + form nhất quán có hỗ trợ DPI cho WinForms).
+- Mọi ảnh mẫu tham khảo UI chỉ dùng cho bố cục và ngôn ngữ thiết kế; không sao chép sản phẩm/giá/đơn hàng/thống kê giả; toàn bộ dữ liệu hiển thị phải đến từ database.
+- Khi thực hiện tác vụ UI: kiểm tra các skill UI/UX sẵn có trước, không tự thiết kế lại màn hình ngoài phạm vi yêu cầu.
 
 ## 9. Coding Rules
 
-Before every future task:
-
-1. Read CONTEXT.md first.
-2. Inspect only files relevant to the current step.
-3. Preserve working code.
-4. Reuse existing implementation where appropriate.
-5. Do not add features outside the requested step.
-6. Do not add fake business data.
-7. Do not add unnecessary packages.
-8. Do not silently change database design.
-9. Build/test affected projects after changes.
-10. Fix errors caused by the current step.
-11. Stop after the requested step.
+1. Đọc [`AGENTS.md`](AGENTS.md) và [`docs/PROGRESS.md`](docs/PROGRESS.md) trước khi lập kế hoạch; đọc `CONTEXT.md` khi cần kiểm tra luật nghiệp vụ hoặc kiến trúc nền.
+2. Chỉ đọc và sửa các file liên quan trực tiếp đến tác vụ hiện tại.
+3. Bảo toàn code đang chạy ổn định, tái sử dụng tầng `Business`/`Data` sẵn có.
+4. Không thêm tính năng, bảng DB, package hay dữ liệu giả ngoài yêu cầu.
+5. Không đưa thông tin đăng nhập, mật khẩu, token hoặc connection string chứa secret vào Git.
+6. Build và chạy test phù hợp sau khi sửa code; khắc phục lỗi phát sinh do thay đổi của mình rồi dừng đúng phạm vi.
 
 ## 10. Current Progress
 
-### Latest verified milestone — S29.4 (2026-11-02)
-
-Primary progress source: [docs/PROGRESS.md](docs/PROGRESS.md). This section is a short summary, not a live environment check.
-- Local environment restored to .NET SDK 8.0.427, EF Core 8.0.28, SQL Server `localhost` with Windows Authentication.
-- AdminBootstrap exists as a separate, controlled tool. Registration is Customer-only; the official rule permits at most one Admin, including inactive accounts.
-- VERIFIED SQL isolation test: new `PhoneStoreDB_MigrationTest` received InitialCreate and `20261102122856_EnforceSingleAdmin`; filtered unique index and role-identity constraint were verified. Duplicate Admin was rejected, multiple Customers accepted, and test rows rolled back (Users = 0).
-- VERIFIED S29.4 build: 0 warnings/errors; unit tests: 72/72 passed. SQL migration tests and unit tests are separate evidence.
-- PARTIAL UI: Web Home/Products/Login returned HTTP 200 at `http://localhost:5015`; WinForms displayed its responsive login window. Both retained the main database configuration. HTTP smoke emitted an HTTPS redirect-port warning; authenticated business workflows were not tested.
-- Main `PhoneStoreDB` remains ONLINE with only InitialCreate applied: **EnforceSingleAdmin has NOT been applied and no Admin account has been created**. The last SELECT recorded Roles = 2 and all seven other business tables empty.
-- Next steps require separate approval for applying the migration to the main database and creating the first Admin. No catalog import/seed is authorized. See PROGRESS.md for detailed evidence, risks and pending work.
-
-### Historical milestones — retained as originally recorded
-
-The S1–S17.3.1 entries below describe previous environments and observations, including the old server and catalog. They do not establish current data, connectivity or readiness; use the latest summary and PROGRESS.md above.
-
-Completed (historical record):
-- S1 Scope
-- S2 Functional Analysis
-- S3 Use Cases / Business Flows
-- S4 Screen Design / Mapping
-- S5 Database Design
-- S6 Architecture Design
-- S7 Solution Initialization
-- S8 Data Foundation
-- S9 Customer Web UI Foundation + Home + Products
-- S10 Product Detail + Product Browsing Polish
-- S11 Customer Authentication
-- S11.5 Customer UI/UX Final Polish
-- S12 Cart + Checkout + Order Creation
-- S13 WinForms Admin Login + Admin UI Foundation
-- S14 Admin Brands + Categories + Products + Product Images
-- S15 Admin Customer + Order Management
-- S16 Admin Dashboard + Reports / Statistics
-- S17 Full System Testing / Regression Test
-
-S8 completed:
-- Entities created.
-- EF Core 8.0.28 configured.
-- PhoneStoreDbContext configured.
-- InitialCreate migration created and inspected.
-- PhoneStoreDB created on `taiiiii\SERVER` using Windows Authentication.
-- Database update verified: 8 business tables and `__EFMigrationsHistory` present;
-  only Admin/Customer roles seeded; all 7 other business tables empty.
-- Build verified: 0 warnings, 0 errors.
-
-S9 completed:
-- Customer Web UI foundation and shared layout.
-- Home with newest active products, database brand/category navigation and empty states.
-- Product List at `/products`; reusable product card with local image fallback.
-- Server-side search/filter/sort through Web → Business → Data.
-- Responsive foundation verified at 1440/820/390/320 px without horizontal overflow.
-- Build verified: 0 warnings, 0 errors; Home and /products return HTTP 200.
-- No fake business data or schema/migration changes.
-- Catalog is empty: validation/query execution verified; populated-result behavior remains unverified.
-
-S10 completed:
-- Product Detail at `/products/{id}` through existing read service; active products only.
-- Product image gallery with keyboard-accessible thumbnail buttons and local fallback.
-- Specifications omit empty values; description is rendered as safely encoded text.
-- Related products: up to 4 active products in the same brand/category, excluding current product.
-- Shared Product Card → Detail navigation.
-- Responsive Product Detail; clean 404 verified at 1440/820/390/320 px.
-- Build verified: 0 warnings, 0 errors; S9 browser regression checks passed.
-- No fake business data or migration/schema changes.
-- Product Detail runtime test pending real product data (including gallery and inactive-product verification).
-
-S11 completed:
-- Customer registration with normalized email, duplicate-email handling and database Customer role assignment.
-- Customer login/logout; secure PasswordHasher<User> hashing; no Identity tables.
-- Cookie authentication with UserId/FullName/Email/Role claims, RememberMe and local-only ReturnUrl.
-- Anti-forgery on authentication POSTs; inactive login blocked and inactive sessions revoked.
-- Authentication-aware header, responsive Login/Register and Customer authorization policy.
-- Runtime/security checks passed; temporary accounts created through Register and removed afterward.
-- Build verified: 0 warnings, 0 errors; S9/S10 browsing regression checks passed.
-- No migration/schema changes. Product Detail still awaits real product data for populated runtime checks.
-
-S11.5 completed:
-- Customer UI/UX final polish; existing white/blue/navy visual identity preserved.
-- Header/footer proportions refined; desktop header remains on one row where space allows.
-- Home and Products spacing refined with shared spacing/control tokens.
-- Product and existing Cart empty states refined without fake business data.
-- Login/Register refined with consistent card width, spacing, focus and touch targets.
-- Customer responsive consistency verified at 1440/1024/1000/820/701/700/390/320 px.
-- Home, Products, Cart, Login/Register and Product Detail 404 verified without horizontal overflow.
-- Search/filter/sort regression checks and invalid authentication forms passed; backend/authentication code unchanged.
-- Build verified: 0 warnings, 0 errors; no data inserted, schema changes or migrations.
-- Populated Product Detail/gallery/related products and authenticated-session runtime checks await real data/accounts.
-- No additional S12 functionality implemented; existing S12 implementation preserved.
-
-S12 completed:
-- Session cart stores ProductId/Quantity; add/update/remove use POST with anti-forgery.
-- Cart indicator reads Session; cart totals use current database prices.
-- Customer-only checkout with safe Login ReturnUrl, shipping prefill and validation.
-- Transactional Order/OrderDetails creation with server-side prices, UnitPrice snapshot and Pending status.
-- Stock revalidated inside a Serializable transaction and reduced only with successful order commit.
-- Cart clears after commit; PRG and a per-submission in-memory guard prevent duplicate submissions on this Web instance.
-- Order Success enforces authenticated order ownership; responsive Cart/Checkout/Success views.
-- Empty-state/security/browser regression checks passed; temporary Register accounts removed.
-- Build verified: 0 warnings, 0 errors; schema unchanged and no migration added.
-- Full purchase-flow runtime test pending real product data (including success refresh and cross-customer order access).
-- Session cart and submission guard currently use in-process memory.
-
-S13 completed:
-- WinForms Admin authentication through Business → existing AuthUserStore/Data → PhoneStoreDB.
-- Shared PasswordHasher<User>; active Admin role required, Customer/inactive/invalid credentials blocked.
-- Safe in-memory Admin session with identity only; logout disposes shell, clears session and returns to a fresh LoginForm.
-- Admin Login UI with Vietnamese validation, masked password, show/hide, Enter submit and safe connection/error messages.
-- Main Admin shell, persistent sidebar, current-page/account header, Dashboard foundation and reusable module placeholder.
-- Dock/TableLayoutPanel desktop foundation with resizing and DPI scaling; screenshots verified at 120 DPI.
-- Exact startup/configuration/DI and invalid login against SQL verified; isolated authentication/UI/lifecycle checks passed without database writes.
-- Real Admin authentication and S15 management navigation verified using the intentional initial Admin account.
-- Real Customer/inactive login runtime checks also await existing accounts; role/inactive rejection verified in isolated service tests.
-- Customer Web preserved; browsing/search/filter/sort, Detail 404, anonymous checkout protection and invalid auth forms regression checks passed.
-- Restore/build verified: 0 warnings, 0 errors; no schema/migration changes or fake data added.
-
-S14 completed:
-- Brand/Category management: database list/search, Add/Edit dialogs, activate/deactivate, trimmed names and safe unique-constraint validation.
-- Product management: database search and brand/category/status filters, Add/Edit specifications, active/historical lookup handling and business-side validation/timestamps.
-- Product image management: multiple local images, transactional primary-image changes, nonnegative display order and safe association removal.
-- Admin management uses Business → Data → the same PhoneStoreDB as Customer Web; authentication/session and S13 shell preserved.
-- Image storage uses configured `ProductImages:UploadsDirectory`, resolved against Admin AppContext.BaseDirectory; development value `../../../../PhoneStore.Web/wwwroot/uploads/products` targets Web wwwroot.
-- Deployment can override `ProductImages__UploadsDirectory` with an absolute/shared Web uploads directory accessible to Admin; database URLs remain `/uploads/products/<generated-guid>.<jpg|jpeg|png|webp>`.
-- Images validate format/signature and a 10 MB limit. Only unreferenced generated files inside the managed directory are deleted; unsafe cleanup or uncertain commit outcomes retain files and may require manual orphan cleanup.
-- Verification passed: 62 lookup and 69 product service assertions, 46 lookup and 44 product UI assertions at 120 DPI, 17 local storage checks and 13 write-blocked checks against the real SQL instance.
-- Exact Admin startup/configuration/DI and normal `dotnet run` Login window verified without authentication bypass; Customer browsing/search/filter/sort, responsive empty states, Detail 404 and anonymous/auth-form protection regression checks passed.
-- Restore/build verified: 0 warnings, 0 errors; no schema changes, migrations, fake seed or business database writes.
-- One intentional Admin account and real S14 catalog data are present. Customer/order runtime integration remains pending a real Customer checkout.
-- Customer/order management is implemented in S15; dashboard statistics and reports remain unimplemented.
-
-S15 completed:
-- Admin Customer management lists only Customer-role users, supports name/email/phone search, status filter, profile detail/edit and activate/deactivate without exposing PasswordHash.
-- Admin Order management provides newest-first database list, search, status filter and read-only detail with historical OrderDetail.UnitPrice and stored TotalAmount.
-- Business layer enforces Pending → Confirmed/Cancelled, Confirmed → Shipping/Cancelled and Shipping → Completed; Completed and Cancelled are terminal.
-- Status updates reload and lock the current order in a Serializable transaction; stale or invalid transitions are rejected.
-- Cancellation restores each product's stock exactly once in the same transaction; normal status updates do not change stock.
-- Customer Web now provides protected `/orders` history and owned `/orders/{id}` detail so Admin status changes appear from the shared PhoneStoreDB; existing ownership checks remain intact.
-- Real Admin login, production Customer/Order controls, real SQL reads/filters and Customer ownership queries verified without database mutations. Anonymous Customer order routes redirect to login.
-- Home, Products, Product Detail 404, Cart and Login regression routes passed; S14 catalog data remains unchanged.
-- Database currently has no Customer or Order rows, so real checkout, populated Admin order detail/status flow and cancellation stock restoration remain runtime pending real Customer order data; no fake order was created.
-- Restore/build verified: 0 warnings, 0 errors; no schema change, migration or fake seed added.
-
-S16 completed:
-- Admin Dashboard uses real PhoneStoreDB statistics for product, customer, order and completed revenue summaries.
-- Order status statistics, recent orders, best-selling products and active low-stock products are displayed with clear empty states.
-- Reports screen supports inclusive date-range reporting for completed revenue, orders, product sales and current inventory.
-- Best-seller calculations use historical OrderDetail.UnitPrice and consistently include Confirmed, Shipping and Completed orders.
-- Reporting queries are read-only, asynchronous and database-aggregated; no fake statistics were added.
-- Built-in WinForms rendering provides useful status and revenue charts without an additional package.
-- Real Admin UI and SQL comparison passed with current data; Customer Web and S14/S15 navigation regression checks passed.
-- Build verified: 0 warnings, 0 errors; no database schema change or migration added.
-
-S17 completed:
-- Full-system regression covered Customer Web, Admin, Business, Data, SQL Server and cross-application integration.
-- Added focused xUnit integration tests for authentication, checkout, ownership, order transitions and cancellation stock restoration: 26 passed, 0 failed, 0 skipped.
-- Customer Web runtime and responsive smoke tests passed at 1440, 768 and 375 px; protected routes, product 404, images and overflow were verified.
-- Existing real order was completed through the normal Admin business workflow; Customer order status, Dashboard/Reports revenue and unchanged stock were verified.
-- Admin authentication, catalog controls, Dashboard and Reports production harnesses passed; destructive catalog tests remained isolated from PhoneStoreDB.
-- Testing evidence is documented in `docs/S17_TESTING.md`, including explicit NOT TESTED manual visual cases.
-- Final database retains 41 products, 1 Customer, 1 Completed order and the demonstration catalog; no fake business data was added.
-- Restore/build/test verified with 0 warnings, 0 errors and 0 failed tests; database schema and migrations unchanged.
-
-Demo catalog:
-- 40 realistic phone catalog products imported for project demonstration and testing across 8 required brands.
-- Category `Điện thoại thông minh` is active; catalog images are served from `/uploads/products/`.
-- The explicit, transactional and idempotent utility is `tools/PhoneStore.CatalogImport`; it never runs from Web or Admin startup.
-- Existing manual product data was preserved; no database schema change or migration was created.
-
-S17.1 status (19/10/2026):
-- Customer Web functional verification is PARTIAL; evidence and the manual checklist are in `docs/S17_1_CUSTOMER_WEB_TEST.md`.
-- Restore succeeded; build passed with 0 warnings/0 errors; 26/26 isolated tests passed.
-- Read-only browser checks passed for Login/Register anti-forgery forms, anonymous protected-route redirects and local ReturnUrl enforcement.
-- Current PhoneStoreDB baseline and DB-backed Home/Products/cart/authenticated pages could not be rerun because the verified `MSSQL$SERVER` service was stopped and this session lacked permission to start it (SQL error 26).
-- No live customer/order was created, no existing Completed order was changed, and schema/migrations were unchanged.
-- Remaining manual work: start `taiiiii\SERVER`, record current counts, run the documented read-only GUI walkthrough, then obtain explicit approval before any new live checkout.
-
-S17.2 status (20/10/2026):
-- Admin WinForms functional verification is PASS by user-confirmed manual execution of A01-A10; evidence and result classification are in `docs/S17_2_ADMIN_WINFORMS_TEST.md`.
-- The previous run recorded restore success, build 0 warnings/0 errors and 26/26 isolated tests passed; these commands were not rerun for the documentation update.
-- Business/security review passed for Admin authentication rules, soft activation, product/image validation, order transitions, stock restoration, Serializable transactions and reporting queries.
-- TLS/Schannel previously blocked automated database probes, but Admin connected successfully during the new manual session and login/RBAC, Dashboard, catalog CRUD/validation/images, customers, orders/workflow/stock and reports all passed.
-- Independent `sqlcmd` read-only counting still fails with the ODBC encryption/credential error, so current baseline/final counts and database-preservation comparison remain BLOCKED. No preservation claim is made.
-- The documentation update made no UI/source/schema/migration/data changes. Do not advance to S17.3 until the independent baseline/final evidence is recorded or the remaining condition is explicitly accepted.
-
-S17.3 status (20/10/2026):
-- Full Web + Admin + SQL Server integration verification is BLOCKED; evidence and manual checklist are in `docs/S17_3_FULL_INTEGRATION_TEST.md`.
-- Restore/build passed with 0 warnings/0 errors; 26/26 existing tests passed on isolated SQLite in-memory and are not claimed as live SQL integration evidence.
-- Web and Admin configurations both target `taiiiii\SERVER/PhoneStoreDB` with Windows Authentication; only the existing InitialCreate migration is present.
-- Current `sqlcmd` read-only access is blocked by the ODBC TLS/Schannel error, so baseline/final counts and database integrity could not be verified.
-- Web Kestrel started, but requests in this session were blocked by Windows Event Log write permission after the HTTPS-port warning. Admin's successful A01-A10 manual evidence remains recorded in S17.2 but was not rerun as S17.3.
-- No live business write, seed/import, schema change or migration was performed. INT01-INT08 have 0/8 PASS under the strict integration-evidence rules; Ready for S18: NO.
-
-S17.3.1 blocker diagnosis/fix (20/10/2026):
-- Development Web logging now uses Console + Debug providers only, preventing an unauthorized Windows Event Log write from aborting requests; production logging and security are unchanged.
-- Release smoke retest passed `/account/login` and the static placeholder with HTTP 200. Database-backed Home/Products now reach EF and expose the remaining SQL TLS/pre-login error instead of the former logging crash.
-- ODBC 17/sqlcmd and EF Core/Microsoft.Data.SqlClient fail with the same encryption error. SQL Server has ForceEncryption 0, no configured certificate, TCP enabled, Named Pipes disabled and Windows exposes 28 TLS cipher suites. Exact certificate/service-account/protocol cause still requires administrative SQL ERRORLOG/Configuration Manager inspection.
-- A guarded read-only SSMS count batch is documented for Roles plus the seven non-role business tables. Execution remains blocked in automation until SQL connectivity works.
-- A safe `PhoneStoreTestDB` isolation plan is documented but no database was created or modified; explicit user approval is required before creation or migration application.
-- Release solution build passed with 0 warnings/0 errors and 26/26 tests passed. No UI, auth, schema, migration, seed or business data changed. Ready to resume S17.3: NO.
+- **Nguồn tiến độ chính**: [`docs/PROGRESS.md`](docs/PROGRESS.md) (luôn ưu tiên `docs/PROGRESS.md`, mã nguồn và bằng chứng kiểm thử thực tế thay vì ghi chú cũ).
+- **Bản lưu lịch sử các mốc cũ (`S1–S35`)**: [`docs/archive/PROGRESS_HISTORY.md`](docs/archive/PROGRESS_HISTORY.md) và các báo cáo chi tiết trong [`docs/archive/`](docs/archive/) (gồm mốc kiểm thử ban đầu [`docs/archive/s17/S17_TESTING.md`](docs/archive/s17/S17_TESTING.md), [`S17_1`](docs/archive/s17/S17_1_CUSTOMER_WEB_TEST.md), [`S17_2`](docs/archive/s17/S17_2_ADMIN_WINFORMS_TEST.md), [`S17_3`](docs/archive/s17/S17_3_FULL_INTEGRATION_TEST.md)).

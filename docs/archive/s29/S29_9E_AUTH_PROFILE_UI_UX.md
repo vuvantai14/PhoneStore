@@ -23,7 +23,7 @@ Tái sử dụng helper form S29.9D. Bổ sung cách tìm `.field-error` qua nhi
 - `src/PhoneStore.Web/Views/Profile/Index.cshtml`
 - `src/PhoneStore.Web/wwwroot/css/site.css`: thêm styles có scope `.customer-account-page`.
 - `src/PhoneStore.Web/wwwroot/js/site.js`: resolver inline error hỗ trợ nhiều ID.
-- Báo cáo này, `docs/PROGRESS.md`, 19 screenshots trong [artifacts/S29.9E](artifacts/S29.9E/).
+- Báo cáo này, `docs/PROGRESS.md`, 19 screenshots trong [artifacts/S29.9E](../../artifacts/S29.9E/).
 
 ## Kiểm thử
 

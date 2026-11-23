@@ -35,7 +35,7 @@ Kiểm toán mã nguồn thực tế của `PhoneStore.Admin` và `PhoneStore.Bu
 | [AdminApiClient.cs](file:///c:/PhoneStore/PhoneStore/src/PhoneStore.Business/AdminApi/AdminApiClient.cs) | Bổ sung phân biệt tường minh mã `HTTP 429 TooManyRequests` trong `LoginAsync`, `EnsureAuthorizedAndSuccessAsync` và `MapManagementResponseAsync` với thông báo tiếng Việt rõ ràng (bên cạnh `401`, `403`, timeout và lỗi mạng). |
 | [Publish-AdminArtifact.ps1](file:///c:/PhoneStore/PhoneStore/scripts/ci/Publish-AdminArtifact.ps1) | Đóng gói `AdminDataAccess = @{ Mode = 'RestApi'; ApiBaseUrl = 'http://127.0.0.1:5025'; TimeoutSeconds = 15 }` làm mặc định cho bản publish artifact `PhoneStore.Admin`. |
 | [AdminRestApiIntegrationTests.cs](file:///c:/PhoneStore/PhoneStore/tests/PhoneStore.Tests/AdminRestApiIntegrationTests.cs) | Cập nhật kiểm thử mặc định `RestApi` (`http://127.0.0.1:5025/`), kiểm thử chọn thủ công `DirectSql`, và bổ sung kiểm thử xử lý `429 TooManyRequests`. |
-| [S35_6B_ADMIN_DEFAULT_RESTAPI.md](file:///c:/PhoneStore/PhoneStore/docs/S35_6B_ADMIN_DEFAULT_RESTAPI.md) | Báo cáo nghiệm thu S35.6B. |
+| [S35_6B_ADMIN_DEFAULT_RESTAPI.md](file:///c:/PhoneStore/PhoneStore/docs/archive/s35/S35_6B_ADMIN_DEFAULT_RESTAPI.md) | Báo cáo nghiệm thu S35.6B. |
 | [PROGRESS.md](file:///c:/PhoneStore/PhoneStore/docs/PROGRESS.md) | Cập nhật tiến độ dự án. |
 
 ---

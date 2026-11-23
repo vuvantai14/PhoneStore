@@ -1,87 +1,120 @@
-# PhoneStore Docker Compose & CI
+# PhoneStore — Docker Compose & CI/CD Guide
 
-Compose đóng gói ba dịch vụ Linux `web`, `api`, `db`; Admin WinForms tiếp tục chạy trực tiếp trên Windows. Cấu hình không tự migrate, seed hoặc restore database.
+Tài liệu này mô tả chính xác cấu hình Docker Compose, GitHub Actions CI, phát hành GHCR và quy trình Windows pull-based CD hiện hành của PhoneStore (`.NET 10`, SQL Server 2022). Không thực thi deployment hay thay đổi dữ liệu tự động.
 
-## 1. Chuẩn bị an toàn
+---
 
-Yêu cầu Docker Desktop (Linux containers), Docker Compose và đủ tài nguyên cho SQL Server 2022. Sao chép cấu hình mẫu:
+## 1. Phân biệt Local Development Docker và Docker Business
 
-```powershell
-Copy-Item .env.example .env
-```
+| Khía cạnh | Local Development Docker (môi trường mới) | Docker Business Production (`phonestore-restore-c2`) |
+|---|---|---|
+| **Compose files** | [`docker-compose.yml`](../docker-compose.yml) | [`docker-compose.yml`](../docker-compose.yml) + [`scripts/cd/docker-compose.business.yml`](../scripts/cd/docker-compose.business.yml) + `%LOCALAPPDATA%\PhoneStore-BusinessCd\docker-compose.cd-override.yml` *(ngoài Git)* |
+| **Project name** | `COMPOSE_PROJECT_NAME` trong `.env` (mẫu: `phonestore-acceptance`) | `phonestore-restore-c2` |
+| **Nguồn image `web` & `api`** | Build cục bộ từ `Dockerfile` và `src/PhoneStore.Api/Dockerfile` | Pin immutable SHA-256 digest từ GHCR (rollback về local baseline digest trong `docker-compose.business.yml`) |
+| **Nguồn image `db`** | `mcr.microsoft.com/mssql/server:2022-latest` | Pin SHA-256 digest cố định, `mem_limit: 2304m`, `MSSQL_MEMORY_LIMIT_MB: 1536`, `stop_grace_period: 60s` |
+| **ASPNETCORE_ENVIRONMENT** | `Development` (mặc định) | `api`: `Production` (tắt Swagger), `web`: theo cấu hình triển khai |
+| **JWT Secrets cho `api`** | Nạp từ `.env` (ngoài Git) | Nạp từ `api-jwt.env` (ACL user-only, độ ưu tiên cao hơn `.env`) |
+| **Cổng host** | `5015` (Web), `5025` (API), `14334` (SQL) — chỉnh khác nếu chạy song song Business | `127.0.0.1:5015` (Web), `127.0.0.1:14334` (SQL), `api` phục vụ nội bộ `8080/tcp` |
 
-Trong `.env`, bắt buộc:
+> **Quy tắc an toàn bắt buộc:** Không chạy trực tiếp `docker compose up -d --build` lên stack Business `phonestore-restore-c2`; không bao giờ chạy `docker compose down -v` hoặc xóa volume `phonestore-restore-c2_mssql_data`.
 
-- tự đặt `MSSQL_SA_PASSWORD` mạnh, duy nhất; không dùng giá trị ví dụ hoặc commit file này;
-- đặt `PRODUCT_UPLOADS_PATH` thành đường dẫn tuyệt đối tới thư mục ảnh runtime mà Admin Windows cũng quản lý;
-- chọn `SQL_PORT` còn trống (mặc định đề xuất 14334, vì 14333 có thể thuộc stack cũ);
-- giữ `COMPOSE_PROJECT_NAME` riêng để không tác động stack/volume cũ.
+---
 
-`.env` đã được `.gitignore` loại trừ. Tuy vậy, người có quyền Docker vẫn có thể xem environment của container; production cần secret manager phù hợp. Credential Docker cũ từng xuất hiện trong Git history, nên phải được đánh giá/rotate trước khi công khai repository; tài liệu này không hướng dẫn rewrite history.
+## 2. Kiến trúc Docker Compose & Services
 
-Kiểm cấu hình mà không khởi động container:
+Ba service chạy trên Linux containers cùng bridge network `phonestore-net` (Admin WinForms chạy trực tiếp trên Windows):
 
-```powershell
-docker compose config --quiet
-```
+1. **`db` (SQL Server 2022)**:
+   - Volume persistent `mssql_data:/var/opt/mssql`.
+   - Trong `scripts/cd/docker-compose.business.yml`: pin SHA-256 image SQL Server 2022, giới hạn `mem_limit: 2304m`, `MSSQL_MEMORY_LIMIT_MB: "1536"`, `stop_grace_period: 60s` và bind-mount thư mục backup `C:/PhoneStoreDockerTransfer/backup:/var/opt/mssql/backup:ro`.
+   - Healthcheck: chạy `sqlcmd` kiểm tra `SELECT 1` mỗi 10s.
+2. **`api` (`PhoneStore.Api`)**:
+   - Đóng gói bởi [`src/PhoneStore.Api/Dockerfile`](../src/PhoneStore.Api/Dockerfile) (`.NET 10`, port nội bộ `8080`).
+   - Kết nối SQL qua `Server=db,1433;Database=${DB_NAME:-PhoneStoreDB}` (`depends_on: db: service_healthy`).
+   - Chủ động ghi đè `MSSQL_SA_PASSWORD: ""` trong `environment` để không lộ biến SA độc lập khi nạp `env_file: .env`.
+   - Shared uploads: đặt `ProductImages__UploadsDirectory: "/app/wwwroot/uploads/products"` và bind-mount `${PRODUCT_UPLOADS_PATH}` ở chế độ **`read_only: false` (`rw`)**.
+   - Healthcheck: TCP HTTP probe `GET /api/health HTTP/1.1` trả `200` mỗi 15s.
+3. **`web` (`PhoneStore.Web`)**:
+   - Đóng gói bởi [`Dockerfile`](../Dockerfile) (`.NET 10`, port nội bộ `8080`, publish `127.0.0.1:5015`).
+   - Kết nối SQL qua `Server=db,1433` và gọi API nội bộ qua `CatalogApi__BaseUrl: "http://api:8080/"` (`CatalogApi__Enabled: true`, `depends_on: db + api: service_healthy`).
+   - Shared uploads: bind-mount cùng `${PRODUCT_UPLOADS_PATH}` vào `/app/wwwroot/uploads/products` ở chế độ **`read_only: true` (`ro`)**.
+   - Healthcheck: TCP HTTP probe `GET / HTTP/1.1` trả `200` mỗi 15s.
 
-Lệnh phải dừng ngay nếu thiếu password hoặc đường dẫn uploads.
-
-## 2. Kiến trúc Compose
-
-| Service | Host mặc định | Container | Vai trò |
-|---|---:|---:|---|
-| `web` | `127.0.0.1:5015` | `8080` | Customer Web; gọi `http://api:8080/` khi feature flag bật |
-| `api` | `127.0.0.1:5025` | `8080` | REST API read-only; health tại `/api/health` |
-| `db` | `127.0.0.1:14334` | `1433` | SQL Server 2022, dữ liệu ở named volume riêng |
-
-Web và API dùng service hostname `db`, không dùng `localhost`. `CatalogApi__BaseUrl` trong Web dùng service hostname `api`. Web/API chỉ khởi động sau khi dependencies healthy.
-
-Ảnh runtime không nằm trong image hoặc Git. Compose bind-mount `PRODUCT_UPLOADS_PATH` read-only vào `/app/wwwroot/uploads/products`; Admin WinForms cần được cấu hình riêng để ghi vào cùng host directory. Không xóa orphan hoặc đổi tên ảnh khi chưa đối chiếu database.
-
-## 3. Build và chạy có kiểm soát
-
-S31.5B chỉ validate/build, **không chạy** các lệnh dưới đây. Khi đã có phê duyệt deployment và đã kiểm tra ports/project name:
-
-```powershell
-docker compose build
-docker compose up -d
-docker compose ps
-```
-
-Truy cập Web tại `http://localhost:5015`, API health tại `http://localhost:5025/api/health`. Xem log theo service, không in `.env`:
+### Chuẩn bị & kiểm tra tĩnh cho môi trường mới
 
 ```powershell
-docker compose logs -f web
-docker compose logs -f api
-docker compose logs -f db
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+# Điền MSSQL_SA_PASSWORD, PRODUCT_UPLOADS_PATH và ApiAuthentication__LocalJwt__SigningKey trong .env (đã bị Git ignore)
+docker compose -f docker-compose.yml config --quiet
 ```
 
-Dừng stack nhưng giữ named volume:
+---
+
+## 3. GitHub Actions CI & GHCR Publishing
+
+Workflow [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) (mọi action đều được pin theo SHA đầy đủ, quyền mặc định `contents: read`) gồm 3 job:
+
+1. **`build-and-test-windows` (`windows-latest`)**:
+   - Cài .NET SDK từ `global.json` (`10.0.403`), `dotnet restore`, `dotnet build PhoneStore.sln --configuration Release`.
+   - Build thêm 3 project phụ trợ (`PhoneStore.CatalogImport`, `PhoneStore.AcceptanceEnvironment`, `PhoneStore.SqlIntegration`).
+   - Chạy `dotnet test tests/PhoneStore.Tests/PhoneStore.Tests.csproj --no-build --configuration Release`.
+   - Publish & kiểm tra artifact Admin WinForms bằng [`scripts/ci/Publish-AdminArtifact.ps1`](../scripts/ci/Publish-AdminArtifact.ps1) (mặc định `RestApi -> 127.0.0.1:5025`) và upload artifact giữ 14 ngày.
+2. **`build-docker-ubuntu` (`ubuntu-latest`)**:
+   - Chuẩn bị Docker build context sạch từ Git bằng [`scripts/ci/prepare_image_context.py`](../scripts/ci/prepare_image_context.py) (loại bỏ `bin/`, `obj/`, `uploads/`, `.env*`, file DB/backup và strip `ConnectionStrings` khỏi `appsettings*.json`).
+   - Build kiểm chứng `linux/amd64` cho cả `PhoneStore.Web` và `PhoneStore.Api` (`push: false`).
+   - Chạy [`scripts/ci/validate_business_compose.py`](../scripts/ci/validate_business_compose.py) kiểm tra offline model Compose hợp nhất (`docker-compose.yml` + `scripts/cd/docker-compose.business.yml`): kiểm tra SQL image digest, giới hạn RAM, shutdown grace period, volume, backup mount, healthchecks và shared uploads (`api` `rw` khớp nguồn `web` `ro`).
+3. **`publish-ghcr` (`ubuntu-latest`, chỉ chạy khi push vào `main` và 2 job trên PASS)**:
+   - Quyền nâng phạm vi hẹp `packages: write`.
+   - Build và push `ghcr.io/vuvantai14/phonestore-web:sha-<commit>` và `ghcr.io/vuvantai14/phonestore-api:sha-<commit>`.
+   - Đối chiếu digest giữa Buildx và `docker buildx imagetools inspect`, xuất manifest `images.json` và upload artifact giữ 30 ngày cho quy trình CD.
+
+---
+
+## 4. Quy trình Windows Pull-Based CD (`scripts/cd/`)
+
+Hệ thống dùng mô hình **Windows máy đích chủ động kéo release đã phê duyệt** (không mở inbound SSH/runner tới máy host):
+
+- **Công cụ chính**:
+  - [`scripts/cd/Business.Cd.ps1`](../scripts/cd/Business.Cd.ps1) & [`scripts/cd/Invoke-BusinessCd.ps1`](../scripts/cd/Invoke-BusinessCd.ps1): thực thi chu trình kiểm tra (`-ValidateOnly`) hoặc áp dụng (`-ApplyApprovedRelease`).
+  - [`scripts/cd/Register-BusinessCdTask.ps1`](../scripts/cd/Register-BusinessCdTask.ps1): đặc tả Scheduled Task quyền tối thiểu (`RunLevel=Limited`, không lưu mật khẩu, yêu cầu xác nhận tường minh `-ConfirmTaskRegistration`).
+  - [`scripts/cd/Rehearsal.Engine.ps1`](../scripts/cd/Rehearsal.Engine.ps1), `Rehearsal.Release.ps1`, `Rehearsal.Probe.ps1`, `Rehearsal.ResourceGate.ps1`, `Rehearsal.SqlFixture.ps1`: engine diễn tập cách ly, Phased Tiered RAM Gates và internal probe.
+- **Các cổng bảo vệ bắt buộc trước khi deploy**:
+  1. **Phê duyệt digest hai lớp**: đối chiếu `approved-release.json` ngoài Git (`AutoDeployUnapproved=false`) với manifest `images.json` trên GHCR.
+  2. **Khóa thực thi**: `deployment.lock` ngăn hai phiên CD chạy chồng chéo.
+  3. **Cổng backup SQL ngoài volume (`Test-CdBusinessSqlBackup`)**: xác minh file backup `COPY_ONLY + CHECKSUM + VERIFYONLY` tồn tại ngoài Docker volume tại `C:\PhoneStoreDockerTransfer\backup` khớp kích thước và SHA-256.
+  4. **Cổng tài nguyên RAM**: kiểm tra Windows Free RAM, WSL2 `MemAvailable` và Swap trước từng bước.
+  5. **Khóa lệnh Compose (`Assert-CdBusinessComposeCommandSafety`)**: chỉ cho phép `up -d --no-deps --no-build --pull never <api|web>`; chặn tuyệt đối `down`, `prune`, `rm`, `db` và mọi từ khóa migrate/seed.
+  6. **Thứ tự tuần tự**: cập nhật `api` → kiểm readiness → cập nhật `web` → kiểm readiness; **tuyệt đối không recreate container `db`**.
+
+---
+
+## 5. Backup, Rollback & Xác minh triển khai
+
+- **Backup trước thay đổi rủi ro**: Tạo bản `BACKUP DATABASE [PhoneStoreDB] TO DISK = ... WITH COPY_ONLY, COMPRESSION, CHECKSUM` ra ngoài volume (`C:\PhoneStoreDockerTransfer\backup`), xác minh bằng `RESTORE VERIFYONLY WITH CHECKSUM` và đối chiếu SHA-256.
+- **Rollback tự động / thủ công**:
+  - Engine CD ghi nhật ký giao dịch vào `journal.jsonl` (`Planned → Before-api → Ready-api → Before-web → Ready-web → Deployed`).
+  - Nếu readiness của `api` hoặc `web` thất bại, CD tự động rollback cả hai service ứng dụng về image baseline đã pin trong `scripts/cd/docker-compose.business.yml` (hoặc khôi phục phiên bị gián đoạn bằng `-Recover`), giữ nguyên hoàn toàn container `db`.
+- **Xác minh chỉ đọc sau vận hành**:
 
 ```powershell
-docker compose down
+# 1. Trạng thái & health 3 container Business
+docker ps --filter "label=com.docker.compose.project=phonestore-restore-c2" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+# 2. Kiểm tra Customer Web Business
+Invoke-WebRequest -Uri "http://localhost:5015/" -UseBasicParsing | Select-Object StatusCode
+Invoke-WebRequest -Uri "http://localhost:5015/products" -UseBasicParsing | Select-Object StatusCode
+
+# 3. Chạy kiểm tra tĩnh Compose & bộ test an toàn CD (không chạm runtime)
+python scripts/ci/validate_business_compose.py
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/cd/Test-BusinessCdReadiness.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/cd/Test-Rehearsal.ps1
 ```
 
-Không dùng `down -v`, không xóa volume và không restore/migrate/seed nếu chưa được phê duyệt riêng. Database nguồn có dữ liệu cá nhân; backup phải nằm ngoài Git và cần quy trình S31.5C.
+---
 
-## 4. Admin WinForms
+## 6. Tài liệu liên quan
 
-S31.5B không đổi cấu hình Admin. Ở bước nghiệm thu sau, Admin Windows có thể dùng cấu hình tạm trỏ tới `localhost,<SQL_PORT>` và cùng `PRODUCT_UPLOADS_PATH`; không ghi đè cấu hình kết nối PhoneStoreDB chính.
-
-## 5. CI
-
-Workflow `.github/workflows/ci.yml`:
-
-1. restore/build/test solution trên Windows;
-2. build riêng Web image và API image trên Linux;
-3. tạo credential kiểm tra tạm thời trong runner rồi chạy `docker compose config --quiet`.
-
-CI không push image, không chạy Compose và không chứa credential dùng lại được.
-
-## 6. Giới hạn còn lại
-
-- Ứng dụng vẫn dùng tài khoản `sa`; least-privilege SQL login cần thay đổi database được phê duyệt riêng.
-- SQL image còn dùng tag `2022-latest`; cần pin bản đã nghiệm thu trước production.
-- Healthcheck HTTP dùng Bash TCP có sẵn theo giả định của base image và cần runtime acceptance ở S31.5C/D.
-- Không có dữ liệu/ảnh trong Git checkout; backup/restore và asset transfer phải được nghiệm thu riêng.
+- [Hướng dẫn Local Development](LOCAL_DEVELOPMENT.md)
+- [Hướng dẫn kiểm thử](testing/TESTING_GUIDE.md)
+- [Bằng chứng deploy production gần nhất (`S35.5`)](archive/s35/S35_5_REAL_DOCKER_BUSINESS_DEPLOYMENT.md)
+- [Tiến độ hiện tại](PROGRESS.md)

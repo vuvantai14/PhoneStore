@@ -27,7 +27,7 @@ SDK repo `8.0.427`, host ASP.NET Core/NETCore/WindowsDesktop `8.0.33`. Web/API/B
 | Swagger / OpenAPI | `v1`, chỉ công bố UI/JSON trong Development | Metadata chưa mô tả đầy đủ lỗi vận hành và hợp đồng route protected chưa có. | Xuất spec có kiểm thử, mô tả auth/status và bảo vệ quyền truy cập tài liệu ở môi trường cần giới hạn. | P1 |
 | Tests | ApiFoundationTests, CatalogApiTests, ApiSecurityHardeningTests, typed-client integration, business/SQLite tests. Có SQL harness cách ly. | Chưa có matrix API auth, ownership, write replay và SQL provider parity cho API mới. | HTTP test host, SQL Server disposable, CI contract diff và các ca bảo mật âm. | P0 trước API ghi |
 
-Nguồn repo: [Api Program](../src/PhoneStore.Api/Program.cs), [Web Program](../src/PhoneStore.Web/Program.cs), [AdminServices](../src/PhoneStore.Admin/AdminServices.cs), [catalog resolver](../src/PhoneStore.Web/CatalogApi/ProductDetailResolver.cs), [CI](../.github/workflows/ci.yml), [S31.3G](system-analysis/17-REST-API-FINAL-ACCEPTANCE.md).
+Nguồn repo: [Api Program](../../../src/PhoneStore.Api/Program.cs), [Web Program](../../../src/PhoneStore.Web/Program.cs), [AdminServices](../../../src/PhoneStore.Admin/AdminServices.cs), [catalog resolver](../../../src/PhoneStore.Web/CatalogApi/ProductDetailResolver.cs), [CI](../../../.github/workflows/ci.yml), [S31.3G](../s31-system-analysis/17-REST-API-FINAL-ACCEPTANCE.md).
 
 ## B. Existing REST Endpoints
 
@@ -40,7 +40,7 @@ Nguồn repo: [Api Program](../src/PhoneStore.Api/Program.cs), [Web Program](../
 | GET `/api/health` | `HealthResponse`, kiểm tra kết nối SQL qua EF | 200; 503 khi SQL unavailable |
 | GET `/swagger/v1/swagger.json`, `/swagger` | Spec/UI Development | Có ở Development |
 
-Catalog có thể trả 429, 500, 503 hoặc 504 tùy điều kiện. Health cũng chịu limiter và timeout riêng. `/api/products` không phải route catalog và trả 404. Không có route REST auth, cart, orders, customers, admin management hoặc reports. MVC form, cart JSON và order routes trong Web thuộc host cookie/session riêng. [Controllers](../src/PhoneStore.Api/Controllers) · [DTO](../src/PhoneStore.Api/Contracts) · [Catalog reader](../src/PhoneStore.Data/Catalog/ProductCatalogReader.cs)
+Catalog có thể trả 429, 500, 503 hoặc 504 tùy điều kiện. Health cũng chịu limiter và timeout riêng. `/api/products` không phải route catalog và trả 404. Không có route REST auth, cart, orders, customers, admin management hoặc reports. MVC form, cart JSON và order routes trong Web thuộc host cookie/session riêng. [Controllers](../../../src/PhoneStore.Api/Controllers) · [DTO](../../../src/PhoneStore.Api/Contracts) · [Catalog reader](../../../src/PhoneStore.Data/Catalog/ProductCatalogReader.cs)
 
 ## C. Kiến trúc hiện tại
 
@@ -76,7 +76,7 @@ Các host tạo DI scope và kết nối SQL riêng. Business và acceptance dù
 | Admin — WinForms trực tiếp SQL | P1 nội bộ. Chọn một lát cắt trước, ưu tiên đọc orders rồi transition theo nhu cầu. Product/lookup/customer writes và ảnh là mở rộng riêng. | Management services hiện có, DTO tách đọc/ghi, expected status/version cho update. Thiết kế upload stream/size riêng nếu cần. | Admin policy theo hành động và fresh auth cho ghi. 200/201/204, 400/401/403/404/409. Test stale state, single-admin, quyền đã bị thu hồi và không DML khi từ chối. |
 | Reporting — WinForms | P2 nội bộ. `GET /api/v1/admin/reports/sales` và `.../revenue-series` nếu cần dashboard/API consumer. | IReportingService. `ReportQueryRequest`, `SalesReportResponse`, `RevenueSeriesResponse`. Kiểm tra ngày địa phương, kỳ và trần khoảng. | Admin read policy. 200/400/401/403/503. Test Completed-only, SQL grouping, 00:00 UTC+7, empty range và giới hạn tải. |
 
-Đối với tạo đơn, hủy đơn và hoàn tồn, giữ transaction và bất biến trong Business/Data. Idempotency hiện tại dùng mã đơn suy ra từ user và token, khóa checkout và unique order code. **Cần định nghĩa fingerprint payload cho hợp đồng mới** vì cùng key với payload khác hiện có thể trả lại order cũ. Dùng outcome có kiểu để ánh xạ HTTP status. Khi không chắc commit đã thành công, chỉ retry với cùng key và tra trạng thái theo owner. [OrderService](../src/PhoneStore.Business/Purchasing/OrderService.cs) · [PurchaseStore](../src/PhoneStore.Data/Purchasing/PurchaseStore.cs)
+Đối với tạo đơn, hủy đơn và hoàn tồn, giữ transaction và bất biến trong Business/Data. Idempotency hiện tại dùng mã đơn suy ra từ user và token, khóa checkout và unique order code. **Cần định nghĩa fingerprint payload cho hợp đồng mới** vì cùng key với payload khác hiện có thể trả lại order cũ. Dùng outcome có kiểu để ánh xạ HTTP status. Khi không chắc commit đã thành công, chỉ retry với cùng key và tra trạng thái theo owner. [OrderService](../../../src/PhoneStore.Business/Purchasing/OrderService.cs) · [PurchaseStore](../../../src/PhoneStore.Data/Purchasing/PurchaseStore.cs)
 
 ## E. Security Assessment
 
@@ -115,7 +115,7 @@ Tên file dưới đây là vị trí dự kiến, tùy kết quả triển khai
 - Hết hỗ trợ .NET 8, Development runtime, `sa` và TLS trust override là điều kiện cần xử lý trước môi trường production.
 - API và Web cùng đọc SQL; checkout, order status và idempotency phải giữ bất biến cùng các client hiện có. Thêm paged admin read nếu pilot cần, vì các interface list Admin hiện trả collection.
 - Chốt issuer/subject mapping, bên sở hữu refresh state, quyền DB theo host và chính sách PII trước route protected. Không dựng shared SQL instance business làm môi trường ghi hoặc stress.
-- SE01 runtime vẫn BLOCKED và RP01 còn thiếu fixture biên giờ. Chúng cung cấp ca test cho S34.6/S34.7, giữ nguyên trạng thái từ S32. [S32 handoff](S32_3B_FINAL_HANDOFF.md)
+- SE01 runtime vẫn BLOCKED và RP01 còn thiếu fixture biên giờ. Chúng cung cấp ca test cho S34.6/S34.7, giữ nguyên trạng thái từ S32. [S32 handoff](../s32/S32_3B_FINAL_HANDOFF.md)
 
 ## I. Recommended First Implementation
 

@@ -17,7 +17,7 @@ Ngày kiểm tra: 2026-11-02. **PASS source/build/tests/browser preview; chờ n
 - `src/PhoneStore.Web/Views/Home/Index.cshtml`
 - `src/PhoneStore.Web/wwwroot/css/site.css`: thêm selector Home, không đổi grid Catalog.
 - `tests/PhoneStore.Tests/HomePresentationTests.cs`
-- Báo cáo này, `docs/PROGRESS.md`, screenshots tại [artifacts/S29.9G](artifacts/S29.9G/).
+- Báo cáo này, `docs/PROGRESS.md`, screenshots tại [artifacts/S29.9G](../../artifacts/S29.9G/).
 
 ## Kiểm chứng
 

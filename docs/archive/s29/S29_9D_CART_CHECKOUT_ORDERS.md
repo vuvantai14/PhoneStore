@@ -37,7 +37,7 @@ Tái sử dụng tokens S29.9B/C. Không đổi giá, tồn kho, điều kiện 
 - Hủy: thử đóng confirmation, submit bị chặn; đơn Cancelled không có action hủy. Không thực thi cancel.
 - Reduced-motion: matches=true, transition còn 0.00001s. Contrast tokens text/muted/primary/error/success/warning trên nền trắng: 5.64–15.59:1, đạt AA; đây không phải chứng nhận WCAG toàn website.
 - Không có JavaScript exception trong lượt browser cuối.
-- Bằng chứng: [screenshots](artifacts/S29.9D/) gồm 16 ảnh Cart/Checkout/Orders/Detail tại 4 breakpoint.
+- Bằng chứng: [screenshots](../../artifacts/S29.9D/) gồm 16 ảnh Cart/Checkout/Orders/Detail tại 4 breakpoint.
 
 ## Phạm vi và giới hạn bằng chứng
 
