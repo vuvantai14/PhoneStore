@@ -5,10 +5,10 @@ Tài liệu này hướng dẫn chạy PhoneStore trên Windows cho mục đích
 ## 1. Prerequisites
 
 - Windows 10/11 để chạy `PhoneStore.Admin` WinForms.
-- .NET SDK theo [`global.json`](../global.json) — hiện là 8.0.427 với patch roll-forward.
-- SQL Server 2022 hoặc phiên bản tương thích EF Core 8.
+- .NET SDK theo [`global.json`](../global.json) — hiện là `.NET 10` (`10.0.403`).
+- **Docker Desktop** đang chạy với stack SQL Server 2022 (`phonestore-restore-c2-db-1` tại `127.0.0.1,14334`) vì đây là **database nghiệp vụ chính duy nhất**.
 - Git và PowerShell.
-- Database `PhoneStoreDB` có schema tương ứng hai migration hiện tại.
+- Database `PhoneStoreDB` đã áp dụng đủ 3 EF Core migrations hiện tại (`InitialCreate`, `EnforceSingleAdmin`, `AddApiRefreshTokens`).
 
 Kiểm tra môi trường:
 
@@ -31,24 +31,50 @@ dotnet build PhoneStore.sln
 
 Không cần tạo `bin/`, `obj/` hoặc thư mục output thủ công.
 
-## 3. Cấu hình SQL Server
+## 3. Cấu hình SQL Server (Database thống nhất)
 
-Ba ứng dụng dùng key `ConnectionStrings:PhoneStoreConnection`. Ưu tiên cấu hình local bằng biến môi trường hoặc user-secrets thay vì sửa và commit appsettings.
+PhoneStore thống nhất **một nguồn dữ liệu nghiệp vụ chính duy nhất**:
 
-Ví dụ Windows Authentication cho terminal hiện tại, không chứa mật khẩu:
+| Môi trường | SQL Server đích | Database | Cơ chế cấu hình |
+| :--- | :--- | :--- | :--- |
+| **Docker Business** (`localhost:5015`) | `db,1433` (bridge DNS nội bộ) | `PhoneStoreDB` | `docker-compose.yml` + `.env` (ngoài Git) |
+| **Local Development** (`dotnet run` Web/API) | `127.0.0.1,14334` (Docker SQL loopback) | `PhoneStoreDB` | `.NET User Secrets` (`ConnectionStrings:PhoneStoreConnection`, ngoài Git) |
+| **Windows SQL (`localhost`)** | `DESKTOP-ES9362P` (`PhoneStoreDB`) | `PhoneStoreDB` | **Bản dữ liệu cũ lưu trữ (read-only archive)** — không xóa, không restore đè, không ghi nghiệp vụ mới |
+
+> **Lưu ý quan trọng:** Vì Local Web và Local API kết nối tới Docker SQL `127.0.0.1,14334`, **Docker Desktop và container `phonestore-restore-c2-db-1` phải đang chạy** trước khi khởi chạy `dotnet run`.
+
+### Thiết lập User Secrets cho Local Development (không lưu credential trong Git)
+
+Cả `PhoneStore.Web` và `PhoneStore.Api` đều hỗ trợ `.NET User Secrets` (`<UserSecretsId>` trong `.csproj`). Thiết lập `ConnectionStrings:PhoneStoreConnection` trỏ tới `127.0.0.1,14334` qua stdin JSON (không in mật khẩu ra màn hình hay command line, không sửa `appsettings.json`):
 
 ```powershell
-$env:ConnectionStrings__PhoneStoreConnection = "Server=localhost;Database=PhoneStoreDB;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true"
+# Đọc thông số từ .env local (đã bị Git ignore) và nạp vào User Secrets của API + Web
+# Giá trị chuỗi kết nối: Server=127.0.0.1,14334;Database=PhoneStoreDB;User Id=sa;Password=<từ .env>;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True
+dotnet user-secrets list --project src/PhoneStore.Api/PhoneStore.Api.csproj
+dotnet user-secrets list --project src/PhoneStore.Web/PhoneStore.Web.csproj
 ```
 
-Yêu cầu an toàn:
+*(Khi kiểm tra bằng `dotnet user-secrets list`, tuyệt đối không chia sẻ/sao chép giá trị bí mật vào log, chat hoặc tài liệu.)*
 
-- Xác minh đúng server và database trước migration/bootstrap hoặc bất kỳ thao tác ghi nào.
+### Rollback nhanh User Secrets về Windows SQL mặc định
+
+Nếu cần quay tạm Local Web/API về mặc định trong `appsettings.json` (`Server=localhost;Database=PhoneStoreDB`) mà không đụng tới database hay Docker:
+
+```powershell
+dotnet user-secrets remove "ConnectionStrings:PhoneStoreConnection" --project src/PhoneStore.Api/PhoneStore.Api.csproj
+dotnet user-secrets remove "ConnectionStrings:PhoneStoreConnection" --project src/PhoneStore.Web/PhoneStore.Web.csproj
+```
+
+Sau đó khởi động lại tiến trình Local Web/API đang chạy.
+
+### Quy ước cho EF Core CLI (`dotnet ef`) và an toàn database
+
+- `PhoneStoreDbContextFactory` ưu tiên đọc biến môi trường `ConnectionStrings__PhoneStoreConnection` (không tự đọc User Secrets). Khi cần chạy lệnh EF CLI lên database chính, phải truyền rõ `ConnectionStrings__PhoneStoreConnection` trong phiên terminal hiện tại và xác minh đúng đích `127.0.0.1,14334` / `PhoneStoreDB`.
 - Không commit connection string chứa username/password.
 - Ứng dụng không tự chạy migration hoặc seed khi startup.
-- Chỉ áp dụng migration lên database development khi bạn có thẩm quyền và đã đánh giá dữ liệu đích.
+- Không chạy `docker compose down -v` hoặc `docker volume prune` vì sẽ xóa volume `phonestore-restore-c2_mssql_data`.
 
-Để tạo schema cho **database development mới**, sau khi đã xác minh connection target:
+Để tạo schema cho **database development mới** (chỉ sau khi đã xác minh connection target và được phê duyệt):
 
 ```powershell
 dotnet ef database update --project src/PhoneStore.Data/PhoneStore.Data.csproj --startup-project src/PhoneStore.Web/PhoneStore.Web.csproj
@@ -56,49 +82,52 @@ dotnet ef database update --project src/PhoneStore.Data/PhoneStore.Data.csproj -
 
 Không dùng lệnh này như cách “sửa kết nối” và không chạy lại trên database đang vận hành nếu chưa được phê duyệt.
 
-## 4. Chạy REST API
+## 4. Chạy REST API (Local — cổng `5025`)
+
+Khi chạy song song với Docker Business (`web-1` ở `5015`, `api-1` nội bộ `8080/tcp`), quy ước chạy Local API tại **`http://127.0.0.1:5025`** (khớp sẵn `AdminDataAccess:ApiBaseUrl` của Admin WinForms):
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Development"
-dotnet run --project src/PhoneStore.Api/PhoneStore.Api.csproj --launch-profile PhoneStore.Api
+dotnet run --project src/PhoneStore.Api/PhoneStore.Api.csproj --no-launch-profile --urls "http://127.0.0.1:5025"
 ```
 
-- Base URL: <http://localhost:5025>
-- Health: <http://localhost:5025/api/health>
-- Swagger Development: <http://localhost:5025/swagger>
+- Base URL: <http://127.0.0.1:5025>
+- Health: <http://127.0.0.1:5025/api/health/live> và <http://127.0.0.1:5025/api/health/ready>
+- Swagger Development: <http://127.0.0.1:5025/swagger>
+- Thư mục upload ảnh chia sẻ (`src/PhoneStore.Api/appsettings.Development.json`): `../PhoneStore.Web/wwwroot/uploads/products`
 - API root `/` trả 404 là bình thường.
 
 Swagger không được map trong Production.
 
-## 5. Chạy Customer Web
+## 5. Chạy Customer Web (Local — cổng `5016`)
 
-Mặc định feature flag API tắt:
+Vì Docker Business Customer Web đang giữ cổng **`5015`**, quy ước chạy Local Customer Web song song tại **`http://127.0.0.1:5016`**:
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Development"
-dotnet run --project src/PhoneStore.Web/PhoneStore.Web.csproj --launch-profile http
+dotnet run --project src/PhoneStore.Web/PhoneStore.Web.csproj --no-launch-profile --urls "http://127.0.0.1:5016"
 ```
 
-Web: <http://localhost:5015>.
+Web Local: <http://127.0.0.1:5016> (đọc cùng database Docker SQL `PhoneStoreDB` với Web Docker tại <http://localhost:5015>).
 
 ### Bật Product Detail qua REST API
 
-Khởi động API trước, sau đó mở terminal khác:
+Khởi động Local API (`5025`) trước, sau đó mở terminal khác:
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Development"
 $env:CatalogApi__Enabled = "true"
-$env:CatalogApi__BaseUrl = "http://localhost:5025/"
+$env:CatalogApi__BaseUrl = "http://127.0.0.1:5025/"
 $env:CatalogApi__TimeoutSeconds = "3"
-dotnet run --project src/PhoneStore.Web/PhoneStore.Web.csproj --launch-profile http
+dotnet run --project src/PhoneStore.Web/PhoneStore.Web.csproj --no-launch-profile --urls "http://127.0.0.1:5016"
 ```
 
-- OFF: Product Detail đọc qua Business/Data, không gọi API.
+- OFF (mặc định trong `appsettings.json`): Product Detail đọc trực tiếp từ DB qua Business/Data (`127.0.0.1,14334` qua User Secrets), không gọi API.
 - ON: Product Detail gọi `GET /api/v1/products/{id}`.
 - API 429/5xx/network/timeout/invalid payload: Web fallback local một lần theo policy hiện tại.
 - API 404: Web trả 404, không fallback.
 
-Home, Product List, Cart, Checkout và Orders chưa chuyển sang REST API.
+Home, Product List, Cart, Checkout và Orders đọc/ghi qua Business/Data trên cùng database Docker SQL `PhoneStoreDB`.
 
 ## 6. Chạy Admin WinForms
 
@@ -106,7 +135,7 @@ Home, Product List, Cart, Checkout và Orders chưa chuyển sang REST API.
 dotnet run --project src/PhoneStore.Admin/PhoneStore.Admin.csproj
 ```
 
-Admin chỉ chạy trên Windows và kết nối Business/Data trực tiếp, không gọi REST API. Nếu build báo DLL bị khóa, đóng đúng instance Admin do bạn đang sử dụng rồi thử lại; không force-kill process không xác định.
+Mặc định từ `S35.6B`, Admin WinForms chạy ở chế độ **`AdminDataAccess:Mode = RestApi`** trỏ tới `http://127.0.0.1:5025` (sử dụng Local JWT qua `PhoneStore.Api`, không đăng ký `PhoneStoreDbContext`). Khi Local API (`5025`) dùng User Secrets trỏ `127.0.0.1,14334`, Admin WinForms tự động làm việc trên cùng database chính với Web Docker (`5015`) và Web Local (`5016`). Nếu build báo DLL bị khóa, đóng đúng instance Admin do bạn đang sử dụng rồi thử lại; không force-kill process không xác định.
 
 ### Chạy Admin với SQL Server Docker
 
@@ -160,10 +189,19 @@ Kết quả gần nhất ngày 14/11/2026: **232/232 PASS**, 0 fail, 0 skipped.
 
 ## 8. Ports
 
+Quy ước cổng khi chạy song song Docker Business và Local Development:
+
+| Thành phần | Cổng mặc định | Ghi chú |
+| :--- | :---: | :--- |
+| Docker Business Customer Web (`web-1`) | `127.0.0.1:5015` | Đọc `db,1433` và gọi `api:8080` |
+| Docker Business SQL Server (`db-1`) | `127.0.0.1:14334` | Database chính `PhoneStoreDB` |
+| Local Customer Web (`dotnet run`) | `127.0.0.1:5016` | Dùng User Secrets -> `127.0.0.1,14334` |
+| Local REST API (`dotnet run`) | `127.0.0.1:5025` | Dùng User Secrets -> `127.0.0.1,14334`, phục vụ Admin WinForms (`RestApi`) |
+
 Kiểm tra listener trước khi khởi động:
 
 ```powershell
-Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 5015,5025 |
+Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 5015,5016,5025,14334 |
     Select-Object LocalAddress,LocalPort,OwningProcess
 ```
 
