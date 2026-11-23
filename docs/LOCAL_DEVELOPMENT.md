@@ -45,11 +45,25 @@ PhoneStore thống nhất **một nguồn dữ liệu nghiệp vụ chính duy n
 
 ### Thiết lập User Secrets cho Local Development (không lưu credential trong Git)
 
-Cả `PhoneStore.Web` và `PhoneStore.Api` đều hỗ trợ `.NET User Secrets` (`<UserSecretsId>` trong `.csproj`). Thiết lập `ConnectionStrings:PhoneStoreConnection` trỏ tới `127.0.0.1,14334` qua stdin JSON (không in mật khẩu ra màn hình hay command line, không sửa `appsettings.json`):
+Cả `PhoneStore.Web` và `PhoneStore.Api` đều hỗ trợ `.NET User Secrets` (`<UserSecretsId>` trong `.csproj`). Vì User Secrets nằm ngoài Git nên trên máy mới cần thiết lập một lần cho kết nối Docker SQL (`127.0.0.1,14334`) và Local JWT của API (thay các placeholder bằng giá trị riêng trên máy bạn, không sửa `appsettings.json`):
 
 ```powershell
-# Đọc thông số từ .env local (đã bị Git ignore) và nạp vào User Secrets của API + Web
-# Giá trị chuỗi kết nối: Server=127.0.0.1,14334;Database=PhoneStoreDB;User Id=sa;Password=<từ .env>;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True
+# 1. Chuẩn bị file .env cho Docker SQL (nếu chưa có) và điền MSSQL_SA_PASSWORD, PRODUCT_UPLOADS_PATH
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+
+# 2. Cấu hình chuỗi kết nối Docker SQL cho Web và API (thay <MatKhauSQL> khớp MSSQL_SA_PASSWORD trong .env)
+dotnet user-secrets set "ConnectionStrings:PhoneStoreConnection" "Server=127.0.0.1,14334;Database=PhoneStoreDB;User Id=sa;Password=<MatKhauSQL>;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True" --project src/PhoneStore.Web/PhoneStore.Web.csproj
+dotnet user-secrets set "ConnectionStrings:PhoneStoreConnection" "Server=127.0.0.1,14334;Database=PhoneStoreDB;User Id=sa;Password=<MatKhauSQL>;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True" --project src/PhoneStore.Api/PhoneStore.Api.csproj
+
+# 3. Cấu hình Local JWT cho PhoneStore.Api (SigningKey ngẫu nhiên tối thiểu 32 ký tự)
+dotnet user-secrets set "ApiAuthentication:Mode" "LocalJwt" --project src/PhoneStore.Api/PhoneStore.Api.csproj
+dotnet user-secrets set "ApiAuthentication:LocalJwt:Issuer" "https://phonestore.local" --project src/PhoneStore.Api/PhoneStore.Api.csproj
+dotnet user-secrets set "ApiAuthentication:LocalJwt:Audience" "phonestore-api" --project src/PhoneStore.Api/PhoneStore.Api.csproj
+dotnet user-secrets set "ApiAuthentication:LocalJwt:SigningKey" "<KhoaBiMatNgauNhienToiThieu32KyTu>" --project src/PhoneStore.Api/PhoneStore.Api.csproj
+dotnet user-secrets set "ApiAuthentication:LocalJwt:AccessTokenMinutes" "15" --project src/PhoneStore.Api/PhoneStore.Api.csproj
+dotnet user-secrets set "ApiAuthentication:LocalJwt:RefreshTokenDays" "7" --project src/PhoneStore.Api/PhoneStore.Api.csproj
+
+# 4. Kiểm tra danh sách khóa đã nạp
 dotnet user-secrets list --project src/PhoneStore.Api/PhoneStore.Api.csproj
 dotnet user-secrets list --project src/PhoneStore.Web/PhoneStore.Web.csproj
 ```
