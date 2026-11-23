@@ -113,13 +113,17 @@ public partial class Program
         builder.Services.AddScoped<LookupManagementStore>();
         builder.Services.AddScoped<LookupManagementService>();
         builder.Services.AddScoped<ILookupManagementService>(sp => sp.GetRequiredService<LookupManagementService>());
-        var configuredUploadsPath = builder.Configuration["ProductImages:UploadsDirectory"];
-        var resolvedUploadsPath = string.IsNullOrWhiteSpace(configuredUploadsPath)
-            ? Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "products")
-            : Path.GetFullPath(configuredUploadsPath, builder.Environment.ContentRootPath);
         builder.Services.AddSingleton<IProductImageContentValidator, CrossPlatformProductImageContentValidator>();
         builder.Services.AddSingleton<IProductImageStorage>(sp =>
-            new LocalProductImageStorage(resolvedUploadsPath, sp.GetRequiredService<IProductImageContentValidator>()));
+        {
+            var configuration = sp.GetRequiredService<IConfiguration>();
+            var environment = sp.GetRequiredService<IWebHostEnvironment>();
+            var configuredUploadsPath = configuration["ProductImages:UploadsDirectory"];
+            var resolvedUploadsPath = string.IsNullOrWhiteSpace(configuredUploadsPath)
+                ? Path.Combine(environment.ContentRootPath, "wwwroot", "uploads", "products")
+                : Path.GetFullPath(configuredUploadsPath, environment.ContentRootPath);
+            return new LocalProductImageStorage(resolvedUploadsPath, sp.GetRequiredService<IProductImageContentValidator>());
+        });
         builder.Services.AddScoped<ProductManagementStore>();
         builder.Services.AddScoped<ProductManagementService>();
         builder.Services.AddScoped<IProductManagementService>(sp => sp.GetRequiredService<ProductManagementService>());

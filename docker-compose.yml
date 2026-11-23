@@ -72,8 +72,14 @@ services:
       ASPNETCORE_HTTP_PORTS: "8080"
       MSSQL_SA_PASSWORD: ""
       ConnectionStrings__PhoneStoreConnection: "Server=db,1433;Database=${DB_NAME:-PhoneStoreDB};User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in the ignored .env file};Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true;"
+      ProductImages__UploadsDirectory: "/app/wwwroot/uploads/products"
     ports:
       - "127.0.0.1:${API_PORT:-5025}:8080"
+    volumes:
+      - type: bind
+        source: "${PRODUCT_UPLOADS_PATH:?Set PRODUCT_UPLOADS_PATH to the host product-images directory}"
+        target: /app/wwwroot/uploads/products
+        read_only: false
     depends_on:
       db:
         condition: service_healthy

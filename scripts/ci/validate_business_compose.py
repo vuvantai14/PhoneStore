@@ -39,4 +39,16 @@ require(backup["type"] == "bind" and backup.get("read_only") and
 for service, probe in (("web", "GET / HTTP/1.1"), ("api", "GET /api/health HTTP/1.1"), ("db", "SELECT 1")):
     health = services[service]["healthcheck"]
     require(not health.get("disable") and probe in " ".join(health["test"]), f"Unexpected {service} health check")
+api = services["api"]
+web = services["web"]
+require(api["environment"].get("ProductImages__UploadsDirectory") == "/app/wwwroot/uploads/products",
+        "Unexpected API ProductImages__UploadsDirectory setting")
+api_uploads = [v for v in api.get("volumes", []) if v.get("target") == "/app/wwwroot/uploads/products"]
+web_uploads = [v for v in web.get("volumes", []) if v.get("target") == "/app/wwwroot/uploads/products"]
+require(len(api_uploads) == 1 and api_uploads[0]["type"] == "bind" and not api_uploads[0].get("read_only"),
+        "Unexpected API shared uploads bind mount")
+require(len(web_uploads) == 1 and web_uploads[0]["type"] == "bind" and web_uploads[0].get("read_only") is True,
+        "Unexpected Web shared uploads bind mount")
+require(api_uploads[0]["source"].replace("\\", "/") == web_uploads[0]["source"].replace("\\", "/"),
+        "API and Web shared uploads sources must match")
 print("Business Compose model validated (db, api, web).")
